@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Pak Service Parts</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; background: #0f1923; color: #e2e8f0; }
+.header { background: linear-gradient(135deg,#0f1923,#1a2f4a); padding: 13px 16px; border-bottom: 2px solid #00c8e0; display: flex; justify-content: space-between; align-items: center; }
+.header-title { font-size: 18px; font-weight: 700; color: #fff; }
+.header-sub { font-size: 11px; color: #64b5c8; margin-top: 2px; }
+.badge-low { background: #ef4444; color: white; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 700; }
+.machine-tabs { background: #141f2d; padding: 10px 14px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid #1e3048; align-items: center; }
+.tab { padding: 6px 16px; border-radius: 20px; border: 1px solid #2a4060; background: transparent; color: #8aa8c0; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.tab.active, .tab:hover { background: #00c8e0; border-color: #00c8e0; color: #0f1923; }
+.tab-add { padding: 6px 12px; border-radius: 20px; border: 1px dashed #3a6050; background: transparent; color: #3a9070; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.tab-add:hover { border-color: #10b981; color: #10b981; }
+.tab-del { padding: 4px 7px; border-radius: 20px; border: 1px solid #ef4444; background: transparent; color: #ef4444; cursor: pointer; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-left: -6px; }
+.tab-del:hover { background: #ef4444; color: white; }
+.toolbar { padding: 12px 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+.search-input { flex: 1; min-width: 150px; padding: 9px 12px; border-radius: 8px; border: 1px solid #2a4060; background: #141f2d; color: #e2e8f0; font-size: 13px; outline: none; }
+.search-input:focus { border-color: #00c8e0; }
+.search-input::placeholder { color: #4a6080; }
+.btn-add { background: #00c8e0; color: #0f1923; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-print-all { background: #1e3048; color: #a78bfa; border: 1px solid #a78bfa; border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.stats-bar { display: flex; gap: 8px; padding: 0 14px 12px; flex-wrap: wrap; }
+.chip { background: #141f2d; border: 1px solid #1e3048; border-radius: 8px; padding: 5px 12px; font-size: 11px; color: #64b5c8; }
+.chip strong { color: #fff; }
+.chip.warn { border-color: #f59e0b; color: #f59e0b; }
+.parts-list { padding: 0 14px 20px; }
+.part-card { background: #141f2d; border-radius: 10px; padding: 11px 13px; margin-bottom: 7px; border-left: 3px solid #3a5070; display: flex; align-items: center; gap: 10px; }
+.part-card.ok { border-left-color: #10b981; }
+.part-card.low { border-left-color: #f59e0b; }
+.part-card.empty { border-left-color: #ef4444; }
+.part-keyno { font-size: 13px; font-weight: 700; color: #00c8e0; font-family: 'Courier New', monospace; }
+.part-desc { font-size: 12px; color: #c8d8e8; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+.part-meta { display: flex; gap: 8px; margin-top: 4px; align-items: center; flex-wrap: wrap; }
+.part-ref { font-size: 10px; background: #1e3048; border-radius: 4px; padding: 1px 5px; color: #5a8090; }
+.part-loc { font-size: 10px; color: #4a7090; }
+.part-card > div:first-child:hover { opacity: 0.85; }
+.action-btns { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.qty-controls { display: flex; align-items: center; gap: 4px; }
+.qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #2a4060; background: #0f1923; color: #e2e8f0; cursor: pointer; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.qty-btn:hover { border-color: #00c8e0; color: #00c8e0; }
+.qty-display { min-width: 30px; text-align: center; font-size: 16px; font-weight: 700; }
+.qty-ok{color:#10b981;}.qty-low{color:#f59e0b;}.qty-empty{color:#ef4444;}.qty-unset{color:#4a6080;}
+.icon-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #2a4060; background: #0f1923; cursor: pointer; font-size: 13px; color: #8aa8c0; display: flex; align-items: center; justify-content: center; }
+.icon-btn:hover { border-color: #00c8e0; color: #00c8e0; }
+.icon-btn.lbl:hover { border-color: #a78bfa; color: #a78bfa; }
+.center { text-align: center; padding: 50px 20px; color: #3a5070; }
+.center .icon { font-size: 36px; margin-bottom: 12px; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; display: none; align-items: flex-end; }
+.overlay.show { display: flex; }
+.modal { background: #141f2d; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; border-top: 2px solid #00c8e0; }
+.modal.green { border-top-color: #10b981; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modal-title { font-size: 16px; font-weight: 700; color: #fff; }
+.modal-close { background: none; border: none; color: #4a6080; font-size: 22px; cursor: pointer; padding: 4px 8px; }
+.section-label { font-size: 10px; font-weight: 700; color: #3a5070; text-transform: uppercase; letter-spacing: 1px; padding: 8px 0 5px; border-bottom: 1px solid #1e3048; margin-bottom: 12px; }
+.field { margin-bottom: 12px; }
+.field label { font-size: 11px; font-weight: 600; color: #64b5c8; display: block; margin-bottom: 5px; text-transform: uppercase; }
+.field input { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #2a4060; background: #0f1923; color: #e2e8f0; font-size: 13px; outline: none; }
+.field input:focus { border-color: #00c8e0; }
+.field input::placeholder { color: #3a5070; }
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }
+.btn-save { width: 100%; padding: 13px; background: #00c8e0; color: #0f1923; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 6px; }
+.btn-save:disabled { background: #2a4060; color: #4a6080; cursor: not-allowed; }
+.btn-save.green { background: #10b981; }
+.btn-delete { width: 100%; padding: 11px; background: transparent; color: #ef4444; border: 1px solid #ef4444; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.btn-delete:hover { background: #ef4444; color: white; }
+.label-panel { background: #0a1520; border-top: 2px solid #a78bfa; padding: 16px; display: none; }
+.label-panel.show { display: block; }
+.label-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.label-panel-title { font-size: 11px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 1px; }
+.label-count { font-size: 11px; color: #6a8090; margin-top: 3px; }
+.label-actions { display: flex; gap: 8px; }
+.btn-do-print { background: #a78bfa; color: white; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-clear { background: none; border: 1px solid #3a5070; color: #4a6080; border-radius: 8px; padding: 8px 12px; font-size: 12px; cursor: pointer; }
+.label-previews { display: flex; flex-wrap: wrap; gap: 14px; }
+.label-preview-card { background: white; color: black; border-radius: 4px; width: 267px; height: 108px; display: flex; align-items: stretch; font-family: Arial, sans-serif; box-shadow: 0 2px 12px rgba(0,0,0,0.5); overflow: hidden; flex-shrink: 0; position: relative; border: 1px solid #ddd; }
+.lp-remove { position: absolute; top: 3px; right: 88px; background: none; border: none; color: #bbb; font-size: 12px; cursor: pointer; z-index: 2; }
+.lp-remove:hover { color: #ef4444; }
+.lp-text { flex: 1; padding: 8px 6px 8px 10px; display: flex; flex-direction: column; justify-content: center; gap: 2px; overflow: hidden; border-right: 1px solid #e0e0e0; }
+.lp-partno-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; }
+.lp-partno { font-size: 27px; font-weight: 900; font-family: 'Courier New', monospace; color: #000; line-height: 1.05; word-break: break-all; }
+.lp-desc { font-size: 16px; font-weight: 700; color: #111; line-height: 1.2; margin-top: 1px; }
+.lp-machine { font-size: 12px; color: #444; margin-top: 3px; }
+.lp-loc { font-size: 12px; color: #444; }
+.lp-qr { flex-shrink: 0; width: 84px; display: flex; align-items: center; justify-content: center; padding: 4px; }
+.lp-qr canvas, .lp-qr img { width: 76px !important; height: 76px !important; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); border-radius: 8px; padding: 10px 22px; font-size: 13px; font-weight: 600; z-index: 200; display: none; white-space: nowrap; }
+.toast.show { display: block; }
+.toast.success { background: #10b981; color: white; }
+.toast.error { background: #ef4444; color: white; }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #2a4060; border-top-color: #00c8e0; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
+.docs-bar { background: #0d1f30; border-bottom: 1px solid #1e3048; padding: 8px 14px; display: none; flex-wrap: wrap; gap: 8px; align-items: center; }
+.docs-bar.show { display: flex; }
+.docs-label { font-size: 10px; font-weight: 700; color: #3a5070; text-transform: uppercase; letter-spacing: 1px; }
+.doc-btn { background: #141f2d; border: 1px solid #2a4060; border-radius: 8px; padding: 5px 12px; font-size: 12px; color: #64b5c8; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s; }
+.doc-btn:hover { border-color: #00c8e0; color: #00c8e0; background: #1a2f4a; }
+.doc-btn.primary { border-color: #00c8e0; color: #00c8e0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media print {
+  body > *:not(#printArea) { display: none !important; }
+  #printArea { display: block !important; }
+  .print-label { width: 89mm; height: 36mm; page-break-after: always; page-break-inside: avoid; display: flex; align-items: stretch; font-family: Arial, sans-serif; background: white; color: black; overflow: hidden; }
+  .pl-text { flex: 1; padding: 2mm 1.5mm 2mm 3mm; display: flex; flex-direction: column; justify-content: center; gap: 0.3mm; overflow: hidden; border-right: 0.3mm solid #ccc; }
+  .pl-partno-label { font-size: 9pt; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
+  .pl-partno { font-size: 22pt; font-weight: 900; font-family: 'Courier New', monospace; color: #000; line-height: 1.05; word-break: break-all; }
+  .pl-desc { font-size: 14pt; font-weight: 700; color: #111; line-height: 1.15; margin-top: 0.3mm; }
+  .pl-machine { font-size: 10pt; color: #333; margin-top: 0.8mm; }
+  .pl-loc { font-size: 10pt; color: #333; }
+  .pl-qr { flex-shrink: 0; width: 30mm; display: flex; align-items: center; justify-content: center; padding: 1.5mm; }
+  .pl-qr canvas, .pl-qr img { width: 27mm !important; height: 27mm !important; }
+  @page { size: 89mm 36mm; margin: 0; }
+}
+#printArea { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">X-PAK SERVICE PARTS</div>
+    <div class="header-sub" id="hSub">Connecting...</div>
+  </div>
+  <div id="lowBadge"></div>
+</div>
+
+<div class="machine-tabs" id="machineTabs"></div>
+
+<div class="docs-bar" id="docsBar"></div>
+<div class="toolbar">
+  <input class="search-input" id="searchBox" placeholder="Search part number, description, location..." oninput="renderParts()">
+  <button class="btn-print-all" onclick="queueAllVisible()">Print All</button>
+  <button class="btn-add" onclick="openAddModal()">+ Add Part</button>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+<div class="parts-list" id="partsList"><div class="center"><span class="spinner"></span> Loading...</div></div>
+
+<div class="label-panel" id="labelPanel">
+  <div class="label-panel-header">
+    <div>
+      <div class="label-panel-title">Label Queue — DYMO 99012</div>
+      <div class="label-count" id="labelCount"></div>
+    </div>
+    <div class="label-actions">
+      <button class="btn-clear" onclick="clearQueue()">Clear All</button>
+      <button class="btn-do-print" onclick="doPrint()">Print Now</button>
+    </div>
+  </div>
+  <div class="label-previews" id="labelPreviews"></div>
+</div>
+
+<div id="printArea"></div>
+
+<!-- Part Modal -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Part</div>
+      <button class="modal-close" onclick="closeModal()">x</button>
+    </div>
+    <div class="section-label">Part Details</div>
+    <div class="field-row">
+      <div class="field"><label>Part Number *</label><input id="fKeyno" placeholder="e.g. 20-41"></div>
+      <div class="field"><label>Diagram Ref</label><input id="fRef" placeholder="e.g. 41 or C2:1/p27"></div>
+    </div>
+    <div class="field"><label>Description *</label><input id="fDesc" placeholder="e.g. CUTTER BLADE"></div>
+    <div class="field"><label>Size / Spec (used for part number)</label><input id="fSpec" placeholder="e.g. 10x14x10, M4x8, 6802ZZ"></div>
+    <div class="field"><label>Alt / Superseded Part Number</label><input id="fAltPartNo" placeholder="e.g. H46-10801 (supersedes H46-10800)"></div>
+    <div class="field"><label>Assembly Section</label><input id="fSection" placeholder="e.g. Tensioning Unit, Gripper Unit"></div>
+    <div class="field-row">
+      <div class="field"><label>Category</label>
+        <select id="fCategory" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <option value="">-- Select --</option>
+          <option value="GS">Grub Screw (XS-GS)</option>
+          <option value="SCR">Screw (XS-SCR)</option>
+          <option value="BRG">Bearing (XS-BRG)</option>
+          <option value="SPR">Spring (XS-SPR)</option>
+          <option value="WSH">Washer (XS-WSH)</option>
+          <option value="PIN">Pin / Roll Pin (XS-PIN)</option>
+          <option value="BLT">Bolt (XS-BLT)</option>
+          <option value="NUT">Nut (XS-NUT)</option>
+          <option value="GEN">General (XS-GEN)</option>
+        </select>
+      </div>
+      <div class="field"><label>Material</label>
+        <select id="fMaterial" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <option value="">-- Select --</option>
+          <optgroup label="Steel">
+            <option value="SS">Stainless Steel (SS)</option>
+            <option value="ST">Steel (ST)</option>
+            <option value="BK">Black Oxide (BK)</option>
+            <option value="ZP">Zinc Plated (ZP)</option>
+            <option value="HT">High Tensile (HT)</option>
+          </optgroup>
+          <optgroup label="Bearing / Bushing">
+            <option value="BRZ">Sintered Bronze (BRZ)</option>
+            <option value="DU">DU Bush - Steel/Bronze/PTFE (DU)</option>
+            <option value="PTFE">PTFE / Dry Lube (PTFE)</option>
+            <option value="NBR">Rubber / NBR (NBR)</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="AL">Aluminium (AL)</option>
+            <option value="NYL">Nylon / Plastic (NYL)</option>
+            <option value="CU">Copper / Brass (CU)</option>
+            <option value="MX">Mixed / Unknown (MX)</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Unit of Measure</label>
+        <select id="fUom" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <option value="">-- Select --</option>
+          <option value="EA">Each (EA)</option>
+          <option value="PR">Pair (PR)</option>
+          <option value="SET">Set (SET)</option>
+          <option value="PKT">Packet (PKT)</option>
+          <option value="M">Metre (M)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Diagram Refs (section:ref/page)</label><input id="fDiagramRefs" placeholder="e.g. C2:1/p27, C10:1/p35 (section:ref/pdfpage)"></div>
+    <div class="field"><label>Notes</label><input id="fNotes" placeholder="Common faults, tips..."></div>
+    <div class="section-label" style="margin-top:14px">Stock and Location</div>
+    <div class="field"><label>Storage Location</label><input id="fLoc" placeholder="e.g. Drawer 1, Left section"></div>
+    <div class="field-row">
+      <div class="field"><label>Qty on Hand</label><input id="fQty" type="number" value="0" min="0"></div>
+      <div class="field"><label>Reorder When Below</label><input id="fThreshold" type="number" value="1" min="0"></div>
+    </div>
+    <div class="section-label" style="margin-top:14px">Pricing</div>
+    <div class="field-row">
+      <div class="field"><label>Cost Price ($)</label><input id="fCost" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="field"><label>Sell Price ($)</label><input id="fSell" type="number" step="0.01" min="0" placeholder="0.00"></div>
+    </div>
+    <div class="section-label" style="margin-top:14px">MYOB Accounts</div>
+    <div class="field"><label>Income Account</label><input id="fMyobIncome" placeholder="e.g. 4-1000"></div>
+    <div class="field"><label>Asset Account</label><input id="fMyobAsset" placeholder="e.g. 1-1400"></div>
+    <div class="field"><label>COGS Account</label><input id="fMyobCogs" placeholder="e.g. 5-1000"></div>
+    <button id="autoGenBtn" onclick="autoGenPartNo()" style="display:none;width:100%;padding:10px;background:#1e3048;color:#f59e0b;border:1px solid #f59e0b;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px;margin-bottom:8px">⚡ Auto-Generate Part Number</button>
+    <button class="btn-save" id="btnSave" onclick="savePart()">Save Part</button>
+    <button class="btn-delete" id="btnDeletePart" onclick="deletePart()" style="display:none">Delete This Part</button>
+  </div>
+</div>
+
+<!-- Add Machine Modal -->
+<div class="overlay" id="machineOverlay" onclick="if(event.target===this)closeMachineModal()">
+  <div class="modal green">
+    <div class="modal-header">
+      <div class="modal-title">+ New Machine</div>
+      <button class="modal-close" onclick="closeMachineModal()">x</button>
+    </div>
+    <div class="section-label">Machine Details</div>
+    <div class="field">
+      <label>Machine Name / Model *</label>
+      <input id="mName" placeholder="e.g. Titan T-900, CHT 460, BXT3-16">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <input id="mDesc" placeholder="e.g. Battery powered strapping tool">
+    </div>
+    <button class="btn-save green" id="btnSaveMachine" onclick="saveMachine()">Create Machine and Start Adding Parts</button>
+    <button class="btn-delete" id="btnDeleteMachine" onclick="deleteMachine()" style="display:none">Delete This Machine and All Its Parts</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const BASE = 'https://stsjbqaqisxcqoklwdzb.supabase.co/rest/v1'
+const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0c2picWFxaXN4Y3Fva2x3ZHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2Njk0MzAsImV4cCI6MjA5MTI0NTQzMH0.B5dR-TnRn_awF3opKSroqVJk46Okypr2wE-ZoNsSn5Q'
+const H = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
+
+let machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = []
+
+async function db(method, path, body) {
+  const r = await fetch(BASE + '/' + path, { method, headers: H, body: body ? JSON.stringify(body) : undefined })
+  if (!r.ok) throw new Error(await r.text())
+  if (method === 'DELETE') return true
+  const t = await r.text(); return t ? JSON.parse(t) : []
+}
+
+async function init() {
+  try {
+    machines = await db('GET', 'machines?select=*&order=name.asc')
+    renderTabs()
+    await loadAllParts()
+    if (machines.length) await selectMachine(machines[0])
+    else document.getElementById('partsList').innerHTML = '<div class="center"><div class="icon">+</div><div>No machines yet. Click + Machine to get started.</div></div>'
+  } catch(e) {
+    document.getElementById('partsList').innerHTML = '<div class="center"><div class="icon">!</div><div style="color:#ef4444">Cannot connect — check internet connection</div></div>'
+  }
+}
+
+async function loadAllParts() {
+  try {
+    const data = await db('GET', 'parts?select=*,stock(*)&order=key_no.asc')
+    allParts = data.map(function(p) {
+      var m = machines.find(function(m){ return m.id === p.machine_id })
+      p.machineName = m ? m.name : 'Unknown'
+      return p
+    })
+  } catch(e) { allParts = [] }
+}
+
+function renderTabs() {
+  document.getElementById('machineTabs').innerHTML =
+    machines.map(function(m) {
+      var active = selectedMachine && selectedMachine.id === m.id
+      var isConsumables = m.is_consumables
+      var tabStyle = isConsumables ? ' style="border-color:#f59e0b;color:#f59e0b"' : ''
+      var activeStyle = isConsumables && active ? ' style="background:#f59e0b;border-color:#f59e0b;color:#0f1923"' : ''
+      var label = isConsumables ? '⚙ ' + m.name : m.name
+      return '<button class="tab' + (active ? ' active' : '') + '"' + (active && isConsumables ? activeStyle : (!active && isConsumables ? tabStyle : '')) + ' onclick="selectMachine(' + JSON.stringify(m).replace(/"/g, '&quot;') + ')">' + label + '</button>' +
+        (active ? '<button class="tab-del" onclick="openDeleteMachineModal()" title="Delete machine">x</button>' : '')
+    }).join('') +
+    '<button class="tab-add" onclick="openMachineModal()">+ Machine</button>'
+}
+
+async function selectMachine(m) {
+  selectedMachine = m; renderTabs(); renderDocsBar()
+  document.getElementById('partsList').innerHTML = '<div class="center"><span class="spinner"></span> Loading parts...</div>'
+  try {
+    parts = await db('GET', 'parts?machine_id=eq.' + m.id + '&select=*,stock(*)&order=key_no.asc')
+    selectedMachine = machines.find(function(x){ return x.id === m.id }) || m
+    renderParts()
+  } catch(e) { showToast('Failed to load parts', 'error') }
+}
+
+function getStatus(p) {
+  const s = p.stock && p.stock[0]
+  if (!s) return 'unset'
+  if (s.quantity === 0) return 'empty'
+  if (s.quantity <= (s.reorder_threshold || 1)) return 'low'
+  return 'ok'
+}
+
+function renderDocsBar() {
+  var bar = document.getElementById('docsBar')
+  if (!selectedMachine || !selectedMachine.diagram_url) { bar.classList.remove('show'); return }
+  bar.classList.add('show')
+  var html = '<span class="docs-label">Docs:</span>'
+  html += '<a class="doc-btn primary" href="' + selectedMachine.diagram_url + '" target="_blank">📄 Main Manual</a>'
+  if (selectedMachine.additional_docs) {
+    try {
+      var docs = JSON.parse(selectedMachine.additional_docs)
+      docs.forEach(function(d) {
+        html += '<a class="doc-btn" href="' + d.url + '" target="_blank">📄 ' + d.name + '</a>'
+      })
+    } catch(e) {}
+  }
+  bar.innerHTML = html
+}
+
+function renderParts() {
+  const q = document.getElementById('searchBox').value.toLowerCase()
+  const isGlobal = q.length > 0
+  const pool = isGlobal ? allParts : parts
+  const f = pool.filter(function(p) {
+    return p.key_no.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      ((p.stock && p.stock[0] && p.stock[0].location) || '').toLowerCase().includes(q) ||
+      (p.machineName || '').toLowerCase().includes(q) ||
+      (p.alt_part_no || '').toLowerCase().includes(q)
+  })
+  const low = parts.filter(function(p) { const s = p.stock && p.stock[0]; return s && s.quantity <= (s.reorder_threshold || 1) && s.quantity >= 0 }).length
+  document.getElementById('hSub').textContent = isGlobal
+    ? 'Global search — ' + f.length + ' result' + (f.length !== 1 ? 's' : '') + ' across all machines'
+    : (selectedMachine ? selectedMachine.name : '') + ' — ' + parts.length + ' parts'
+  document.getElementById('lowBadge').innerHTML = (!isGlobal && low > 0) ? '<div class="badge-low">' + low + ' LOW</div>' : ''
+  document.getElementById('statsBar').innerHTML = isGlobal
+    ? '<div class="chip" style="border-color:#f59e0b;color:#f59e0b">Searching all machines</div>'
+    : '<div class="chip"><strong>' + parts.length + '</strong> parts</div>' +
+      '<div class="chip"><strong>' + parts.filter(function(p){ return p.stock && p.stock[0] }).length + '</strong> with stock</div>' +
+      (low > 0 ? '<div class="chip warn"><strong>' + low + '</strong> need reorder</div>' : '')
+  if (!f.length) {
+    document.getElementById('partsList').innerHTML = '<div class="center"><div class="icon">' + (q ? 'search' : 'box') + '</div><div>' + (q ? 'No parts match across any machine' : 'No parts yet — click Add Part') + '</div></div>'
+    return
+  }
+  const qClasses = { ok:'qty-ok', low:'qty-low', empty:'qty-empty', unset:'qty-unset' }
+  document.getElementById('partsList').innerHTML = f.map(function(p) {
+    const s = p.stock && p.stock[0], status = getStatus(p)
+    const qty = s ? s.quantity : null
+    const inQueue = labelQueue.some(function(x){ return x.id === p.id })
+    const machineBadge = isGlobal && p.machineName ? '<span class="part-ref" style="background:#0a2a1a;color:#10b981;border:1px solid #10b981">' + p.machineName + '</span>' : ''
+    return '<div class="part-card ' + status + '">' +
+      '<div style="flex:1;min-width:0;cursor:pointer" onclick="openEditModal(\'' + p.id + '\')">' +
+        '<div class="part-keyno">' + p.key_no + '</div>' +
+        '<div class="part-desc" title="' + p.description + '">' + p.description + '</div>' +
+        '<div class="part-meta">' +
+          machineBadge +
+          (p.spec ? '<span class="part-ref" style="background:#1a1a2a;color:#818cf8">' + p.spec + '</span>' : '') +
+          (p.alt_part_no ? '<span class="part-ref" style="background:#2a1a1a;color:#f59e0b">Alt: ' + p.alt_part_no + '</span>' : '') +
+          (p.category ? '<span class="part-ref" style="background:#2a1a2a;color:#c084fc">XS-' + p.category + '</span>' : '') +
+          (p.material ? '<span class="part-ref" style="background:#1a2a2a;color:#22d3ee">' + p.material + '</span>' : '') +
+          (p.uom ? '<span class="part-ref" style="background:#1a2a1a;color:#86efac">' + p.uom + '</span>' : '') +
+
+          (p.assembly_section ? '<span class="part-ref" style="background:#1a2a3a;color:#64b5c8">' + p.assembly_section + '</span>' : '') +
+          (p.diagram_refs ? '<span class="part-ref" style="background:#1a1a3a;color:#a78bfa">Refs: ' + p.diagram_refs + '</span>' : (p.diagram_ref ? '<span class="part-ref">Ref ' + p.diagram_ref + '</span>' : '')) +
+          '<span class="part-loc">📍 ' + ((s && s.location) || 'No location set') + '</span>' +
+          (p.notes ? '<span class="part-loc"><em>' + p.notes + '</em></span>' : '') +
+          (p.sell_price ? '<span class="part-ref" style="background:#0a2a1a;color:#10b981">Sell $' + parseFloat(p.sell_price).toFixed(2) + '</span>' : '') +
+          (p.cost_price ? '<span class="part-ref" style="background:#1a1a2a;color:#6080c0">Cost $' + parseFloat(p.cost_price).toFixed(2) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="action-btns">' +
+        '<div class="qty-controls">' +
+          '<button class="qty-btn" onclick="updateQty(\'' + p.id + '\',-1)">-</button>' +
+          '<span class="qty-display ' + (qClasses[status] || 'qty-unset') + '">' + (qty !== null ? qty : '-') + '</span>' +
+          '<button class="qty-btn" onclick="updateQty(\'' + p.id + '\',1)">+</button>' +
+        '</div>' +
+        '<button class="icon-btn lbl" onclick="queueLabel(\'' + p.id + '\')" title="Label"' + (inQueue ? ' style="border-color:#a78bfa;color:#a78bfa;background:#1a1030"' : '') + '>🖨</button>' +
+        '<button class="icon-btn" onclick="openEditModal(\'' + p.id + '\')" title="Edit">✏</button>' +
+      '</div>' +
+    '</div>'
+  }).join('')
+}
+
+async function updateQty(partId, delta) {
+  var p = allParts.find(function(x){ return x.id === partId })
+  if (!p) p = parts.find(function(x){ return x.id === partId })
+  if (!p) return
+  const s = p.stock && p.stock[0]
+  const newQty = Math.max(0, ((s && s.quantity) || 0) + delta)
+  try {
+    if (s && s.id) {
+      await db('PATCH', 'stock?id=eq.' + s.id, { quantity: newQty, updated_at: new Date().toISOString() })
+      s.quantity = newQty
+    } else {
+      const res = await db('POST', 'stock', { part_id: partId, quantity: newQty, location: '', reorder_threshold: 1 })
+      p.stock = [res[0]]
+    }
+    renderParts()
+  } catch(e) { showToast('Update failed', 'error') }
+}
+
+function openMachineModal() {
+  document.getElementById('mName').value = ''
+  document.getElementById('mDesc').value = ''
+  document.getElementById('btnSaveMachine').style.display = 'block'
+  document.getElementById('btnSaveMachine').textContent = 'Create Machine and Start Adding Parts'
+  document.getElementById('btnDeleteMachine').style.display = 'none'
+  document.getElementById('machineOverlay').classList.add('show')
+  setTimeout(function(){ document.getElementById('mName').focus() }, 100)
+}
+function closeMachineModal() { document.getElementById('machineOverlay').classList.remove('show') }
+
+async function saveMachine() {
+  const name = document.getElementById('mName').value.trim()
+  if (!name) { showToast('Machine name is required', 'error'); return }
+  const btn = document.getElementById('btnSaveMachine')
+  btn.disabled = true; btn.textContent = 'Creating...'
+  try {
+    const res = await db('POST', 'machines', { name: name, description: document.getElementById('mDesc').value.trim() || null })
+    const newMachine = res[0]
+    machines.push(newMachine)
+    machines.sort(function(a,b){ return a.name.localeCompare(b.name) })
+    closeMachineModal()
+    showToast(name + ' created')
+    await selectMachine(newMachine)
+  } catch(e) { showToast('Failed: ' + e.message, 'error') }
+  finally { btn.disabled = false; btn.textContent = 'Create Machine and Start Adding Parts' }
+}
+
+function makeLabelData(partId) {
+  const p = parts.find(function(x){ return x.id === partId }); if (!p) return null
+  return { id: p.id, machine: selectedMachine ? selectedMachine.name : '', keyno: p.key_no, description: p.description, location: (p.stock && p.stock[0] && p.stock[0].location) || '', qrText: 'XPAK|' + p.key_no + '|' + p.description + '|' + (selectedMachine ? selectedMachine.name : '') }
+}
+
+function queueLabel(partId) {
+  const d = makeLabelData(partId); if (!d) return
+  if (labelQueue.some(function(x){ return x.id === d.id })) { showToast('Already in queue', 'error'); return }
+  labelQueue.push(d); updateLabelPanel(); renderParts()
+  showToast(d.keyno + ' added to queue')
+}
+
+function queueAllVisible() {
+  const q = document.getElementById('searchBox').value.toLowerCase()
+  const visible = parts.filter(function(p){ return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || ((p.stock && p.stock[0] && p.stock[0].location) || '').toLowerCase().includes(q) })
+  let added = 0
+  visible.forEach(function(p){ if (!labelQueue.some(function(x){ return x.id===p.id })) { const d = makeLabelData(p.id); if (d) { labelQueue.push(d); added++ } } })
+  updateLabelPanel(); renderParts()
+  showToast(added + ' labels queued')
+}
+
+function removeFromQueue(partId) { labelQueue = labelQueue.filter(function(x){ return x.id !== partId }); updateLabelPanel(); renderParts() }
+function clearQueue() { labelQueue = []; updateLabelPanel(); renderParts() }
+
+function makeLabelInner(d, prefix, qSize) {
+  return '<div class="' + prefix + '-text">' +
+    '<div class="' + prefix + '-partno-label">Part No.</div>' +
+    '<div class="' + prefix + '-partno">' + d.keyno + '</div>' +
+    '<div class="' + prefix + '-desc">' + d.description + '</div>' +
+    '<div class="' + prefix + '-machine">Machine Model &nbsp;' + d.machine + '</div>' +
+    (d.location ? '<div class="' + prefix + '-loc">S/L &nbsp;' + d.location + '</div>' : '') +
+  '</div>' +
+  '<div class="' + prefix + '-qr" id="' + prefix + 'qr-' + d.id + '"></div>'
+}
+
+function autoSizeLabelText(el) {
+  var text = el.textContent || el.innerText
+  if (text.length > 14) el.style.fontSize = '18px'
+  else if (text.length > 10) el.style.fontSize = '22px'
+  else el.style.fontSize = '27px'
+}
+
+function updateLabelPanel() {
+  const panel = document.getElementById('labelPanel')
+  if (!labelQueue.length) { panel.classList.remove('show'); return }
+  panel.classList.add('show')
+  document.getElementById('labelCount').textContent = labelQueue.length + ' label' + (labelQueue.length > 1 ? 's' : '') + ' ready'
+  document.getElementById('labelPreviews').innerHTML = labelQueue.map(function(d){
+    return '<div class="label-preview-card"><button class="lp-remove" onclick="removeFromQueue(\'' + d.id + '\')">x</button>' + makeLabelInner(d, 'lp', 76) + '</div>'
+  }).join('')
+  labelQueue.forEach(function(d){
+    const el = document.getElementById('lpqr-' + d.id)
+    if (el && el.children.length === 0) new QRCode(el, { text: d.qrText, width: 76, height: 76, correctLevel: QRCode.CorrectLevel.M })
+    var pn = document.getElementById('lpqr-' + d.id)
+    if (pn) {
+      var card = pn.closest('.label-preview-card')
+      if (card) { var partnoEl = card.querySelector('.lp-partno'); if (partnoEl) autoSizeLabelText(partnoEl) }
+    }
+  })
+}
+
+function doPrint() {
+  if (!labelQueue.length) return
+  const pa = document.getElementById('printArea')
+  pa.innerHTML = labelQueue.map(function(d){ return '<div class="print-label">' + makeLabelInner(d, 'pl', 102) + '</div>' }).join('')
+  labelQueue.forEach(function(d){
+    const el = document.getElementById('plqr-' + d.id)
+    if (el) new QRCode(el, { text: d.qrText, width: 102, height: 102, correctLevel: QRCode.CorrectLevel.M })
+  })
+  setTimeout(function(){ window.print() }, 450)
+}
+
+function openAddModal() {
+  editingPart = null
+  document.getElementById('modalTitle').textContent = '+ New Part'
+  ;['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fSell','fMyobIncome','fMyobAsset','fMyobCogs'].forEach(function(id){ document.getElementById(id).value = '' })
+  document.getElementById('fCategory').value = ''
+  document.getElementById('fMaterial').value = ''
+  document.getElementById('fUom').value = ''
+  document.getElementById('fQty').value = '0'; document.getElementById('fThreshold').value = '1'
+  document.getElementById('btnDeletePart').style.display = 'none'
+  document.getElementById('overlay').classList.add('show')
+  document.getElementById('autoGenBtn').style.display = 'block'
+  setTimeout(function(){ document.getElementById('fKeyno').focus() }, 100)
+}
+
+function autoGenPartNo() {
+  var cat = document.getElementById('fCategory').value
+  var mat = document.getElementById('fMaterial').value
+  var spec = document.getElementById('fSpec').value.trim().toUpperCase()
+  if (!cat) { showToast('Select a category first', 'error'); return }
+  if (!mat) { showToast('Select a material first', 'error'); return }
+  if (!spec) { showToast('Enter Size/Spec first (e.g. 10x14x10)', 'error'); return }
+  var clean = spec.replace(/[^A-Z0-9X.\/]/g, '')
+  var partNo = 'XS-' + cat + '-' + clean + '-' + mat
+  document.getElementById('fKeyno').value = partNo
+  showToast('Generated: ' + partNo)
+}
+
+function openEditModal(partId) {
+  const p = parts.find(function(x){ return x.id === partId }); if (!p) return
+  editingPart = p; const s = (p.stock && p.stock[0]) || {}
+  document.getElementById('modalTitle').textContent = 'Edit Part'
+  document.getElementById('fKeyno').value = p.key_no
+  document.getElementById('fRef').value = p.diagram_ref || ''
+  document.getElementById('fDesc').value = p.description
+  document.getElementById('fSpec').value = p.spec || ''
+  document.getElementById('fAltPartNo').value = p.alt_part_no || ''
+  document.getElementById('fCategory').value = p.category || ''
+  document.getElementById('fMaterial').value = p.material || ''
+  document.getElementById('fUom').value = p.uom || ''
+  document.getElementById('autoGenBtn').style.display = 'block'
+  document.getElementById('fSection').value = p.assembly_section || ''
+  document.getElementById('fDiagramRefs').value = p.diagram_refs || ''
+  document.getElementById('fCost').value = p.cost_price || ''
+  document.getElementById('fSell').value = p.sell_price || ''
+  document.getElementById('fMyobIncome').value = p.myob_account_income || ''
+  document.getElementById('fMyobAsset').value = p.myob_account_asset || ''
+  document.getElementById('fMyobCogs').value = p.myob_account_cogs || ''
+  document.getElementById('fDiagramRefs').value = p.diagram_refs || ''
+  document.getElementById('fNotes').value = p.notes || ''
+  document.getElementById('fLoc').value = s.location || ''
+  document.getElementById('fQty').value = s.quantity !== undefined ? s.quantity : 0
+  document.getElementById('fThreshold').value = s.reorder_threshold || 1
+  document.getElementById('btnDeletePart').style.display = 'block'
+  document.getElementById('overlay').classList.add('show')
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('show') }
+
+async function deletePart() {
+  if (!editingPart) return
+  if (!confirm('Delete ' + editingPart.key_no + ' - ' + editingPart.description + '?\n\nThis cannot be undone.')) return
+  try {
+    const s = editingPart.stock && editingPart.stock[0]
+    if (s && s.id) await db('DELETE', 'stock?id=eq.' + s.id)
+    await db('DELETE', 'parts?id=eq.' + editingPart.id)
+    closeModal()
+    showToast(editingPart.key_no + ' deleted')
+    await selectMachine(selectedMachine)
+    await loadAllParts()
+  } catch(e) { showToast('Delete failed: ' + e.message, 'error') }
+}
+
+function openDeleteMachineModal() {
+  if (!selectedMachine) return
+  document.getElementById('mName').value = selectedMachine.name
+  document.getElementById('mDesc').value = selectedMachine.description || ''
+  document.getElementById('btnSaveMachine').style.display = 'none'
+  document.getElementById('btnDeleteMachine').style.display = 'block'
+  document.getElementById('machineOverlay').classList.add('show')
+}
+
+async function deleteMachine() {
+  if (!selectedMachine) return
+  if (!confirm('Delete machine "' + selectedMachine.name + '" AND all its parts?\n\nThis cannot be undone.')) return
+  try {
+    await db('DELETE', 'parts?machine_id=eq.' + selectedMachine.id)
+    await db('DELETE', 'machines?id=eq.' + selectedMachine.id)
+    machines = machines.filter(function(m){ return m.id !== selectedMachine.id })
+    selectedMachine = null
+    closeMachineModal()
+    showToast('Machine deleted')
+    if (machines.length) { await selectMachine(machines[0]) }
+    else { renderTabs(); document.getElementById('partsList').innerHTML = '<div class="center"><div class="icon">+</div><div>No machines yet. Click + Machine to get started.</div></div>' }
+  } catch(e) { showToast('Delete failed: ' + e.message, 'error') }
+}
+
+async function savePart() {
+  const keyno = document.getElementById('fKeyno').value.trim()
+  const desc  = document.getElementById('fDesc').value.trim()
+  if (!keyno || !desc) { showToast('Part number and description required', 'error'); return }
+  const btn = document.getElementById('btnSave')
+  btn.disabled = true; btn.textContent = 'Saving...'
+  const stock = { location: document.getElementById('fLoc').value.trim(), quantity: parseInt(document.getElementById('fQty').value) || 0, reorder_threshold: parseInt(document.getElementById('fThreshold').value) || 1, updated_at: new Date().toISOString() }
+  try {
+    if (editingPart) {
+      await db('PATCH', 'parts?id=eq.' + editingPart.id, { key_no: keyno, description: desc, diagram_ref: document.getElementById('fRef').value || null, assembly_section: document.getElementById('fSection').value || null, diagram_refs: document.getElementById('fDiagramRefs').value || null, notes: document.getElementById('fNotes').value || null, spec: document.getElementById('fSpec').value || null, alt_part_no: document.getElementById('fAltPartNo').value || null, category: document.getElementById('fCategory').value || null, material: document.getElementById('fMaterial').value || null, uom: document.getElementById('fUom').value || null, cost_price: parseFloat(document.getElementById('fCost').value) || null, sell_price: parseFloat(document.getElementById('fSell').value) || null, myob_account_income: document.getElementById('fMyobIncome').value || null, myob_account_asset: document.getElementById('fMyobAsset').value || null, myob_account_cogs: document.getElementById('fMyobCogs').value || null })
+      const s = editingPart.stock && editingPart.stock[0]
+      if (s && s.id) await db('PATCH', 'stock?id=eq.' + s.id, stock)
+      else await db('POST', 'stock', Object.assign({ part_id: editingPart.id }, stock))
+      showToast('Part updated')
+    } else {
+      const res = await db('POST', 'parts', { machine_id: selectedMachine.id, key_no: keyno, description: desc, diagram_ref: document.getElementById('fRef').value || null, assembly_section: document.getElementById('fSection').value || null, diagram_refs: document.getElementById('fDiagramRefs').value || null, notes: document.getElementById('fNotes').value || null, spec: document.getElementById('fSpec').value || null, alt_part_no: document.getElementById('fAltPartNo').value || null, category: document.getElementById('fCategory').value || null, material: document.getElementById('fMaterial').value || null, uom: document.getElementById('fUom').value || null, cost_price: parseFloat(document.getElementById('fCost').value) || null, sell_price: parseFloat(document.getElementById('fSell').value) || null, myob_account_income: document.getElementById('fMyobIncome').value || null, myob_account_asset: document.getElementById('fMyobAsset').value || null, myob_account_cogs: document.getElementById('fMyobCogs').value || null })
+      await db('POST', 'stock', Object.assign({ part_id: res[0].id }, stock))
+      showToast('Part added')
+    }
+    closeModal(); await selectMachine(selectedMachine); await loadAllParts()
+  } catch(e) { showToast('Save failed: ' + e.message, 'error') }
+  finally { btn.disabled = false; btn.textContent = 'Save Part' }
+}
+
+function showToast(msg, type) {
+  type = type || 'success'
+  const t = document.getElementById('toast')
+  t.textContent = msg; t.className = 'toast show ' + type
+  setTimeout(function(){ t.className = 'toast' }, 2500)
+}
+
+init()
+</script>
+</body>
+</html>
