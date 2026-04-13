@@ -106,16 +106,42 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; backgr
 @media print {
   body > *:not(#printArea) { display: none !important; }
   #printArea { display: block !important; }
-  .print-label { width: 89mm; height: 36mm; page-break-after: always; page-break-inside: avoid; display: flex; align-items: stretch; font-family: Arial, sans-serif; background: white; color: black; overflow: hidden; }
-  .pl-text { flex: 1; padding: 2mm 1.5mm 2mm 3mm; display: flex; flex-direction: column; justify-content: center; gap: 0.3mm; overflow: hidden; border-right: 0.3mm solid #ccc; }
+  .print-label {
+    width: 87mm;
+    height: 32mm;
+    page-break-after: always;
+    page-break-inside: avoid;
+    display: flex;
+    align-items: stretch;
+    font-family: Arial, sans-serif;
+    background: white;
+    color: black;
+    overflow: hidden;
+  }
+  .pl-text {
+    flex: 1;
+    padding: 1.5mm 1.5mm 1.5mm 3mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border-right: 0.3mm solid #ccc;
+  }
   .pl-partno-label { font-size: 9pt; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
   .pl-partno { font-size: 22pt; font-weight: 900; font-family: 'Courier New', monospace; color: #000; line-height: 1.05; word-break: break-all; }
-  .pl-desc { font-size: 14pt; font-weight: 700; color: #111; line-height: 1.15; margin-top: 0.3mm; }
-  .pl-machine { font-size: 10pt; color: #333; margin-top: 0.8mm; }
-  .pl-loc { font-size: 10pt; color: #333; }
-  .pl-qr { flex-shrink: 0; width: 30mm; display: flex; align-items: center; justify-content: center; padding: 1.5mm; }
-  .pl-qr canvas, .pl-qr img { width: 27mm !important; height: 27mm !important; }
-  @page { size: 89mm 36mm; margin: 0; }
+  .pl-desc { font-size: 13pt; font-weight: 700; color: #111; line-height: 1.15; }
+  .pl-machine { font-size: 9pt; color: #333; }
+  .pl-loc { font-size: 9pt; color: #333; }
+  .pl-qr {
+    flex-shrink: 0;
+    width: 28mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1mm;
+  }
+  .pl-qr canvas, .pl-qr img { width: 26mm !important; height: 26mm !important; }
+  @page { size: 89mm 36mm; margin: 2mm 1mm; }
 }
 #printArea { display: none; }
 </style>
@@ -400,7 +426,6 @@ function renderParts() {
           (p.category ? '<span class="part-ref" style="background:#2a1a2a;color:#c084fc">XS-' + p.category + '</span>' : '') +
           (p.material ? '<span class="part-ref" style="background:#1a2a2a;color:#22d3ee">' + p.material + '</span>' : '') +
           (p.uom ? '<span class="part-ref" style="background:#1a2a1a;color:#86efac">' + p.uom + '</span>' : '') +
-
           (p.assembly_section ? '<span class="part-ref" style="background:#1a2a3a;color:#64b5c8">' + p.assembly_section + '</span>' : '') +
           (p.diagram_refs ? '<span class="part-ref" style="background:#1a1a3a;color:#a78bfa">Refs: ' + p.diagram_refs + '</span>' : (p.diagram_ref ? '<span class="part-ref">Ref ' + p.diagram_ref + '</span>' : '')) +
           '<span class="part-loc">📍 ' + ((s && s.location) || 'No location set') + '</span>' +
@@ -587,7 +612,6 @@ function openEditModal(partId) {
   document.getElementById('fMyobIncome').value = p.myob_account_income || ''
   document.getElementById('fMyobAsset').value = p.myob_account_asset || ''
   document.getElementById('fMyobCogs').value = p.myob_account_cogs || ''
-  document.getElementById('fDiagramRefs').value = p.diagram_refs || ''
   document.getElementById('fNotes').value = p.notes || ''
   document.getElementById('fLoc').value = s.location || ''
   document.getElementById('fQty').value = s.quantity !== undefined ? s.quantity : 0
