@@ -6,157 +6,157 @@
 <title>X-Pak Service Parts</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; background: #0f1923; color: #e2e8f0; }
-.header { background: linear-gradient(135deg,#0f1923,#1a2f4a); padding: 13px 16px; border-bottom: 2px solid #00c8e0; display: flex; justify-content: space-between; align-items: center; }
-.header-title { font-size: 18px; font-weight: 700; color: #fff; }
-.header-sub { font-size: 11px; color: #64b5c8; margin-top: 2px; }
-.badge-low { background: #ef4444; color: white; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 700; }
-.machine-tabs { background: #141f2d; padding: 10px 14px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid #1e3048; align-items: center; }
-.tab { padding: 6px 16px; border-radius: 20px; border: 1px solid #2a4060; background: transparent; color: #8aa8c0; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.tab.active, .tab:hover { background: #00c8e0; border-color: #00c8e0; color: #0f1923; }
-.tab.jobs-tab { border-color: #f97316; color: #f97316; }
-.tab.jobs-tab:hover, .tab.jobs-tab.active { background: #f97316; border-color: #f97316; color: #0f1923; }
-.tab-add { padding: 6px 12px; border-radius: 20px; border: 1px dashed #3a6050; background: transparent; color: #3a9070; cursor: pointer; font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
-.tab-add:hover { border-color: #10b981; color: #10b981; }
-.tab-del { padding: 4px 7px; border-radius: 20px; border: 1px solid #ef4444; background: transparent; color: #ef4444; cursor: pointer; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-left: -6px; }
-.tab-del:hover { background: #ef4444; color: white; }
-.toolbar { padding: 12px 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.search-input { flex: 1; min-width: 150px; padding: 9px 12px; border-radius: 8px; border: 1px solid #2a4060; background: #141f2d; color: #e2e8f0; font-size: 13px; outline: none; }
-.search-input:focus { border-color: #00c8e0; }
-.search-input::placeholder { color: #4a6080; }
-.btn-add { background: #00c8e0; color: #0f1923; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-.btn-add.orange { background: #f97316; }
-.btn-print-all { background: #1e3048; color: #a78bfa; border: 1px solid #a78bfa; border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.view-toggle { display: flex; border: 1px solid #2a4060; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
-.view-btn { padding: 8px 12px; background: transparent; color: #8aa8c0; border: none; cursor: pointer; font-size: 13px; }
-.view-btn.active { background: #1e3048; color: #fff; }
-.stats-bar { display: flex; gap: 8px; padding: 0 14px 12px; flex-wrap: wrap; }
-.chip { background: #141f2d; border: 1px solid #1e3048; border-radius: 8px; padding: 5px 12px; font-size: 11px; color: #64b5c8; }
-.chip strong { color: #fff; }
-.chip.warn { border-color: #f59e0b; color: #f59e0b; }
-.parts-list { padding: 0 14px 20px; }
-.part-card { background: #141f2d; border-radius: 10px; padding: 11px 13px; margin-bottom: 7px; border-left: 3px solid #3a5070; display: flex; align-items: center; gap: 10px; }
-.part-card.ok { border-left-color: #10b981; }
-.part-card.low { border-left-color: #f59e0b; }
-.part-card.empty { border-left-color: #ef4444; }
-.part-keyno { font-size: 13px; font-weight: 700; color: #00c8e0; font-family: 'Courier New', monospace; }
-.part-desc { font-size: 12px; color: #c8d8e8; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
-.part-meta { display: flex; gap: 8px; margin-top: 4px; align-items: center; flex-wrap: wrap; }
-.part-ref { font-size: 10px; background: #1e3048; border-radius: 4px; padding: 1px 5px; color: #5a8090; }
-.part-loc { font-size: 10px; color: #4a7090; }
-.action-btns { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.qty-controls { display: flex; align-items: center; gap: 4px; }
-.qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #2a4060; background: #0f1923; color: #e2e8f0; cursor: pointer; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
-.qty-btn:hover { border-color: #00c8e0; color: #00c8e0; }
-.qty-display { min-width: 30px; text-align: center; font-size: 16px; font-weight: 700; }
-.qty-ok{color:#10b981;}.qty-low{color:#f59e0b;}.qty-empty{color:#ef4444;}.qty-unset{color:#4a6080;}
-.icon-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #2a4060; background: #0f1923; cursor: pointer; font-size: 13px; color: #8aa8c0; display: flex; align-items: center; justify-content: center; }
-.icon-btn:hover { border-color: #00c8e0; color: #00c8e0; }
-.icon-btn.lbl:hover { border-color: #a78bfa; color: #a78bfa; }
-.jobs-filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-.filter-btn { padding: 5px 14px; border-radius: 16px; border: 1px solid #2a4060; background: transparent; color: #8aa8c0; cursor: pointer; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.filter-btn.active { background: #1e3048; border-color: #64b5c8; color: #fff; }
-.job-card { background: #141f2d; border-radius: 10px; padding: 13px; margin-bottom: 8px; border-left: 4px solid #3a5070; cursor: pointer; transition: background 0.1s; }
-.job-card:hover { background: #1a2a3d; }
-.job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
-.job-number { font-size: 11px; font-weight: 700; color: #00c8e0; font-family: 'Courier New', monospace; }
-.job-status-badge { font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 9px; white-space: nowrap; flex-shrink: 0; }
-.job-customer { font-size: 15px; font-weight: 700; color: #e2e8f0; }
-.job-meta { font-size: 11px; color: #5a8090; margin-top: 5px; display: flex; flex-wrap: wrap; gap: 10px; }
-.job-fault { font-size: 11px; color: #8aa8c0; margin-top: 5px; font-style: italic; }
-.job-folder-tile { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; background: #1e3048; border: 1px solid #2a4060; border-radius: 6px; padding: 4px 10px; font-size: 11px; color: #64b5c8; text-decoration: none; }
-.job-folder-tile:hover { border-color: #00c8e0; color: #00c8e0; }
-.board-wrap { overflow-x: auto; padding: 0 14px 20px; }
-.board { display: flex; gap: 12px; min-width: max-content; align-items: flex-start; }
-.board-col { background: #0d1a28; border-radius: 10px; width: 200px; flex-shrink: 0; overflow: hidden; }
-.board-col-header { padding: 9px 11px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3048; }
-.board-col-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-.board-col-count { font-size: 11px; font-weight: 700; background: #1e3048; border-radius: 10px; padding: 1px 7px; color: #8aa8c0; }
-.board-col-body { padding: 7px; display: flex; flex-direction: column; gap: 6px; min-height: 50px; }
-.board-card { background: #141f2d; border-radius: 7px; padding: 8px 9px; cursor: pointer; border-left: 3px solid transparent; }
-.board-card:hover { background: #1a2a3d; }
-.board-card-num { font-size: 10px; font-weight: 700; color: #64b5c8; font-family: 'Courier New', monospace; margin-bottom: 2px; }
-.board-card-customer { font-size: 12px; font-weight: 700; color: #e2e8f0; line-height: 1.3; }
-.board-card-meta { font-size: 10px; color: #4a6080; margin-top: 3px; }
-.center { text-align: center; padding: 50px 20px; color: #3a5070; }
-.center .icon { font-size: 36px; margin-bottom: 12px; }
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; display: none; align-items: flex-end; }
-.overlay.show { display: flex; }
-.modal { background: #141f2d; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; max-height: 90vh; overflow-y: auto; border-top: 2px solid #00c8e0; }
-.modal.green { border-top-color: #10b981; }
-.modal.orange { border-top-color: #f97316; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.modal-title { font-size: 16px; font-weight: 700; color: #fff; }
-.modal-close { background: none; border: none; color: #4a6080; font-size: 22px; cursor: pointer; padding: 4px 8px; }
-.section-label { font-size: 10px; font-weight: 700; color: #3a5070; text-transform: uppercase; letter-spacing: 1px; padding: 8px 0 5px; border-bottom: 1px solid #1e3048; margin-bottom: 12px; margin-top: 4px; }
-.field { margin-bottom: 12px; }
-.field label { font-size: 11px; font-weight: 600; color: #64b5c8; display: block; margin-bottom: 5px; text-transform: uppercase; }
-.field input, .field select, .field textarea { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #2a4060; background: #0f1923; color: #e2e8f0; font-size: 13px; outline: none; font-family: inherit; }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: #00c8e0; }
-.field input::placeholder, .field textarea::placeholder { color: #3a5070; }
-.field textarea { resize: vertical; min-height: 65px; }
-.field-row { display: flex; gap: 10px; }
-.field-row .field { flex: 1; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
-.form-grid .field { margin-bottom: 12px; }
-.form-grid .field.full { grid-column: 1 / -1; }
-.field-check { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.field-check label { font-size: 13px; color: #e2e8f0; cursor: pointer; }
-.field-check input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: #f97316; }
-.btn-save { width: 100%; padding: 13px; background: #00c8e0; color: #0f1923; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 6px; }
-.btn-save:disabled { background: #2a4060; color: #4a6080; cursor: not-allowed; }
-.btn-save.green { background: #10b981; }
-.btn-save.orange { background: #f97316; }
-.btn-delete { width: 100%; padding: 11px; background: transparent; color: #ef4444; border: 1px solid #ef4444; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 8px; }
-.btn-delete:hover { background: #ef4444; color: white; }
-.label-panel { background: #0a1520; border-top: 2px solid #a78bfa; padding: 16px; display: none; }
-.label-panel.show { display: block; }
-.label-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.label-panel-title { font-size: 11px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 1px; }
-.label-count { font-size: 11px; color: #6a8090; margin-top: 3px; }
-.label-actions { display: flex; gap: 8px; }
-.btn-do-print { background: #a78bfa; color: white; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer; }
-.btn-clear { background: none; border: 1px solid #3a5070; color: #4a6080; border-radius: 8px; padding: 8px 12px; font-size: 12px; cursor: pointer; }
-.label-previews { display: flex; flex-wrap: wrap; gap: 14px; }
-.label-preview-card { background: white; color: black; border-radius: 4px; width: 267px; height: 108px; display: flex; align-items: stretch; font-family: Arial, sans-serif; box-shadow: 0 2px 12px rgba(0,0,0,0.5); overflow: hidden; flex-shrink: 0; position: relative; border: 1px solid #ddd; }
-.lp-remove { position: absolute; top: 3px; right: 88px; background: none; border: none; color: #bbb; font-size: 12px; cursor: pointer; z-index: 2; }
-.lp-remove:hover { color: #ef4444; }
-.lp-text { flex: 1; padding: 8px 6px 8px 10px; display: flex; flex-direction: column; justify-content: center; gap: 2px; overflow: hidden; border-right: 1px solid #e0e0e0; }
-.lp-partno-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; }
-.lp-partno { font-size: 27px; font-weight: 900; font-family: 'Courier New', monospace; color: #000; line-height: 1.05; word-break: break-all; }
-.lp-desc { font-size: 16px; font-weight: 700; color: #111; line-height: 1.2; margin-top: 1px; }
-.lp-machine { font-size: 12px; color: #444; margin-top: 3px; }
-.lp-loc { font-size: 12px; color: #444; }
-.lp-qr { flex-shrink: 0; width: 84px; display: flex; align-items: center; justify-content: center; padding: 4px; }
-.lp-qr canvas, .lp-qr img { width: 76px !important; height: 76px !important; }
-.docs-bar { background: #0d1f30; border-bottom: 1px solid #1e3048; padding: 8px 14px; display: none; flex-wrap: wrap; gap: 8px; align-items: center; }
-.docs-bar.show { display: flex; }
-.docs-label { font-size: 10px; font-weight: 700; color: #3a5070; text-transform: uppercase; letter-spacing: 1px; }
-.doc-btn { background: #141f2d; border: 1px solid #2a4060; border-radius: 8px; padding: 5px 12px; font-size: 12px; color: #64b5c8; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
-.doc-btn:hover { border-color: #00c8e0; color: #00c8e0; }
-.doc-btn.primary { border-color: #00c8e0; color: #00c8e0; }
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); border-radius: 8px; padding: 10px 22px; font-size: 13px; font-weight: 600; z-index: 200; display: none; white-space: nowrap; }
-.toast.show { display: block; }
-.toast.success { background: #10b981; color: white; }
-.toast.error { background: #ef4444; color: white; }
-.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #2a4060; border-top-color: #00c8e0; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@media print {
-  body > *:not(#printArea) { display: none !important; }
-  #printArea { display: block !important; }
-  .print-label { width: 87mm; height: 32mm; page-break-after: always; page-break-inside: avoid; display: flex; align-items: stretch; font-family: Arial, sans-serif; background: white; color: black; overflow: hidden; }
-  .pl-text { flex: 1; padding: 1.5mm 1.5mm 1.5mm 3mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border-right: 0.3mm solid #ccc; }
-  .pl-partno-label { font-size: 9pt; font-weight: 700; color: #666; text-transform: uppercase; }
-  .pl-partno { font-size: 22pt; font-weight: 900; font-family: 'Courier New', monospace; color: #000; line-height: 1.05; word-break: break-all; }
-  .pl-desc { font-size: 13pt; font-weight: 700; color: #111; line-height: 1.15; }
-  .pl-machine { font-size: 9pt; color: #333; }
-  .pl-loc { font-size: 9pt; color: #333; }
-  .pl-qr { flex-shrink: 0; width: 28mm; display: flex; align-items: center; justify-content: center; padding: 1mm; }
-  .pl-qr canvas, .pl-qr img { width: 26mm !important; height: 26mm !important; }
-  @page { size: 89mm 36mm; margin: 2mm 1mm; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f1923;color:#e2e8f0}
+.header{background:linear-gradient(135deg,#0f1923,#1a2f4a);padding:13px 16px;border-bottom:2px solid #00c8e0;display:flex;justify-content:space-between;align-items:center}
+.header-title{font-size:18px;font-weight:700;color:#fff}
+.header-sub{font-size:11px;color:#64b5c8;margin-top:2px}
+.badge-low{background:#ef4444;color:white;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700}
+.machine-tabs{background:#141f2d;padding:10px 14px;display:flex;gap:8px;overflow-x:auto;border-bottom:1px solid #1e3048;align-items:center}
+.tab{padding:6px 16px;border-radius:20px;border:1px solid #2a4060;background:transparent;color:#8aa8c0;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap}
+.tab.active,.tab:hover{background:#00c8e0;border-color:#00c8e0;color:#0f1923}
+.tab.jobs-tab{border-color:#f97316;color:#f97316}
+.tab.jobs-tab:hover,.tab.jobs-tab.active{background:#f97316;border-color:#f97316;color:#0f1923}
+.tab-add{padding:6px 12px;border-radius:20px;border:1px dashed #3a6050;background:transparent;color:#3a9070;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.tab-add:hover{border-color:#10b981;color:#10b981}
+.tab-del{padding:4px 7px;border-radius:20px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;margin-left:-6px}
+.tab-del:hover{background:#ef4444;color:white}
+.toolbar{padding:12px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.search-input{flex:1;min-width:150px;padding:9px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none}
+.search-input:focus{border-color:#00c8e0}
+.search-input::placeholder{color:#4a6080}
+.btn-add{background:#00c8e0;color:#0f1923;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-add.orange{background:#f97316}
+.btn-print-all{background:#1e3048;color:#a78bfa;border:1px solid #a78bfa;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.view-toggle{display:flex;border:1px solid #2a4060;border-radius:8px;overflow:hidden;flex-shrink:0}
+.view-btn{padding:8px 12px;background:transparent;color:#8aa8c0;border:none;cursor:pointer;font-size:13px}
+.view-btn.active{background:#1e3048;color:#fff}
+.stats-bar{display:flex;gap:8px;padding:0 14px 12px;flex-wrap:wrap}
+.chip{background:#141f2d;border:1px solid #1e3048;border-radius:8px;padding:5px 12px;font-size:11px;color:#64b5c8}
+.chip strong{color:#fff}
+.chip.warn{border-color:#f59e0b;color:#f59e0b}
+.parts-list{padding:0 14px 20px}
+.part-card{background:#141f2d;border-radius:10px;padding:11px 13px;margin-bottom:7px;border-left:3px solid #3a5070;display:flex;align-items:center;gap:10px}
+.part-card.ok{border-left-color:#10b981}
+.part-card.low{border-left-color:#f59e0b}
+.part-card.empty{border-left-color:#ef4444}
+.part-keyno{font-size:13px;font-weight:700;color:#00c8e0;font-family:'Courier New',monospace}
+.part-desc{font-size:12px;color:#c8d8e8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
+.part-meta{display:flex;gap:8px;margin-top:4px;align-items:center;flex-wrap:wrap}
+.part-ref{font-size:10px;background:#1e3048;border-radius:4px;padding:1px 5px;color:#5a8090}
+.part-loc{font-size:10px;color:#4a7090}
+.action-btns{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.qty-controls{display:flex;align-items:center;gap:4px}
+.qty-btn{width:28px;height:28px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;cursor:pointer;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.qty-btn:hover{border-color:#00c8e0;color:#00c8e0}
+.qty-display{min-width:30px;text-align:center;font-size:16px;font-weight:700}
+.qty-ok{color:#10b981}.qty-low{color:#f59e0b}.qty-empty{color:#ef4444}.qty-unset{color:#4a6080}
+.icon-btn{width:28px;height:28px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;cursor:pointer;font-size:13px;color:#8aa8c0;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{border-color:#00c8e0;color:#00c8e0}
+.icon-btn.lbl:hover{border-color:#a78bfa;color:#a78bfa}
+.jobs-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.filter-btn{padding:5px 14px;border-radius:16px;border:1px solid #2a4060;background:transparent;color:#8aa8c0;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap}
+.filter-btn.active{background:#1e3048;border-color:#64b5c8;color:#fff}
+.job-card{background:#141f2d;border-radius:10px;padding:13px;margin-bottom:8px;border-left:4px solid #3a5070;cursor:pointer;transition:background 0.1s}
+.job-card:hover{background:#1a2a3d}
+.job-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px}
+.job-number{font-size:11px;font-weight:700;color:#00c8e0;font-family:'Courier New',monospace}
+.job-status-badge{font-size:10px;font-weight:700;border-radius:10px;padding:2px 9px;white-space:nowrap;flex-shrink:0}
+.job-customer{font-size:15px;font-weight:700;color:#e2e8f0}
+.job-meta{font-size:11px;color:#5a8090;margin-top:5px;display:flex;flex-wrap:wrap;gap:10px}
+.job-fault{font-size:11px;color:#8aa8c0;margin-top:5px;font-style:italic}
+.job-folder-tile{display:inline-flex;align-items:center;gap:5px;margin-top:7px;background:#1e3048;border:1px solid #2a4060;border-radius:6px;padding:4px 10px;font-size:11px;color:#64b5c8;text-decoration:none}
+.job-folder-tile:hover{border-color:#00c8e0;color:#00c8e0}
+.board-wrap{overflow-x:auto;padding:0 14px 20px}
+.board{display:flex;gap:12px;min-width:max-content;align-items:flex-start}
+.board-col{background:#0d1a28;border-radius:10px;width:200px;flex-shrink:0;overflow:hidden}
+.board-col-header{padding:9px 11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e3048}
+.board-col-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.board-col-count{font-size:11px;font-weight:700;background:#1e3048;border-radius:10px;padding:1px 7px;color:#8aa8c0}
+.board-col-body{padding:7px;display:flex;flex-direction:column;gap:6px;min-height:50px}
+.board-card{background:#141f2d;border-radius:7px;padding:8px 9px;cursor:pointer;border-left:3px solid transparent}
+.board-card:hover{background:#1a2a3d}
+.board-card-num{font-size:10px;font-weight:700;color:#64b5c8;font-family:'Courier New',monospace;margin-bottom:2px}
+.board-card-customer{font-size:12px;font-weight:700;color:#e2e8f0;line-height:1.3}
+.board-card-meta{font-size:10px;color:#4a6080;margin-top:3px}
+.center{text-align:center;padding:50px 20px;color:#3a5070}
+.center .icon{font-size:36px;margin-bottom:12px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:none;align-items:flex-end}
+.overlay.show{display:flex}
+.modal{background:#141f2d;width:100%;border-radius:16px 16px 0 0;padding:20px;max-height:90vh;overflow-y:auto;border-top:2px solid #00c8e0}
+.modal.green{border-top-color:#10b981}
+.modal.orange{border-top-color:#f97316}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-title{font-size:16px;font-weight:700;color:#fff}
+.modal-close{background:none;border:none;color:#4a6080;font-size:22px;cursor:pointer;padding:4px 8px}
+.section-label{font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;padding:8px 0 5px;border-bottom:1px solid #1e3048;margin-bottom:12px;margin-top:4px}
+.field{margin-bottom:12px}
+.field label{font-size:11px;font-weight:600;color:#64b5c8;display:block;margin-bottom:5px;text-transform:uppercase}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#00c8e0}
+.field input::placeholder,.field textarea::placeholder{color:#3a5070}
+.field textarea{resize:vertical;min-height:65px}
+.field-row{display:flex;gap:10px}
+.field-row .field{flex:1}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.form-grid .field{margin-bottom:12px}
+.form-grid .field.full{grid-column:1 / -1}
+.field-check{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.field-check label{font-size:13px;color:#e2e8f0;cursor:pointer}
+.field-check input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:#f97316}
+.btn-save{width:100%;padding:13px;background:#00c8e0;color:#0f1923;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px}
+.btn-save:disabled{background:#2a4060;color:#4a6080;cursor:not-allowed}
+.btn-save.green{background:#10b981}
+.btn-save.orange{background:#f97316}
+.btn-delete{width:100%;padding:11px;background:transparent;color:#ef4444;border:1px solid #ef4444;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px}
+.btn-delete:hover{background:#ef4444;color:white}
+.label-panel{background:#0a1520;border-top:2px solid #a78bfa;padding:16px;display:none}
+.label-panel.show{display:block}
+.label-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.label-panel-title{font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px}
+.label-count{font-size:11px;color:#6a8090;margin-top:3px}
+.label-actions{display:flex;gap:8px}
+.btn-do-print{background:#a78bfa;color:white;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-clear{background:none;border:1px solid #3a5070;color:#4a6080;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer}
+.label-previews{display:flex;flex-wrap:wrap;gap:14px}
+.label-preview-card{background:white;color:black;border-radius:4px;width:267px;height:108px;display:flex;align-items:stretch;font-family:Arial,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,0.5);overflow:hidden;flex-shrink:0;position:relative;border:1px solid #ddd}
+.lp-remove{position:absolute;top:3px;right:88px;background:none;border:none;color:#bbb;font-size:12px;cursor:pointer;z-index:2}
+.lp-remove:hover{color:#ef4444}
+.lp-text{flex:1;padding:8px 6px 8px 10px;display:flex;flex-direction:column;justify-content:center;gap:2px;overflow:hidden;border-right:1px solid #e0e0e0}
+.lp-partno-label{font-size:11px;font-weight:700;color:#888;text-transform:uppercase}
+.lp-partno{font-size:27px;font-weight:900;font-family:'Courier New',monospace;color:#000;line-height:1.05;word-break:break-all}
+.lp-desc{font-size:16px;font-weight:700;color:#111;line-height:1.2;margin-top:1px}
+.lp-machine{font-size:12px;color:#444;margin-top:3px}
+.lp-loc{font-size:12px;color:#444}
+.lp-qr{flex-shrink:0;width:84px;display:flex;align-items:center;justify-content:center;padding:4px}
+.lp-qr canvas,.lp-qr img{width:76px !important;height:76px !important}
+.docs-bar{background:#0d1f30;border-bottom:1px solid #1e3048;padding:8px 14px;display:none;flex-wrap:wrap;gap:8px;align-items:center}
+.docs-bar.show{display:flex}
+.docs-label{font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px}
+.doc-btn{background:#141f2d;border:1px solid #2a4060;border-radius:8px;padding:5px 12px;font-size:12px;color:#64b5c8;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.doc-btn:hover{border-color:#00c8e0;color:#00c8e0}
+.doc-btn.primary{border-color:#00c8e0;color:#00c8e0}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);border-radius:8px;padding:10px 22px;font-size:13px;font-weight:600;z-index:200;display:none;white-space:nowrap}
+.toast.show{display:block}
+.toast.success{background:#10b981;color:white}
+.toast.error{background:#ef4444;color:white}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid #2a4060;border-top-color:#00c8e0;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media print{
+  body > *:not(#printArea){display:none !important}
+  #printArea{display:block !important}
+  .print-label{width:87mm;height:32mm;page-break-after:always;page-break-inside:avoid;display:flex;align-items:stretch;font-family:Arial,sans-serif;background:white;color:black;overflow:hidden}
+  .pl-text{flex:1;padding:1.5mm 1.5mm 1.5mm 3mm;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;border-right:0.3mm solid #ccc}
+  .pl-partno-label{font-size:9pt;font-weight:700;color:#666;text-transform:uppercase}
+  .pl-partno{font-size:22pt;font-weight:900;font-family:'Courier New',monospace;color:#000;line-height:1.05;word-break:break-all}
+  .pl-desc{font-size:13pt;font-weight:700;color:#111;line-height:1.15}
+  .pl-machine{font-size:9pt;color:#333}
+  .pl-loc{font-size:9pt;color:#333}
+  .pl-qr{flex-shrink:0;width:28mm;display:flex;align-items:center;justify-content:center;padding:1mm}
+  .pl-qr canvas,.pl-qr img{width:26mm !important;height:26mm !important}
+  @page{size:89mm 36mm;margin:2mm 1mm}
 }
-#printArea { display: none; }
+#printArea{display:none}
 </style>
 </head>
 <body>
@@ -181,7 +181,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; backgr
   </div>
   <button class="btn-add orange" onclick="openNewJobModal()">+ New Service Case</button>
 </div>
-<div id="jobsListSection" style="display:none; padding:0 14px 20px;">
+<div id="jobsListSection" style="display:none;padding:0 14px 20px">
   <div class="jobs-filter-bar">
     <button class="filter-btn active" onclick="setJobFilter('ALL',this)">All</button>
     <button class="filter-btn" onclick="setJobFilter('OPEN',this)">Open</button>
@@ -191,12 +191,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; backgr
   </div>
   <div id="jobsList"></div>
 </div>
-<div id="jobsBoardSection" style="display:none;">
+<div id="jobsBoardSection" style="display:none">
   <div class="board-wrap"><div class="board" id="boardCols"></div></div>
 </div>
 <div class="label-panel" id="labelPanel">
   <div class="label-panel-header">
-    <div><div class="label-panel-title">Label Queue — DYMO 99012</div><div class="label-count" id="labelCount"></div></div>
+    <div><div class="label-panel-title">Label Queue &#8212; DYMO 99012</div><div class="label-count" id="labelCount"></div></div>
     <div class="label-actions">
       <button class="btn-clear" onclick="clearQueue()">Clear All</button>
       <button class="btn-do-print" onclick="doPrint()">Print Now</button>
@@ -221,22 +221,10 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; backgr
     <div class="field"><label>Assembly Section</label><input id="fSection" placeholder="e.g. Tensioning Unit"></div>
     <div class="field-row">
       <div class="field"><label>Category</label>
-        <select id="fCategory">
-          <option value="">-- Select --</option>
-          <option value="GS">Grub Screw (XS-GS)</option><option value="SCR">Screw (XS-SCR)</option>
-          <option value="BRG">Bearing (XS-BRG)</option><option value="SPR">Spring (XS-SPR)</option>
-          <option value="WSH">Washer (XS-WSH)</option><option value="PIN">Pin / Roll Pin (XS-PIN)</option>
-          <option value="BLT">Bolt (XS-BLT)</option><option value="NUT">Nut (XS-NUT)</option>
-          <option value="GEN">General (XS-GEN)</option>
-        </select>
+        <select id="fCategory"><option value="">-- Select --</option><option value="GS">Grub Screw (XS-GS)</option><option value="SCR">Screw (XS-SCR)</option><option value="BRG">Bearing (XS-BRG)</option><option value="SPR">Spring (XS-SPR)</option><option value="WSH">Washer (XS-WSH)</option><option value="PIN">Pin / Roll Pin (XS-PIN)</option><option value="BLT">Bolt (XS-BLT)</option><option value="NUT">Nut (XS-NUT)</option><option value="GEN">General (XS-GEN)</option></select>
       </div>
       <div class="field"><label>Material</label>
-        <select id="fMaterial">
-          <option value="">-- Select --</option>
-          <optgroup label="Steel"><option value="SS">Stainless Steel (SS)</option><option value="ST">Steel (ST)</option><option value="BK">Black Oxide (BK)</option><option value="ZP">Zinc Plated (ZP)</option><option value="HT">High Tensile (HT)</option></optgroup>
-          <optgroup label="Bearing"><option value="BRZ">Sintered Bronze (BRZ)</option><option value="DU">DU Bush (DU)</option><option value="PTFE">PTFE (PTFE)</option><option value="NBR">Rubber/NBR (NBR)</option></optgroup>
-          <optgroup label="Other"><option value="AL">Aluminium (AL)</option><option value="NYL">Nylon/Plastic (NYL)</option><option value="CU">Copper/Brass (CU)</option><option value="MX">Mixed/Unknown (MX)</option></optgroup>
-        </select>
+        <select id="fMaterial"><option value="">-- Select --</option><optgroup label="Steel"><option value="SS">Stainless Steel (SS)</option><option value="ST">Steel (ST)</option><option value="BK">Black Oxide (BK)</option><option value="ZP">Zinc Plated (ZP)</option><option value="HT">High Tensile (HT)</option></optgroup><optgroup label="Bearing"><option value="BRZ">Sintered Bronze (BRZ)</option><option value="DU">DU Bush (DU)</option><option value="PTFE">PTFE (PTFE)</option><option value="NBR">Rubber/NBR (NBR)</option></optgroup><optgroup label="Other"><option value="AL">Aluminium (AL)</option><option value="NYL">Nylon/Plastic (NYL)</option><option value="CU">Copper/Brass (CU)</option><option value="MX">Mixed/Unknown (MX)</option></optgroup></select>
       </div>
     </div>
     <div class="field"><label>Unit of Measure</label>
@@ -281,8 +269,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; backgr
 <div class="overlay" id="jobOverlay" onclick="if(event.target===this)closeJobModal()">
   <div class="modal orange">
     <div class="modal-header"><div class="modal-title" id="jobModalTitle">New Service Case</div><button class="modal-close" onclick="closeJobModal()">&times;</button></div>
-    <div class="field">
-      <label>Status</label>
+    <div class="field"><label>Status</label>
       <select id="jStatus">
         <option value="NEW JOB">NEW JOB</option>
         <option value="AWAITING ASSESSMENT">AWAITING ASSESSMENT</option>
@@ -306,14 +293,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; backgr
       <div class="field"><label>Machine Model</label><select id="jMachine"><option value="">-- Select --</option></select></div>
       <div class="field"><label>Serial Number</label><input id="jSerial" placeholder="e.g. 56096"></div>
       <div class="field"><label>Fault Type</label>
-        <select id="jFaultType">
-          <option value="">-- Select --</option>
-          <option>Not cutting</option><option>Tension / force issue</option><option>Jammed / mechanical fault</option>
-          <option>Motor fault / error code</option><option>Battery / charging issue</option>
-          <option>Gripper foot worn / slipping</option><option>Physical damage</option>
-          <option>Control panel / software fault</option><option>General service / maintenance</option>
-          <option>Unknown / to assess</option><option>Other</option>
-        </select>
+        <select id="jFaultType"><option value="">-- Select --</option><option>Not cutting</option><option>Tension / force issue</option><option>Jammed / mechanical fault</option><option>Motor fault / error code</option><option>Battery / charging issue</option><option>Gripper foot worn / slipping</option><option>Physical damage</option><option>Control panel / software fault</option><option>General service / maintenance</option><option>Unknown / to assess</option><option>Other</option></select>
       </div>
       <div class="field"><label>Error Code</label><input id="jErrorCode" placeholder="e.g. E.2 (motor jammed)"></div>
       <div class="field full"><label>Customer Reported Issue</label><textarea id="jCustomerIssue" placeholder="What the customer reported..."></textarea></div>
@@ -339,68 +319,506 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; backgr
 
 <div class="toast" id="toast"></div>
 <script>
-var BASE='https://stsjbqaqisxcqoklwdzb.supabase.co/rest/v1'
-var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0c2picWFxaXN4Y3Fva2x3ZHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2Njk0MzAsImV4cCI6MjA5MTI0NTQzMH0.B5dR-TnRn_awF3opKSroqVJk46Okypr2wE-ZoNsSn5Q'
-var H={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'}
-var machines=[],parts=[],allParts=[],selectedMachine=null,editingPart=null,labelQueue=[]
-var jobs=[],editingJob=null,jobFilter='ALL',currentView='parts',jobViewMode='list'
-var STATUS_COLORS={'NEW JOB':'#3b82f6','AWAITING ASSESSMENT':'#8b5cf6','AWAITING GOODS':'#f59e0b','QUOTED - AWAITING APPROVAL':'#eab308','WAITING ON PARTS':'#f97316','IN WORKSHOP':'#06b6d4','WAITING TO BE RETURNED':'#10b981','AFTER SERVICE FOLLOW-UP':'#00c8e0','COMPLETED':'#4a6080'}
-var ALL_STATUSES=['NEW JOB','AWAITING ASSESSMENT','AWAITING GOODS','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE RETURNED','AFTER SERVICE FOLLOW-UP','COMPLETED']
-var OPEN_STATUSES=['NEW JOB','AWAITING ASSESSMENT','AWAITING GOODS','QUOTED - AWAITING APPROVAL']
-var ACTIVE_STATUSES=['WAITING ON PARTS','IN WORKSHOP','WAITING TO BE RETURNED']
-var FOLLOW_STATUSES=['AFTER SERVICE FOLLOW-UP']
-async function db(method,path,body){var r=await fetch(BASE+'/'+path,{method:method,headers:H,body:body?JSON.stringify(body):undefined});if(!r.ok)throw new Error(await r.text());if(method==='DELETE')return true;var t=await r.text();return t?JSON.parse(t):[]}
-async function init(){try{machines=await db('GET','machines?select=*&order=name.asc');renderTabs();await loadAllParts();if(machines.length)await selectMachine(machines[0]);else document.getElementById('partsList').innerHTML='<div class="center"><div class="icon">+</div><div>No machines yet.</div></div>'}catch(e){document.getElementById('hSub').textContent='Connection error';document.getElementById('partsList').innerHTML='<div class="center"><div style="color:#ef4444">Cannot connect</div></div>'}}
-async function loadAllParts(){try{var data=await db('GET','parts?select=*,stock(*)&order=key_no.asc');allParts=data.map(function(p){var m=machines.find(function(m){return m.id===p.machine_id});p.machineName=m?m.name:'Unknown';return p})}catch(e){allParts=[]}}
-function switchToJobs(){currentView='jobs';renderTabs();document.getElementById('mainToolbar').style.display='none';document.getElementById('statsBar').style.display='none';document.getElementById('partsList').style.display='none';document.getElementById('labelPanel').classList.remove('show');document.getElementById('docsBar').classList.remove('show');document.getElementById('jobsToolbar').style.display='flex';document.getElementById('hSub').textContent='Service Cases';document.getElementById('lowBadge').innerHTML='';setJobView(jobViewMode);loadJobs()}
-function switchToParts(){currentView='parts';renderTabs();document.getElementById('mainToolbar').style.display='flex';document.getElementById('statsBar').style.display='flex';document.getElementById('partsList').style.display='block';document.getElementById('jobsToolbar').style.display='none';document.getElementById('jobsListSection').style.display='none';document.getElementById('jobsBoardSection').style.display='none';if(selectedMachine){renderDocsBar();renderParts()}}
-function setJobView(mode){jobViewMode=mode;document.getElementById('btnListView').classList.toggle('active',mode==='list');document.getElementById('btnBoardView').classList.toggle('active',mode==='board');document.getElementById('jobsListSection').style.display=mode==='list'?'block':'none';document.getElementById('jobsBoardSection').style.display=mode==='board'?'block':'none';renderJobs()}
-function renderTabs(){var isJobs=currentView==='jobs';var html='<button class="tab jobs-tab'+(isJobs?' active':'')+'" onclick="'+(isJobs?'':\'switchToJobs()\')+'">&#128295; Jobs</button>';if(!isJobs){html+=machines.map(function(m){var active=selectedMachine&&selectedMachine.id===m.id,isC=m.is_consumables;var aStyle=isC&&active?' style="background:#f59e0b;border-color:#f59e0b;color:#0f1923"':'';' var iStyle=isC&&!active?' style="border-color:#f59e0b;color:#f59e0b"':'';' return'<button class="tab'+(active?' active':'')+'"'+(active?aStyle:iStyle)+' onclick="selectMachine('+JSON.stringify(m).replace(/"/g,'&quot;')+')">'+(isC?'&#9881; ':'')+m.name+'</button>'+(active?'<button class="tab-del" onclick="openDeleteMachineModal()">&times;</button>':'')\}).join('')+'<button class="tab-add" onclick="openMachineModal()">+ Machine</button>'}document.getElementById('machineTabs').innerHTML=html}
-async function selectMachine(m){if(currentView==='jobs')switchToParts();selectedMachine=m;renderTabs();renderDocsBar();document.getElementById('partsList').innerHTML='<div class="center"><span class="spinner"></span> Loading...</div>';try{parts=await db('GET','parts?machine_id=eq.'+m.id+'&select=*,stock(*)&order=key_no.asc');selectedMachine=machines.find(function(x){return x.id===m.id})||m;renderParts()}catch(e){showToast('Failed to load parts','error')}}
-function getStatus(p){var s=p.stock&&p.stock[0];if(!s)return'unset';if(s.quantity===0)return'empty';if(s.quantity<=(s.reorder_threshold||1))return'low';return'ok'}
-function renderDocsBar(){var bar=document.getElementById('docsBar');if(!selectedMachine||!selectedMachine.diagram_url){bar.classList.remove('show');return}bar.classList.add('show');var html='<span class="docs-label">Docs:</span><a class="doc-btn primary" href="'+selectedMachine.diagram_url+'" target="_blank">&#128196; Main Manual</a>';if(selectedMachine.additional_docs){try{var docs=JSON.parse(selectedMachine.additional_docs);docs.forEach(function(d){html+='<a class="doc-btn" href="'+d.url+'" target="_blank">&#128196; '+d.name+'</a>'})}catch(e){}}bar.innerHTML=html}
-function renderParts(){var q=document.getElementById('searchBox').value.toLowerCase(),isGlobal=q.length>0,pool=isGlobal?allParts:parts;var f=pool.filter(function(p){return p.key_no.toLowerCase().includes(q)||p.description.toLowerCase().includes(q)||((p.stock&&p.stock[0]&&p.stock[0].location)||''). toLowerCase().includes(q)||(p.machineName||''). toLowerCase().includes(q)||(p.alt_part_no||''). toLowerCase().includes(q)});var low=parts.filter(function(p){var s=p.stock&&p.stock[0];return s&&s.quantity<=(s.reorder_threshold||1)&&s.quantity>=0}).length;document.getElementById('hSub').textContent=isGlobal?'Global search — '+f.length+' result'+(f.length!==1?'s':'')+' across all machines':(selectedMachine?selectedMachine.name:'')+' — '+parts.length+' parts';document.getElementById('lowBadge').innerHTML=(!isGlobal&&low>0)?'<div class="badge-low">'+low+' LOW</div>':'';
-document.getElementById('statsBar').innerHTML=isGlobal?'<div class="chip" style="border-color:#f59e0b;color:#f59e0b">Searching all machines</div>':'<div class="chip"><strong>'+parts.length+'</strong> parts</div><div class="chip"><strong>'+parts.filter(function(p){return p.stock&&p.stock[0]}).length+'</strong> with stock</div>'+(low>0?'<div class="chip warn"><strong>'+low+'</strong> need reorder</div>':'')+'';if(!f.length){document.getElementById('partsList').innerHTML='<div class="center"><div class="icon">'+(q?'&#128269;':'&#128230;')+'</div><div>'+(q?'No parts match':'No parts yet — click Add Part')+'</div></div>';return}var qC={ok:'qty-ok',low:'qty-low',empty:'qty-empty',unset:'qty-unset'};document.getElementById('partsList').innerHTML=f.map(function(p){var s=p.stock&&p.stock[0],status=getStatus(p),qty=s?s.quantity:null,inQueue=labelQueue.some(function(x){return x.id===p.id});var mb=isGlobal&&p.machineName?'<span class="part-ref" style="background:#0a2a1a;color:#10b981;border:1px solid #10b981">'+p.machineName+'</span>':'';
-return'<div class="part-card '+status+'"><div style="flex:1;min-width:0;cursor:pointer" onclick="openEditModal(\''+ p.id+'\')"><div class="part-keyno">'+p.key_no+'</div><div class="part-desc">'+p.description+'</div><div class="part-meta">'+mb+(p.spec?'<span class="part-ref" style="background:#1a1a2a;color:#818cf8">'+p.spec+'</span>':'')+( p.alt_part_no?'<span class="part-ref" style="background:#2a1a1a;color:#f59e0b">Alt: '+p.alt_part_no+'</span>':'')+( p.category?'<span class="part-ref" style="background:#2a1a2a;color:#c084fc">XS-'+p.category+'</span>':'')+( p.material?'<span class="part-ref" style="background:#1a2a2a;color:#22d3ee">'+p.material+'</span>':'')+( p.uom?'<span class="part-ref" style="background:#1a2a1a;color:#86efac">'+p.uom+'</span>':'')+( p.assembly_section?'<span class="part-ref" style="background:#1a2a3a;color:#64b5c8">'+p.assembly_section+'</span>':'')+( p.diagram_refs?'<span class="part-ref" style="background:#1a1a3a;color:#a78bfa">Refs: '+p.diagram_refs+'</span>':(p.diagram_ref?'<span class="part-ref">Ref '+p.diagram_ref+'</span>':''))+'<span class="part-loc">&#128205; '+((s&&s.location)||'No location set')+'</span>'+(p.notes?'<span class="part-loc"><em>'+p.notes+'</em></span>':'')+( p.sell_price?'<span class="part-ref" style="background:#0a2a1a;color:#10b981">Sell $'+parseFloat(p.sell_price).toFixed(2)+'</span>':'')+( p.cost_price?'<span class="part-ref" style="background:#1a1a2a;color:#6080c0">Cost $'+parseFloat(p.cost_price).toFixed(2)+'</span>':'')+'</div></div><div class="action-btns"><div class="qty-controls"><button class="qty-btn" onclick="updateQty(\''+ p.id+'\',-1)">&minus;</button><span class="qty-display '+(qC[status]||'qty-unset')+'">'+(qty!==null?qty:'-')+'</span><button class="qty-btn" onclick="updateQty(\''+ p.id+'\',1)">+</button></div><button class="icon-btn lbl" onclick="queueLabel(\''+ p.id+'\')">&#128424;</button><button class="icon-btn" onclick="openEditModal(\''+ p.id+'\')">&#9999;</button></div></div>'}).join('')}
-async function updateQty(partId,delta){var p=allParts.find(function(x){return x.id===partId})||parts.find(function(x){return x.id===partId});if(!p)return;var s=p.stock&&p.stock[0],newQty=Math.max(0,((s&&s.quantity)||0)+delta);try{if(s&&s.id){await db('PATCH','stock?id=eq.'+s.id,{quantity:newQty,updated_at:new Date().toISOString()});s.quantity=newQty}else{var res=await db('POST','stock',{part_id:partId,quantity:newQty,location:'',reorder_threshold:1});p.stock=[res[0]]}renderParts()}catch(e){showToast('Update failed','error')}}
-function xpsNum(n){return'XPS-'+String(n).padStart(3,'0')}
-async function loadJobs(){try{jobs=await db('GET','jobs?select=*&order=created_at.desc');renderJobs()}catch(e){document.getElementById('jobsList').innerHTML='<div class="center"><div style="color:#ef4444">Could not load jobs. Run the SQL to create the jobs table first.</div></div>'}}
-function setJobFilter(f,btn){jobFilter=f;document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderJobs()}
-function fmtDate(dt){if(!dt)return'';var d=new Date(dt);return d.getDate().toString().padStart(2,'0')+'/' + ''+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getFullYear()}
-function filterJobs(){var q=(document.getElementById('jobSearchBox').value||''). toLowerCase();return jobs.filter(function(j){if(jobFilter==='OPEN'&&!OPEN_STATUSES.includes(j.status))return false;if(jobFilter==='ACTIVE'&&!ACTIVE_STATUSES.includes(j.status))return false;if(jobFilter==='FOLLOW'&&!FOLLOW_STATUSES.includes(j.status))return false;if(jobFilter==='COMPLETED'&&j.status!=='COMPLETED')return false;if(q){var hay=((j.customer||'')+xpsNum(j.job_number)+(j.serial_number||'')+( j.contact_name||'')+( j.fault_type||'')).toLowerCase();if(!hay.includes(q))return false}return true})}
-function renderJobs(){var open=jobs.filter(function(j){return OPEN_STATUSES.includes(j.status)||ACTIVE_STATUSES.includes(j.status)||FOLLOW_STATUSES.includes(j.status)}).length;document.getElementById('hSub').textContent='Service Cases — '+jobs.length+' total';document.getElementById('lowBadge').innerHTML=open>0?'<div class="badge-low">'+open+' OPEN</div>':'';
-if(jobViewMode==='board')renderBoard();else renderList()}
-function renderList(){var filtered=filterJobs();if(!filtered.length){document.getElementById('jobsList').innerHTML='<div class="center"><div class="icon">&#128203;</div><div>'+(jobs.length?'No cases match filters':'No service cases yet — click + New Service Case')+'</div></div>';return}document.getElementById('jobsList').innerHTML=filtered.map(function(j){var col=STATUS_COLORS[j.status]||'#4a6080',mName='';if(j.machine_id){var m=machines.find(function(x){return x.id===j.machine_id});if(m)mName=m.name}var total=(parseFloat(j.labour_cost)||0)+(parseFloat(j.parts_cost)||0);var folder=j.service_folder?'<a class="job-folder-tile" href="'+j.service_folder+'" target="_blank" onclick="event.stopPropagation()">&#128193; Service Folder</a>':'';
-return'<div class="job-card" style="border-left-color:'+col+'" onclick="openEditJobModal(\''+ j.id+'\')"><div class="job-card-top"><div><div class="job-number">'+xpsNum(j.job_number)+'</div><div class="job-customer">'+(j.customer||'No customer')+'</div></div><span class="job-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+j.status+'</span></div><div class="job-meta">'+(mName?'<span>&#128295; '+mName+'</span>':'')+( j.serial_number?'<span>S/N: '+j.serial_number+'</span>':'')+( j.contact_name?'<span>&#128100; '+j.contact_name+'</span>':'')+( total>0?'<span>&#128178;'+total.toFixed(2)+'</span>':'')+'<span>&#128197; '+fmtDate(j.created_at)+'</span>'+(j.followup_required?'<span style="color:#f97316">&#9888; Follow-up</span>':'')+ '</div>'+(j.fault_type?'<div class="job-fault">Fault: '+j.fault_type+'</div>':'')+folder+'</div>'}).join('')}
-function renderBoard(){var q=(document.getElementById('jobSearchBox').value||''). toLowerCase();var searched=jobs.filter(function(j){if(!q)return true;var hay=((j.customer||'')+xpsNum(j.job_number)+(j.serial_number||'')+( j.fault_type||'')).toLowerCase();return hay.includes(q)});document.getElementById('boardCols').innerHTML=ALL_STATUSES.map(function(status){var col=STATUS_COLORS[status]||'#4a6080',colJobs=searched.filter(function(j){return j.status===status});var cards=colJobs.length?colJobs.map(function(j){var mName='';if(j.machine_id){var m=machines.find(function(x){return x.id===j.machine_id});if(m)mName=m.name}return'<div class="board-card" style="border-left-color:'+col+'" onclick="openEditJobModal(\''+ j.id+'\')"><div class="board-card-num">'+xpsNum(j.job_number)+'</div><div class="board-card-customer">'+(j.customer||'No customer')+'</div><div class="board-card-meta">'+( mName?mName+' &middot; ':'' )+fmtDate(j.created_at)+(j.followup_required?' &middot; &#9888;':'')+'</div></div>'}).join(''):'<div style="font-size:11px;color:#2a4060;padding:6px;text-align:center">&mdash;</div>';return'<div class="board-col"><div class="board-col-header"><span class="board-col-title" style="color:'+col+'">'+status+'</span><span class="board-col-count">'+colJobs.length+'</span></div><div class="board-col-body">'+cards+'</div></div>'}).join('')}
-function openNewJobModal(){editingJob=null;document.getElementById('jobModalTitle').textContent='New Service Case';['jCustomer','jContact','jPhone','jSerial','jErrorCode','jCustomerIssue','jWorkshopNotes','jFollowupNotes','jInternalNotes','jFolder'].forEach(function(id){document.getElementById(id).value=''});document.getElementById('jStatus').value='NEW JOB';document.getElementById('jMachine').value='';document.getElementById('jFaultType').value='';document.getElementById('jLabour').value='';document.getElementById('jParts').value='';document.getElementById('jFollowup').checked=false;populateMachineDropdown();document.getElementById('btnDeleteJob').style.display='none';document.getElementById('jobOverlay').classList.add('show');setTimeout(function(){document.getElementById('jCustomer').focus()},100)}
-function openEditJobModal(jobId){var j=jobs.find(function(x){return x.id===jobId});if(!j)return;editingJob=j;document.getElementById('jobModalTitle').textContent=xpsNum(j.job_number)+' — '+(j.customer||'');document.getElementById('jStatus').value=j.status||'NEW JOB';document.getElementById('jCustomer').value=j.customer||'';document.getElementById('jContact').value=j.contact_name||'';document.getElementById('jPhone').value=j.phone||'';document.getElementById('jSerial').value=j.serial_number||'';document.getElementById('jFaultType').value=j.fault_type||'';document.getElementById('jCustomerIssue').value=j.customer_issue||'';document.getElementById('jWorkshopNotes').value=j.workshop_notes||'';document.getElementById('jErrorCode').value=j.error_code||'';document.getElementById('jLabour').value=j.labour_cost||'';document.getElementById('jParts').value=j.parts_cost||'';document.getElementById('jFollowup').checked=!!j.followup_required;document.getElementById('jFollowupNotes').value=j.followup_notes||'';document.getElementById('jInternalNotes').value=j.internal_notes||'';document.getElementById('jFolder').value=j.service_folder||'';populateMachineDropdown(j.machine_id);document.getElementById('btnDeleteJob').style.display='block';document.getElementById('jobOverlay').classList.add('show')}
-function populateMachineDropdown(sel){document.getElementById('jMachine').innerHTML='<option value="">-- Select --</option>'+machines.filter(function(m){return!m.is_consumables}).map(function(m){return'<option value="'+m.id+'"' +(m.id===sel?' selected':'')+'>'+m.name+'</option>'}).join('')}
-function closeJobModal(){document.getElementById('jobOverlay').classList.remove('show')}
-async function saveJob(){var customer=document.getElementById('jCustomer').value.trim();if(!customer){showToast('Customer name is required','error');return}var btn=document.getElementById('btnSaveJob');btn.disabled=true;btn.textContent='Saving...';var payload={status:document.getElementById('jStatus').value,customer:customer,contact_name:document.getElementById('jContact').value||null,phone:document.getElementById('jPhone').value||null,machine_id:document.getElementById('jMachine').value||null,serial_number:document.getElementById('jSerial').value||null,fault_type:document.getElementById('jFaultType').value||null,customer_issue:document.getElementById('jCustomerIssue').value||null,workshop_notes:document.getElementById('jWorkshopNotes').value||null,error_code:document.getElementById('jErrorCode').value||null,labour_cost:parseFloat(document.getElementById('jLabour').value)||null,parts_cost:parseFloat(document.getElementById('jParts').value)||null,followup_required:document.getElementById('jFollowup').checked,followup_notes:document.getElementById('jFollowupNotes').value||null,internal_notes:document.getElementById('jInternalNotes').value||null,service_folder:document.getElementById('jFolder').value||null,updated_at:new Date().toISOString()};try{if(editingJob){await db('PATCH','jobs?id=eq.'+editingJob.id,payload);showToast('Service case updated')}else{await db('POST','jobs',payload);showToast('Service case created')}closeJobModal();await loadJobs()}catch(e){showToast('Save failed: '+e.message,'error')}finally{btn.disabled=false;btn.textContent='Save Service Case'}}
-async function deleteJob(){if(!editingJob)return;if(!confirm('Delete service case for '+editingJob.customer+'?\n\nThis cannot be undone.'))return;try{await db('DELETE','jobs?id=eq.'+editingJob.id);closeJobModal();showToast('Deleted');await loadJobs()}catch(e){showToast('Delete failed','error')}}
-function openMachineModal(){document.getElementById('mName').value='';document.getElementById('mDesc').value='';document.getElementById('btnSaveMachine').style.display='block';document.getElementById('btnSaveMachine').textContent='Create Machine and Start Adding Parts';document.getElementById('btnDeleteMachine').style.display='none';document.getElementById('machineOverlay').classList.add('show');setTimeout(function(){document.getElementById('mName').focus()},100)}
-function closeMachineModal(){document.getElementById('machineOverlay').classList.remove('show')}
-async function saveMachine(){var name=document.getElementById('mName').value.trim();if(!name){showToast('Machine name is required','error');return}var btn=document.getElementById('btnSaveMachine');btn.disabled=true;btn.textContent='Creating...';try{var res=await db('POST','machines',{name:name,description:document.getElementById('mDesc').value.trim()||null});var newM=res[0];machines.push(newM);machines.sort(function(a,b){return a.name.localeCompare(b.name)});closeMachineModal();showToast(name+' created');await selectMachine(newM)}catch(e){showToast('Failed: '+e.message,'error')}finally{btn.disabled=false;btn.textContent='Create Machine and Start Adding Parts'}}
-function openDeleteMachineModal(){if(!selectedMachine)return;document.getElementById('mName').value=selectedMachine.name;document.getElementById('mDesc').value=selectedMachine.description||'';document.getElementById('btnSaveMachine').style.display='none';document.getElementById('btnDeleteMachine').style.display='block';document.getElementById('machineOverlay').classList.add('show')}
-async function deleteMachine(){if(!selectedMachine)return;if(!confirm('Delete "'+selectedMachine.name+'" AND all its parts?\n\nThis cannot be undone.'))return;try{await db('DELETE','parts?machine_id=eq.'+selectedMachine.id);await db('DELETE','machines?id=eq.'+selectedMachine.id);machines=machines.filter(function(m){return m.id!==selectedMachine.id});selectedMachine=null;closeMachineModal();showToast('Machine deleted');if(machines.length)await selectMachine(machines[0]);else{renderTabs();document.getElementById('partsList').innerHTML='<div class="center"><div class="icon">+</div><div>No machines yet.</div></div>'}}catch(e){showToast('Delete failed','error')}}
-function openAddModal(){editingPart=null;document.getElementById('modalTitle').textContent='+ New Part';['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fSell','fMyobIncome','fMyobAsset','fMyobCogs'].forEach(function(id){document.getElementById(id).value=''});document.getElementById('fCategory').value='';document.getElementById('fMaterial').value='';document.getElementById('fUom').value='';document.getElementById('fQty').value='0';document.getElementById('fThreshold').value='1';document.getElementById('btnDeletePart').style.display='none';document.getElementById('autoGenBtn').style.display='block';document.getElementById('overlay').classList.add('show');setTimeout(function(){document.getElementById('fKeyno').focus()},100)}
-function autoGenPartNo(){var cat=document.getElementById('fCategory').value,mat=document.getElementById('fMaterial').value,spec=document.getElementById('fSpec').value.trim().toUpperCase();if(!cat){showToast('Select a category first','error');return}if(!mat){showToast('Select a material first','error');return}if(!spec){showToast('Enter Size/Spec first','error');return}document.getElementById('fKeyno').value='XS-'+cat+'-'+spec.replace(/[^A-Z0-9X.\/]/g,'')+'-'+mat;showToast('Part number generated')}
-function openEditModal(partId){var p=parts.find(function(x){return x.id===partId});if(!p)return;editingPart=p;var s=(p.stock&&p.stock[0])||{};document.getElementById('modalTitle').textContent='Edit Part';document.getElementById('fKeyno').value=p.key_no;document.getElementById('fRef').value=p.diagram_ref||'';document.getElementById('fDesc').value=p.description;document.getElementById('fSpec').value=p.spec||'';document.getElementById('fAltPartNo').value=p.alt_part_no||'';document.getElementById('fCategory').value=p.category||'';document.getElementById('fMaterial').value=p.material||'';document.getElementById('fUom').value=p.uom||'';document.getElementById('autoGenBtn').style.display='block';document.getElementById('fSection').value=p.assembly_section||'';document.getElementById('fDiagramRefs').value=p.diagram_refs||'';document.getElementById('fCost').value=p.cost_price||'';document.getElementById('fSell').value=p.sell_price||'';document.getElementById('fMyobIncome').value=p.myob_account_income||'';document.getElementById('fMyobAsset').value=p.myob_account_asset||'';document.getElementById('fMyobCogs').value=p.myob_account_cogs||'';document.getElementById('fNotes').value=p.notes||'';document.getElementById('fLoc').value=s.location||'';document.getElementById('fQty').value=s.quantity!==undefined?s.quantity:0;document.getElementById('fThreshold').value=s.reorder_threshold||1;document.getElementById('btnDeletePart').style.display='block';document.getElementById('overlay').classList.add('show')}
-function closeModal(){document.getElementById('overlay').classList.remove('show')}
-async function deletePart(){if(!editingPart)return;if(!confirm('Delete '+editingPart.key_no+' \u2014 '+editingPart.description+'?\n\nThis cannot be undone.'))return;try{var s=editingPart.stock&&editingPart.stock[0];if(s&&s.id)await db('DELETE','stock?id=eq.'+s.id);await db('DELETE','parts?id=eq.'+editingPart.id);closeModal();showToast(editingPart.key_no+' deleted');await selectMachine(selectedMachine);await loadAllParts()}catch(e){showToast('Delete failed','error')}}
-async function savePart(){var keyno=document.getElementById('fKeyno').value.trim(),desc=document.getElementById('fDesc').value.trim();if(!keyno||!desc){showToast('Part number and description required','error');return}var btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Saving...';var stock={location:document.getElementById('fLoc').value.trim(),quantity:parseInt(document.getElementById('fQty').value)||0,reorder_threshold:parseInt(document.getElementById('fThreshold').value)||1,updated_at:new Date().toISOString()};var pd={key_no:keyno,description:desc,diagram_ref:document.getElementById('fRef').value||null,assembly_section:document.getElementById('fSection').value||null,diagram_refs:document.getElementById('fDiagramRefs').value||null,notes:document.getElementById('fNotes').value||null,spec:document.getElementById('fSpec').value||null,alt_part_no:document.getElementById('fAltPartNo').value||null,category:document.getElementById('fCategory').value||null,material:document.getElementById('fMaterial').value||null,uom:document.getElementById('fUom').value||null,cost_price:parseFloat(document.getElementById('fCost').value)||null,sell_price:parseFloat(document.getElementById('fSell').value)||null,myob_account_income:document.getElementById('fMyobIncome').value||null,myob_account_asset:document.getElementById('fMyobAsset').value||null,myob_account_cogs:document.getElementById('fMyobCogs').value||null};try{if(editingPart){await db('PATCH','parts?id=eq.'+editingPart.id,pd);var s=editingPart.stock&&editingPart.stock[0];if(s&&s.id)await db('PATCH','stock?id=eq.'+s.id,stock);else await db('POST','stock',Object.assign({part_id:editingPart.id},stock));showToast('Part updated')}else{var res=await db('POST','parts',Object.assign({machine_id:selectedMachine.id},pd));await db('POST','stock',Object.assign({part_id:res[0].id},stock));showToast('Part added')}closeModal();await selectMachine(selectedMachine);await loadAllParts()}catch(e){showToast('Save failed: '+e.message,'error')}finally{btn.disabled=false;btn.textContent='Save Part'}}
-function makeLabelData(partId){var p=parts.find(function(x){return x.id===partId});if(!p)return null;return{id:p.id,machine:selectedMachine?selectedMachine.name:'',keyno:p.key_no,description:p.description,location:(p.stock&&p.stock[0]&&p.stock[0].location)||'',qrText:'XPAK|'+p.key_no+'|'+p.description+'|'+(selectedMachine?selectedMachine.name:'')}}
-function makeLabelInner(d,prefix){return'<div class="'+prefix+'-text"><div class="'+prefix+'-partno-label">Part No.</div><div class="'+prefix+'-partno">'+d.keyno+'</div><div class="'+prefix+'-desc">'+d.description+'</div><div class="'+prefix+'-machine">'+d.machine+'</div>'+(d.location?'<div class="'+prefix+'-loc">S/L '+d.location+'</div>':'')+'</div><div class="'+prefix+'-qr" id="'+prefix+'qr-'+d.id+'"></div>'}
-function autoSizeLabelText(el){var l=(el.textContent||el.innerText).length;el.style.fontSize=l>14?'18px':l>10?'22px':'27px'}
-function queueLabel(partId){var d=makeLabelData(partId);if(!d)return;if(labelQueue.some(function(x){return x.id===d.id})){showToast('Already in queue','error');return}labelQueue.push(d);updateLabelPanel();renderParts();showToast(d.keyno+' added to queue')}
-function queueAllVisible(){var q=document.getElementById('searchBox').value.toLowerCase();var visible=parts.filter(function(p){return p.key_no.toLowerCase().includes(q)||p.description.toLowerCase().includes(q)||((p.stock&&p.stock[0]&&p.stock[0].location)||''). toLowerCase().includes(q)});var added=0;visible.forEach(function(p){if(!labelQueue.some(function(x){return x.id===p.id})){var d=makeLabelData(p.id);if(d){labelQueue.push(d);added++}}});updateLabelPanel();renderParts();showToast(added+' labels queued')}
-function removeFromQueue(partId){labelQueue=labelQueue.filter(function(x){return x.id!==partId});updateLabelPanel();renderParts()}
-function clearQueue(){labelQueue=[];updateLabelPanel();renderParts()}
-function updateLabelPanel(){var panel=document.getElementById('labelPanel');if(!labelQueue.length){panel.classList.remove('show');return}panel.classList.add('show');document.getElementById('labelCount').textContent=labelQueue.length+' label'+(labelQueue.length>1?'s':'')+' ready';document.getElementById('labelPreviews').innerHTML=labelQueue.map(function(d){return'<div class="label-preview-card"><button class="lp-remove" onclick="removeFromQueue(\''+ d.id+'\')">&times;</button>'+makeLabelInner(d,'lp')+'</div>'}).join('');labelQueue.forEach(function(d){var el=document.getElementById('lpqr-'+d.id);if(el&&!el.children.length)new QRCode(el,{text:d.qrText,width:76,height:76,correctLevel:QRCode.CorrectLevel.M});var card=el?el.closest('.label-preview-card'):null;if(card){var pn=card.querySelector('.lp-partno');if(pn)autoSizeLabelText(pn)}})}
-function doPrint(){if(!labelQueue.length)return;var pa=document.getElementById('printArea');pa.innerHTML=labelQueue.map(function(d){return'<div class="print-label">'+makeLabelInner(d,'pl')+'</div>'}).join('');labelQueue.forEach(function(d){var el=document.getElementById('plqr-'+d.id);if(el)new QRCode(el,{text:d.qrText,width:102,height:102,correctLevel:QRCode.CorrectLevel.M})});setTimeout(function(){window.print()},450)}
-function showToast(msg,type){type=type||'success';var t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(function(){t.className='toast'},2500)}
-init()
+var BASE = 'https://stsjbqaqisxcqoklwdzb.supabase.co/rest/v1';
+var KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0c2picWFxaXN4Y3Fva2x3ZHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2Njk0MzAsImV4cCI6MjA5MTI0NTQzMH0.B5dR-TnRn_awF3opKSroqVJk46Okypr2wE-ZoNsSn5Q';
+var H = {apikey:KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json',Prefer:'return=representation'};
+var machines=[],parts=[],allParts=[],selectedMachine=null,editingPart=null,labelQueue=[];
+var jobs=[],editingJob=null,jobFilter='ALL',currentView='parts',jobViewMode='list';
+var SC = {'NEW JOB':'#3b82f6','AWAITING ASSESSMENT':'#8b5cf6','AWAITING GOODS':'#f59e0b','QUOTED - AWAITING APPROVAL':'#eab308','WAITING ON PARTS':'#f97316','IN WORKSHOP':'#06b6d4','WAITING TO BE RETURNED':'#10b981','AFTER SERVICE FOLLOW-UP':'#00c8e0','COMPLETED':'#4a6080'};
+var ALL_ST=['NEW JOB','AWAITING ASSESSMENT','AWAITING GOODS','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE RETURNED','AFTER SERVICE FOLLOW-UP','COMPLETED'];
+var OPEN_ST=['NEW JOB','AWAITING ASSESSMENT','AWAITING GOODS','QUOTED - AWAITING APPROVAL'];
+var ACT_ST=['WAITING ON PARTS','IN WORKSHOP','WAITING TO BE RETURNED'];
+var FOL_ST=['AFTER SERVICE FOLLOW-UP'];
+
+async function db(method,path,body){
+  var r=await fetch(BASE+'/'+path,{method:method,headers:H,body:body?JSON.stringify(body):undefined});
+  if(!r.ok) throw new Error(await r.text());
+  if(method==='DELETE') return true;
+  var t=await r.text(); return t?JSON.parse(t):[];
+}
+
+async function init(){
+  try{
+    machines=await db('GET','machines?select=*&order=name.asc');
+    renderTabs(); await loadAllParts();
+    if(machines.length) await selectMachine(machines[0]);
+    else document.getElementById('partsList').innerHTML='<div class="center"><div class="icon">+</div><div>No machines yet.</div></div>';
+  }catch(e){
+    document.getElementById('hSub').textContent='Connection error';
+    document.getElementById('partsList').innerHTML='<div class="center"><div style="color:#ef4444">Cannot connect</div></div>';
+  }
+}
+
+async function loadAllParts(){
+  try{
+    var data=await db('GET','parts?select=*,stock(*)&order=key_no.asc');
+    allParts=data.map(function(p){var m=machines.find(function(m){return m.id===p.machine_id});p.machineName=m?m.name:'Unknown';return p});
+  }catch(e){allParts=[];}
+}
+
+function switchToJobs(){
+  currentView='jobs'; renderTabs();
+  document.getElementById('mainToolbar').style.display='none';
+  document.getElementById('statsBar').style.display='none';
+  document.getElementById('partsList').style.display='none';
+  document.getElementById('labelPanel').classList.remove('show');
+  document.getElementById('docsBar').classList.remove('show');
+  document.getElementById('jobsToolbar').style.display='flex';
+  document.getElementById('hSub').textContent='Service Cases';
+  document.getElementById('lowBadge').innerHTML='';
+  setJobView(jobViewMode); loadJobs();
+}
+
+function switchToParts(){
+  currentView='parts'; renderTabs();
+  document.getElementById('mainToolbar').style.display='flex';
+  document.getElementById('statsBar').style.display='flex';
+  document.getElementById('partsList').style.display='block';
+  document.getElementById('jobsToolbar').style.display='none';
+  document.getElementById('jobsListSection').style.display='none';
+  document.getElementById('jobsBoardSection').style.display='none';
+  if(selectedMachine){renderDocsBar();renderParts();}
+}
+
+function setJobView(mode){
+  jobViewMode=mode;
+  document.getElementById('btnListView').classList.toggle('active',mode==='list');
+  document.getElementById('btnBoardView').classList.toggle('active',mode==='board');
+  document.getElementById('jobsListSection').style.display=mode==='list'?'block':'none';
+  document.getElementById('jobsBoardSection').style.display=mode==='board'?'block':'none';
+  renderJobs();
+}
+
+function renderTabs(){
+  var isJobs=currentView==='jobs';
+  var html='<button class="tab jobs-tab'+(isJobs?' active':'')+'" onclick="'+(isJobs?'':'switchToJobs()')+'">&#128295; Jobs</button>';
+  if(!isJobs){
+    html+=machines.map(function(m){
+      var active=selectedMachine&&selectedMachine.id===m.id,isC=m.is_consumables;
+      var aStyle=isC&&active?' style="background:#f59e0b;border-color:#f59e0b;color:#0f1923"':'';
+      var iStyle=isC&&!active?' style="border-color:#f59e0b;color:#f59e0b"':'';
+      return '<button class="tab'+(active?' active':'')+'"'+(active?aStyle:iStyle)+' onclick="selectMachine('+JSON.stringify(m).replace(/"/g,'&quot;')+')">'+(isC?'&#9881; ':'')+m.name+'</button>'+(active?'<button class="tab-del" onclick="openDeleteMachineModal()">&times;</button>':'');
+    }).join('')+'<button class="tab-add" onclick="openMachineModal()">+ Machine</button>';
+  }
+  document.getElementById('machineTabs').innerHTML=html;
+}
+
+async function selectMachine(m){
+  if(currentView==='jobs') switchToParts();
+  selectedMachine=m; renderTabs(); renderDocsBar();
+  document.getElementById('partsList').innerHTML='<div class="center"><span class="spinner"></span> Loading...</div>';
+  try{
+    parts=await db('GET','parts?machine_id=eq.'+m.id+'&select=*,stock(*)&order=key_no.asc');
+    selectedMachine=machines.find(function(x){return x.id===m.id})||m; renderParts();
+  }catch(e){showToast('Failed to load parts','error');}
+}
+
+function getStatus(p){var s=p.stock&&p.stock[0];if(!s)return'unset';if(s.quantity===0)return'empty';if(s.quantity<=(s.reorder_threshold||1))return'low';return'ok';}
+
+function renderDocsBar(){
+  var bar=document.getElementById('docsBar');
+  if(!selectedMachine||!selectedMachine.diagram_url){bar.classList.remove('show');return;}
+  bar.classList.add('show');
+  var html='<span class="docs-label">Docs:</span><a class="doc-btn primary" href="'+selectedMachine.diagram_url+'" target="_blank">&#128196; Main Manual</a>';
+  if(selectedMachine.additional_docs){try{var docs=JSON.parse(selectedMachine.additional_docs);docs.forEach(function(d){html+='<a class="doc-btn" href="'+d.url+'" target="_blank">&#128196; '+d.name+'</a>';});}catch(e){}}
+  bar.innerHTML=html;
+}
+
+function renderParts(){
+  var q=document.getElementById('searchBox').value.toLowerCase(),isGlobal=q.length>0,pool=isGlobal?allParts:parts;
+  var f=pool.filter(function(p){return p.key_no.toLowerCase().includes(q)||p.description.toLowerCase().includes(q)||((p.stock&&p.stock[0]&&p.stock[0].location)||'').toLowerCase().includes(q)||(p.machineName||'').toLowerCase().includes(q)||(p.alt_part_no||'').toLowerCase().includes(q);});
+  var low=parts.filter(function(p){var s=p.stock&&p.stock[0];return s&&s.quantity<=(s.reorder_threshold||1)&&s.quantity>=0;}).length;
+  document.getElementById('hSub').textContent=isGlobal?'Global search — '+f.length+' result'+(f.length!==1?'s':'')+' across all machines':(selectedMachine?selectedMachine.name:'')+' — '+parts.length+' parts';
+  document.getElementById('lowBadge').innerHTML=(!isGlobal&&low>0)?'<div class="badge-low">'+low+' LOW</div>':'';
+  document.getElementById('statsBar').innerHTML=isGlobal?'<div class="chip" style="border-color:#f59e0b;color:#f59e0b">Searching all machines</div>':'<div class="chip"><strong>'+parts.length+'</strong> parts</div><div class="chip"><strong>'+parts.filter(function(p){return p.stock&&p.stock[0];}).length+'</strong> with stock</div>'+(low>0?'<div class="chip warn"><strong>'+low+'</strong> need reorder</div>':'');
+  if(!f.length){document.getElementById('partsList').innerHTML='<div class="center"><div class="icon">'+(q?'&#128269;':'&#128230;')+'</div><div>'+(q?'No parts match':'No parts yet — click Add Part')+'</div></div>';return;}
+  var qC={ok:'qty-ok',low:'qty-low',empty:'qty-empty',unset:'qty-unset'};
+  document.getElementById('partsList').innerHTML=f.map(function(p){
+    var s=p.stock&&p.stock[0],status=getStatus(p),qty=s?s.quantity:null;
+    var inQ=labelQueue.some(function(x){return x.id===p.id;});
+    var mb=isGlobal&&p.machineName?'<span class="part-ref" style="background:#0a2a1a;color:#10b981;border:1px solid #10b981">'+p.machineName+'</span>':'';
+    var refs=p.diagram_refs?'<span class="part-ref" style="background:#1a1a3a;color:#a78bfa">Refs: '+p.diagram_refs+'</span>':(p.diagram_ref?'<span class="part-ref">Ref '+p.diagram_ref+'</span>':'');
+    return '<div class="part-card '+status+'">'+
+      '<div style="flex:1;min-width:0;cursor:pointer" onclick="openEditModal(''+p.id+'')">'+
+      '<div class="part-keyno">'+p.key_no+'</div>'+
+      '<div class="part-desc">'+p.description+'</div>'+
+      '<div class="part-meta">'+mb+
+        (p.spec?'<span class="part-ref" style="background:#1a1a2a;color:#818cf8">'+p.spec+'</span>':'')+
+        (p.alt_part_no?'<span class="part-ref" style="background:#2a1a1a;color:#f59e0b">Alt: '+p.alt_part_no+'</span>':'')+
+        (p.category?'<span class="part-ref" style="background:#2a1a2a;color:#c084fc">XS-'+p.category+'</span>':'')+
+        (p.material?'<span class="part-ref" style="background:#1a2a2a;color:#22d3ee">'+p.material+'</span>':'')+
+        (p.uom?'<span class="part-ref" style="background:#1a2a1a;color:#86efac">'+p.uom+'</span>':'')+
+        (p.assembly_section?'<span class="part-ref" style="background:#1a2a3a;color:#64b5c8">'+p.assembly_section+'</span>':'')+
+        refs+'<span class="part-loc">&#128205; '+((s&&s.location)||'No location set')+'</span>'+
+        (p.notes?'<span class="part-loc"><em>'+p.notes+'</em></span>':'')+
+        (p.sell_price?'<span class="part-ref" style="background:#0a2a1a;color:#10b981">Sell $'+parseFloat(p.sell_price).toFixed(2)+'</span>':'')+
+        (p.cost_price?'<span class="part-ref" style="background:#1a1a2a;color:#6080c0">Cost $'+parseFloat(p.cost_price).toFixed(2)+'</span>':'')+
+      '</div></div>'+
+      '<div class="action-btns"><div class="qty-controls">'+
+        '<button class="qty-btn" onclick="updateQty(''+p.id+'',-1)">&minus;</button>'+
+        '<span class="qty-display '+(qC[status]||'qty-unset')+'">'+(qty!==null?qty:'-')+'</span>'+
+        '<button class="qty-btn" onclick="updateQty(''+p.id+'',1)">+</button>'+
+      '</div>'+
+      '<button class="icon-btn lbl" onclick="queueLabel(''+p.id+'')"'+(inQ?' style="border-color:#a78bfa;color:#a78bfa;background:#1a1030"':'')+'>&#128424;</button>'+
+      '<button class="icon-btn" onclick="openEditModal(''+p.id+'')">&#9999;</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+async function updateQty(partId,delta){
+  var p=allParts.find(function(x){return x.id===partId;})||parts.find(function(x){return x.id===partId;});
+  if(!p) return;
+  var s=p.stock&&p.stock[0],newQty=Math.max(0,((s&&s.quantity)||0)+delta);
+  try{
+    if(s&&s.id){await db('PATCH','stock?id=eq.'+s.id,{quantity:newQty,updated_at:new Date().toISOString()});s.quantity=newQty;}
+    else{var res=await db('POST','stock',{part_id:partId,quantity:newQty,location:'',reorder_threshold:1});p.stock=[res[0]];}
+    renderParts();
+  }catch(e){showToast('Update failed','error');}
+}
+
+function xpsNum(n){return 'XPS-'+String(n).padStart(3,'0');}
+
+async function loadJobs(){
+  try{jobs=await db('GET','jobs?select=*&order=created_at.desc');renderJobs();}
+  catch(e){document.getElementById('jobsList').innerHTML='<div class="center"><div style="color:#ef4444">Could not load jobs. Run SQL to create jobs table first.</div></div>';}
+}
+
+function setJobFilter(f,btn){
+  jobFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active'); renderJobs();
+}
+
+function fmtDate(dt){
+  if(!dt) return '';
+  var d=new Date(dt);
+  return d.getDate().toString().padStart(2,'0')+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getFullYear();
+}
+
+function filterJobs(){
+  var q=(document.getElementById('jobSearchBox').value||'').toLowerCase();
+  return jobs.filter(function(j){
+    if(jobFilter==='OPEN'&&!OPEN_ST.includes(j.status)) return false;
+    if(jobFilter==='ACTIVE'&&!ACT_ST.includes(j.status)) return false;
+    if(jobFilter==='FOLLOW'&&!FOL_ST.includes(j.status)) return false;
+    if(jobFilter==='COMPLETED'&&j.status!=='COMPLETED') return false;
+    if(q){var hay=((j.customer||'')+xpsNum(j.job_number)+(j.serial_number||'')+(j.contact_name||'')+(j.fault_type||'')).toLowerCase();if(!hay.includes(q)) return false;}
+    return true;
+  });
+}
+
+function renderJobs(){
+  var open=jobs.filter(function(j){return OPEN_ST.includes(j.status)||ACT_ST.includes(j.status)||FOL_ST.includes(j.status);}).length;
+  document.getElementById('hSub').textContent='Service Cases — '+jobs.length+' total';
+  document.getElementById('lowBadge').innerHTML=open>0?'<div class="badge-low">'+open+' OPEN</div>':'';
+  if(jobViewMode==='board') renderBoard(); else renderList();
+}
+
+function renderList(){
+  var filtered=filterJobs();
+  if(!filtered.length){document.getElementById('jobsList').innerHTML='<div class="center"><div class="icon">&#128203;</div><div>'+(jobs.length?'No cases match filters':'No service cases yet — click + New Service Case')+'</div></div>';return;}
+  document.getElementById('jobsList').innerHTML=filtered.map(function(j){
+    var col=SC[j.status]||'#4a6080',mName='';
+    if(j.machine_id){var m=machines.find(function(x){return x.id===j.machine_id;});if(m) mName=m.name;}
+    var total=(parseFloat(j.labour_cost)||0)+(parseFloat(j.parts_cost)||0);
+    var folder=j.service_folder?'<a class="job-folder-tile" href="'+j.service_folder+'" target="_blank" onclick="event.stopPropagation()">&#128193; Service Folder</a>':'';
+    return '<div class="job-card" style="border-left-color:'+col+'" onclick="openEditJobModal(''+j.id+'')">'+
+      '<div class="job-card-top"><div><div class="job-number">'+xpsNum(j.job_number)+'</div><div class="job-customer">'+(j.customer||'No customer')+'</div></div>'+
+      '<span class="job-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+j.status+'</span></div>'+
+      '<div class="job-meta">'+
+        (mName?'<span>&#128295; '+mName+'</span>':'')+
+        (j.serial_number?'<span>S/N: '+j.serial_number+'</span>':'')+
+        (j.contact_name?'<span>&#128100; '+j.contact_name+'</span>':'')+
+        (total>0?'<span>&#36;'+total.toFixed(2)+'</span>':'')+
+        '<span>&#128197; '+fmtDate(j.created_at)+'</span>'+
+        (j.followup_required?'<span style="color:#f97316">&#9888; Follow-up</span>':'')+
+      '</div>'+
+      (j.fault_type?'<div class="job-fault">Fault: '+j.fault_type+'</div>':'')+
+      folder+'</div>';
+  }).join('');
+}
+
+function renderBoard(){
+  var q=(document.getElementById('jobSearchBox').value||'').toLowerCase();
+  var searched=q?jobs.filter(function(j){return((j.customer||'')+xpsNum(j.job_number)+(j.serial_number||'')+(j.fault_type||'')).toLowerCase().includes(q);}):jobs;
+  document.getElementById('boardCols').innerHTML=ALL_ST.map(function(status){
+    var col=SC[status]||'#4a6080';
+    var colJobs=searched.filter(function(j){return j.status===status;});
+    var cards=colJobs.length?colJobs.map(function(j){
+      var mName='';if(j.machine_id){var m=machines.find(function(x){return x.id===j.machine_id;});if(m)mName=m.name;}
+      return '<div class="board-card" style="border-left-color:'+col+'" onclick="openEditJobModal(''+j.id+'')">'+
+        '<div class="board-card-num">'+xpsNum(j.job_number)+'</div>'+
+        '<div class="board-card-customer">'+(j.customer||'No customer')+'</div>'+
+        '<div class="board-card-meta">'+(mName?mName+' &middot; ':'')+fmtDate(j.created_at)+(j.followup_required?' &middot; &#9888;':'')+'</div>'+
+        '</div>';
+    }).join(''):'<div style="font-size:11px;color:#2a4060;padding:6px;text-align:center">&mdash;</div>';
+    return '<div class="board-col"><div class="board-col-header"><span class="board-col-title" style="color:'+col+'">'+status+'</span><span class="board-col-count">'+colJobs.length+'</span></div><div class="board-col-body">'+cards+'</div></div>';
+  }).join('');
+}
+
+function openNewJobModal(){
+  editingJob=null;
+  document.getElementById('jobModalTitle').textContent='New Service Case';
+  ['jCustomer','jContact','jPhone','jSerial','jErrorCode','jCustomerIssue','jWorkshopNotes','jFollowupNotes','jInternalNotes','jFolder'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('jStatus').value='NEW JOB';
+  document.getElementById('jMachine').value='';
+  document.getElementById('jFaultType').value='';
+  document.getElementById('jLabour').value='';
+  document.getElementById('jParts').value='';
+  document.getElementById('jFollowup').checked=false;
+  populateMachineDropdown();
+  document.getElementById('btnDeleteJob').style.display='none';
+  document.getElementById('jobOverlay').classList.add('show');
+  setTimeout(function(){document.getElementById('jCustomer').focus();},100);
+}
+
+function openEditJobModal(jobId){
+  var j=jobs.find(function(x){return x.id===jobId;}); if(!j) return;
+  editingJob=j;
+  document.getElementById('jobModalTitle').textContent=xpsNum(j.job_number)+' — '+(j.customer||'');
+  document.getElementById('jStatus').value=j.status||'NEW JOB';
+  document.getElementById('jCustomer').value=j.customer||'';
+  document.getElementById('jContact').value=j.contact_name||'';
+  document.getElementById('jPhone').value=j.phone||'';
+  document.getElementById('jSerial').value=j.serial_number||'';
+  document.getElementById('jFaultType').value=j.fault_type||'';
+  document.getElementById('jCustomerIssue').value=j.customer_issue||'';
+  document.getElementById('jWorkshopNotes').value=j.workshop_notes||'';
+  document.getElementById('jErrorCode').value=j.error_code||'';
+  document.getElementById('jLabour').value=j.labour_cost||'';
+  document.getElementById('jParts').value=j.parts_cost||'';
+  document.getElementById('jFollowup').checked=!!j.followup_required;
+  document.getElementById('jFollowupNotes').value=j.followup_notes||'';
+  document.getElementById('jInternalNotes').value=j.internal_notes||'';
+  document.getElementById('jFolder').value=j.service_folder||'';
+  populateMachineDropdown(j.machine_id);
+  document.getElementById('btnDeleteJob').style.display='block';
+  document.getElementById('jobOverlay').classList.add('show');
+}
+
+function populateMachineDropdown(selId){
+  document.getElementById('jMachine').innerHTML='<option value="">-- Select --</option>'+
+    machines.filter(function(m){return !m.is_consumables;}).map(function(m){
+      return '<option value="'+m.id+'"'+(m.id===selId?' selected':'')+'>'+m.name+'</option>';
+    }).join('');
+}
+
+function closeJobModal(){document.getElementById('jobOverlay').classList.remove('show');}
+
+async function saveJob(){
+  var customer=document.getElementById('jCustomer').value.trim();
+  if(!customer){showToast('Customer name is required','error');return;}
+  var btn=document.getElementById('btnSaveJob');btn.disabled=true;btn.textContent='Saving...';
+  var payload={
+    status:document.getElementById('jStatus').value,customer:customer,
+    contact_name:document.getElementById('jContact').value||null,
+    phone:document.getElementById('jPhone').value||null,
+    machine_id:document.getElementById('jMachine').value||null,
+    serial_number:document.getElementById('jSerial').value||null,
+    fault_type:document.getElementById('jFaultType').value||null,
+    customer_issue:document.getElementById('jCustomerIssue').value||null,
+    workshop_notes:document.getElementById('jWorkshopNotes').value||null,
+    error_code:document.getElementById('jErrorCode').value||null,
+    labour_cost:parseFloat(document.getElementById('jLabour').value)||null,
+    parts_cost:parseFloat(document.getElementById('jParts').value)||null,
+    followup_required:document.getElementById('jFollowup').checked,
+    followup_notes:document.getElementById('jFollowupNotes').value||null,
+    internal_notes:document.getElementById('jInternalNotes').value||null,
+    service_folder:document.getElementById('jFolder').value||null,
+    updated_at:new Date().toISOString()
+  };
+  try{
+    if(editingJob){await db('PATCH','jobs?id=eq.'+editingJob.id,payload);showToast('Service case updated');}
+    else{await db('POST','jobs',payload);showToast('Service case created');}
+    closeJobModal(); await loadJobs();
+  }catch(e){showToast('Save failed: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Save Service Case';}
+}
+
+async function deleteJob(){
+  if(!editingJob) return;
+  if(!confirm('Delete service case for '+editingJob.customer+'?\n\nThis cannot be undone.')) return;
+  try{await db('DELETE','jobs?id=eq.'+editingJob.id);closeJobModal();showToast('Deleted');await loadJobs();}
+  catch(e){showToast('Delete failed','error');}
+}
+
+function openMachineModal(){
+  document.getElementById('mName').value='';document.getElementById('mDesc').value='';
+  document.getElementById('btnSaveMachine').style.display='block';
+  document.getElementById('btnSaveMachine').textContent='Create Machine and Start Adding Parts';
+  document.getElementById('btnDeleteMachine').style.display='none';
+  document.getElementById('machineOverlay').classList.add('show');
+  setTimeout(function(){document.getElementById('mName').focus();},100);
+}
+function closeMachineModal(){document.getElementById('machineOverlay').classList.remove('show');}
+
+async function saveMachine(){
+  var name=document.getElementById('mName').value.trim();
+  if(!name){showToast('Machine name is required','error');return;}
+  var btn=document.getElementById('btnSaveMachine');btn.disabled=true;btn.textContent='Creating...';
+  try{
+    var res=await db('POST','machines',{name:name,description:document.getElementById('mDesc').value.trim()||null});
+    var newM=res[0];machines.push(newM);machines.sort(function(a,b){return a.name.localeCompare(b.name);});
+    closeMachineModal();showToast(name+' created');await selectMachine(newM);
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Create Machine and Start Adding Parts';}
+}
+
+function openDeleteMachineModal(){
+  if(!selectedMachine) return;
+  document.getElementById('mName').value=selectedMachine.name;
+  document.getElementById('mDesc').value=selectedMachine.description||'';
+  document.getElementById('btnSaveMachine').style.display='none';
+  document.getElementById('btnDeleteMachine').style.display='block';
+  document.getElementById('machineOverlay').classList.add('show');
+}
+
+async function deleteMachine(){
+  if(!selectedMachine) return;
+  if(!confirm('Delete "'+selectedMachine.name+'" AND all its parts?\n\nThis cannot be undone.')) return;
+  try{
+    await db('DELETE','parts?machine_id=eq.'+selectedMachine.id);
+    await db('DELETE','machines?id=eq.'+selectedMachine.id);
+    machines=machines.filter(function(m){return m.id!==selectedMachine.id;});
+    selectedMachine=null;closeMachineModal();showToast('Machine deleted');
+    if(machines.length) await selectMachine(machines[0]);
+    else{renderTabs();document.getElementById('partsList').innerHTML='<div class="center"><div class="icon">+</div><div>No machines yet.</div></div>';}
+  }catch(e){showToast('Delete failed','error');}
+}
+
+function openAddModal(){
+  editingPart=null;document.getElementById('modalTitle').textContent='+ New Part';
+  ['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fSell','fMyobIncome','fMyobAsset','fMyobCogs'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('fCategory').value='';document.getElementById('fMaterial').value='';document.getElementById('fUom').value='';
+  document.getElementById('fQty').value='0';document.getElementById('fThreshold').value='1';
+  document.getElementById('btnDeletePart').style.display='none';document.getElementById('autoGenBtn').style.display='block';
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(function(){document.getElementById('fKeyno').focus();},100);
+}
+
+function autoGenPartNo(){
+  var cat=document.getElementById('fCategory').value,mat=document.getElementById('fMaterial').value,spec=document.getElementById('fSpec').value.trim().toUpperCase();
+  if(!cat){showToast('Select a category first','error');return;}
+  if(!mat){showToast('Select a material first','error');return;}
+  if(!spec){showToast('Enter Size/Spec first','error');return;}
+  document.getElementById('fKeyno').value='XS-'+cat+'-'+spec.replace(/[^A-Z0-9X.\/]/g,'')+'-'+mat;
+  showToast('Part number generated');
+}
+
+function openEditModal(partId){
+  var p=parts.find(function(x){return x.id===partId;}); if(!p) return;
+  editingPart=p; var s=(p.stock&&p.stock[0])||{};
+  document.getElementById('modalTitle').textContent='Edit Part';
+  document.getElementById('fKeyno').value=p.key_no;document.getElementById('fRef').value=p.diagram_ref||'';
+  document.getElementById('fDesc').value=p.description;document.getElementById('fSpec').value=p.spec||'';
+  document.getElementById('fAltPartNo').value=p.alt_part_no||'';document.getElementById('fCategory').value=p.category||'';
+  document.getElementById('fMaterial').value=p.material||'';document.getElementById('fUom').value=p.uom||'';
+  document.getElementById('autoGenBtn').style.display='block';
+  document.getElementById('fSection').value=p.assembly_section||'';document.getElementById('fDiagramRefs').value=p.diagram_refs||'';
+  document.getElementById('fCost').value=p.cost_price||'';document.getElementById('fSell').value=p.sell_price||'';
+  document.getElementById('fMyobIncome').value=p.myob_account_income||'';document.getElementById('fMyobAsset').value=p.myob_account_asset||'';
+  document.getElementById('fMyobCogs').value=p.myob_account_cogs||'';document.getElementById('fNotes').value=p.notes||'';
+  document.getElementById('fLoc').value=s.location||'';document.getElementById('fQty').value=s.quantity!==undefined?s.quantity:0;
+  document.getElementById('fThreshold').value=s.reorder_threshold||1;
+  document.getElementById('btnDeletePart').style.display='block';document.getElementById('overlay').classList.add('show');
+}
+
+function closeModal(){document.getElementById('overlay').classList.remove('show');}
+
+async function deletePart(){
+  if(!editingPart) return;
+  if(!confirm('Delete '+editingPart.key_no+' \u2014 '+editingPart.description+'?\n\nThis cannot be undone.')) return;
+  try{
+    var s=editingPart.stock&&editingPart.stock[0];
+    if(s&&s.id) await db('DELETE','stock?id=eq.'+s.id);
+    await db('DELETE','parts?id=eq.'+editingPart.id);
+    closeModal();showToast(editingPart.key_no+' deleted');
+    await selectMachine(selectedMachine);await loadAllParts();
+  }catch(e){showToast('Delete failed','error');}
+}
+
+async function savePart(){
+  var keyno=document.getElementById('fKeyno').value.trim(),desc=document.getElementById('fDesc').value.trim();
+  if(!keyno||!desc){showToast('Part number and description required','error');return;}
+  var btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Saving...';
+  var stock={location:document.getElementById('fLoc').value.trim(),quantity:parseInt(document.getElementById('fQty').value)||0,reorder_threshold:parseInt(document.getElementById('fThreshold').value)||1,updated_at:new Date().toISOString()};
+  var pd={key_no:keyno,description:desc,diagram_ref:document.getElementById('fRef').value||null,assembly_section:document.getElementById('fSection').value||null,diagram_refs:document.getElementById('fDiagramRefs').value||null,notes:document.getElementById('fNotes').value||null,spec:document.getElementById('fSpec').value||null,alt_part_no:document.getElementById('fAltPartNo').value||null,category:document.getElementById('fCategory').value||null,material:document.getElementById('fMaterial').value||null,uom:document.getElementById('fUom').value||null,cost_price:parseFloat(document.getElementById('fCost').value)||null,sell_price:parseFloat(document.getElementById('fSell').value)||null,myob_account_income:document.getElementById('fMyobIncome').value||null,myob_account_asset:document.getElementById('fMyobAsset').value||null,myob_account_cogs:document.getElementById('fMyobCogs').value||null};
+  try{
+    if(editingPart){
+      await db('PATCH','parts?id=eq.'+editingPart.id,pd);
+      var s=editingPart.stock&&editingPart.stock[0];
+      if(s&&s.id) await db('PATCH','stock?id=eq.'+s.id,stock);
+      else await db('POST','stock',Object.assign({part_id:editingPart.id},stock));
+      showToast('Part updated');
+    }else{
+      var res=await db('POST','parts',Object.assign({machine_id:selectedMachine.id},pd));
+      await db('POST','stock',Object.assign({part_id:res[0].id},stock));
+      showToast('Part added');
+    }
+    closeModal();await selectMachine(selectedMachine);await loadAllParts();
+  }catch(e){showToast('Save failed: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Save Part';}
+}
+
+function makeLabelData(partId){
+  var p=parts.find(function(x){return x.id===partId;}); if(!p) return null;
+  return{id:p.id,machine:selectedMachine?selectedMachine.name:'',keyno:p.key_no,description:p.description,location:(p.stock&&p.stock[0]&&p.stock[0].location)||'',qrText:'XPAK|'+p.key_no+'|'+p.description+'|'+(selectedMachine?selectedMachine.name:'')};
+}
+
+function makeLabelInner(d,prefix){
+  return '<div class="'+prefix+'-text"><div class="'+prefix+'-partno-label">Part No.</div><div class="'+prefix+'-partno">'+d.keyno+'</div><div class="'+prefix+'-desc">'+d.description+'</div><div class="'+prefix+'-machine">'+d.machine+'</div>'+(d.location?'<div class="'+prefix+'-loc">S/L '+d.location+'</div>':'')+
+  '</div><div class="'+prefix+'-qr" id="'+prefix+'qr-'+d.id+'"></div>';
+}
+
+function autoSizeLabelText(el){var l=(el.textContent||el.innerText).length;el.style.fontSize=l>14?'18px':l>10?'22px':'27px';}
+
+function queueLabel(partId){
+  var d=makeLabelData(partId); if(!d) return;
+  if(labelQueue.some(function(x){return x.id===d.id;})){showToast('Already in queue','error');return;}
+  labelQueue.push(d);updateLabelPanel();renderParts();showToast(d.keyno+' added to queue');
+}
+
+function queueAllVisible(){
+  var q=document.getElementById('searchBox').value.toLowerCase();
+  var visible=parts.filter(function(p){return p.key_no.toLowerCase().includes(q)||p.description.toLowerCase().includes(q)||((p.stock&&p.stock[0]&&p.stock[0].location)||'').toLowerCase().includes(q);});
+  var added=0;visible.forEach(function(p){if(!labelQueue.some(function(x){return x.id===p.id;})){var d=makeLabelData(p.id);if(d){labelQueue.push(d);added++;}}});
+  updateLabelPanel();renderParts();showToast(added+' labels queued');
+}
+
+function removeFromQueue(partId){labelQueue=labelQueue.filter(function(x){return x.id!==partId;});updateLabelPanel();renderParts();}
+function clearQueue(){labelQueue=[];updateLabelPanel();renderParts();}
+
+function updateLabelPanel(){
+  var panel=document.getElementById('labelPanel');
+  if(!labelQueue.length){panel.classList.remove('show');return;}
+  panel.classList.add('show');
+  document.getElementById('labelCount').textContent=labelQueue.length+' label'+(labelQueue.length>1?'s':'')+' ready';
+  document.getElementById('labelPreviews').innerHTML=labelQueue.map(function(d){
+    return '<div class="label-preview-card"><button class="lp-remove" onclick="removeFromQueue(''+d.id+'')">&times;</button>'+makeLabelInner(d,'lp')+'</div>';
+  }).join('');
+  labelQueue.forEach(function(d){
+    var el=document.getElementById('lpqr-'+d.id);
+    if(el&&!el.children.length) new QRCode(el,{text:d.qrText,width:76,height:76,correctLevel:QRCode.CorrectLevel.M});
+    var card=el?el.closest('.label-preview-card'):null;
+    if(card){var pn=card.querySelector('.lp-partno');if(pn)autoSizeLabelText(pn);}
+  });
+}
+
+function doPrint(){
+  if(!labelQueue.length) return;
+  var pa=document.getElementById('printArea');
+  pa.innerHTML=labelQueue.map(function(d){return '<div class="print-label">'+makeLabelInner(d,'pl')+'</div>';}).join('');
+  labelQueue.forEach(function(d){var el=document.getElementById('plqr-'+d.id);if(el)new QRCode(el,{text:d.qrText,width:102,height:102,correctLevel:QRCode.CorrectLevel.M});});
+  setTimeout(function(){window.print();},450);
+}
+
+function showToast(msg,type){
+  type=type||'success';var t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+type;
+  setTimeout(function(){t.className='toast';},2500);
+}
+
+init();
 </script>
 </body>
 </html>
