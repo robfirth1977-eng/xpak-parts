@@ -1661,7 +1661,7 @@ function renderAssessmentReport(j, tools, jparts) {
     var mName = mLookup(t.machine_id);
     var toolParts = jparts.filter(function(p) { return !p.tool_number || p.tool_number === t.tool_number; });
     var partsRows = toolParts.map(function(p) {
-      var sell = p.sell_price ? parseFloat(p.sell_price) : 0;
+      var sell = (p.parts && p.parts.sell_price) ? parseFloat(p.parts.sell_price) : 0;
       var total = sell * (p.quantity || 1);
       return '<tr><td>' + (p.part_key_no||'') + '</td><td>' + (p.part_description||'') + '</td><td style="text-align:center">' + (p.quantity||1) + '</td><td style="text-align:right">' + (sell > 0 ? '$' + sell.toFixed(2) : '-') + '</td><td style="text-align:right">' + (total > 0 ? '$' + total.toFixed(2) : '-') + '</td></tr>';
     }).join('');
