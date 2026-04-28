@@ -1336,6 +1336,8 @@ function openEditModal(partId) {
   document.getElementById('fCost').value = p.cost_price || ''; document.getElementById('fSell').value = p.sell_price || '';
   document.getElementById('fMyobIncome').value = p.myob_account_income || ''; document.getElementById('fMyobAsset').value = p.myob_account_asset || '';
   document.getElementById('fMyobCogs').value = p.myob_account_cogs || ''; document.getElementById('fNotes').value = p.notes || '';
+  try { partSuppliers = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e) { partSuppliers = []; }
+  renderSuppliersList();
   document.getElementById('fLoc').value = s.location || ''; document.getElementById('fQty').value = s.quantity !== undefined ? s.quantity : 0;
   document.getElementById('fThreshold').value = s.reorder_threshold || 1;
   document.getElementById('btnDeletePart').style.display = 'block'; document.getElementById('overlay').classList.add('show');
