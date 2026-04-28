@@ -1547,7 +1547,7 @@ var FAULT_OPTIONS = ['Not cutting','Tension / force issue','Jammed / mechanical 
 
 function addTool() {
   var num = jobToolsLocal.length + 1;
-  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' });
+  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' });
   renderToolsList();
 }
 
@@ -1569,17 +1569,14 @@ function renderToolsList() {
     machines.filter(function(m) { return !m.is_consumables; }).map(function(m) {
       return '<option value="' + m.id + '">' + m.name + '</option>';
     }).join('');
-  var faultOpts = '<option value="">-- Select --</option>' + FAULT_OPTIONS.map(function(f) { return '<option>' + f + '</option>'; }).join('');
+
 
   el.innerHTML = jobToolsLocal.map(function(t) {
     var mOpts = '<option value="">-- Select --</option>' +
       machines.filter(function(m) { return !m.is_consumables; }).map(function(m) {
         return '<option value="' + m.id + '"' + (m.id === t.machine_id ? ' selected' : '') + '>' + m.name + '</option>';
       }).join('');
-    var fOpts = '<option value="">-- Select --</option>' + FAULT_OPTIONS.map(function(f) {
-      return '<option' + (f === t.fault_type ? ' selected' : '') + '>' + f + '</option>';
-    }).join('');
-    var mName = t.machine_id ? (machines.find(function(m){return m.id===t.machine_id;})||{}).name || '' : '';
+  var mName = t.machine_id ? (machines.find(function(m){return m.id===t.machine_id;})||{}).name || '' : '';
     return '<div class="tool-card" id="tc_' + t._tempId + '">' +
       '<div class="tool-card-header">' +
         '<span class="tool-card-title">Tool ' + t.tool_number + (mName ? ' — ' + mName : '') + '</span>' +
@@ -1588,8 +1585,9 @@ function renderToolsList() {
       '<div class="g2">' +
         '<div class="field"><label>Machine Model</label><div class="machine-row"><select onchange="setToolField(\'' + t._tempId + '\',\'machine_id\',this.value);renderToolsList()" style="flex:1;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">' + mOpts + '</select><button class="btn-add-machine" onclick="openMachineModalFromJob(\'' + t._tempId + '\')">+ New</button></div></div>' +
         '<div class="field"><label>Serial Number</label><input value="' + (t.serial_number||'') + '" placeholder="e.g. 56096" oninput="setToolField(\'' + t._tempId + '\',\'serial_number\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
-        '<div class="field"><label>Fault Type</label><select onchange="setToolField(\'' + t._tempId + '\',\'fault_type\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">' + fOpts + '</select></div>' +
+        '<div class="field"><label>Fault Type</label><input value="' + (t.fault_type||'') + '" list="fltOpts_' + t._tempId + '" placeholder="Select or type..." oninput="setToolField(\'' + t._tempId + '\',\'fault_type\',this.value)" autocomplete="off" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><datalist id="fltOpts_' + t._tempId + '">' + FAULT_OPTIONS.map(function(f){return'<option value="'+f+'">';}).join('') + '</datalist></div>' +
         '<div class="field"><label>Error Code</label><input value="' + (t.error_code||'') + '" placeholder="e.g. E.2" oninput="setToolField(\'' + t._tempId + '\',\'error_code\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
+        '<div class="field"><label>Cycle Count</label><input type="number" value="' + (t.cycle_count||'') + '" placeholder="e.g. 16835" min="0" oninput="setToolField(\'' + t._tempId + '\',\'cycle_count\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field full"><label>Customer Reported Issue</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'customer_issue\',this.value)" placeholder="What the customer reported..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.customer_issue||'') + '</textarea></div>' +
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
