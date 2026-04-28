@@ -1049,7 +1049,7 @@ async function saveJob() {
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, updated_at: new Date().toISOString() });
+      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, updated_at: new Date().toISOString() });
     }
     // Save job parts
     for (var i = 0; i < jobPartsLocal.length; i++) {
