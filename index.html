@@ -1308,6 +1308,7 @@ function openAddModal() {
   document.getElementById('fCategory').value = ''; document.getElementById('fMaterial').value = ''; document.getElementById('fUom').value = '';
   document.getElementById('fQty').value = '0'; document.getElementById('fThreshold').value = '1';
   document.getElementById('btnDeletePart').style.display = 'none'; document.getElementById('autoGenBtn').style.display = 'block';
+  partSuppliers = []; renderSuppliersList();
   document.getElementById('overlay').classList.add('show');
   setTimeout(function() { document.getElementById('fKeyno').focus(); }, 100);
 }
