@@ -368,11 +368,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="g2">
         <div class="field"><label>Supplier Name</label><input id="sName" placeholder="e.g. ITA, Makopak"></div>
         <div class="field"><label>Their Part No.</label><input id="sPartNo" placeholder="e.g. 05082000001"></div>
-        <div class="field"><label>Contact Name</label><input id="sContact" placeholder="e.g. Caren Grove"></div>
-        <div class="field"><label>Phone</label><input id="sPhone" placeholder="e.g. 02 9000 0000"></div>
-        <div class="field"><label>Email</label><input id="sEmail" placeholder="e.g. orders@supplier.com"></div>
-        <div class="field"><label>Unit Cost ($)</label><input id="sPrice" type="number" step="0.01" min="0" placeholder="0.00"></div>
-        <div class="field" style="display:flex;align-items:center;padding-top:20px"><input type="checkbox" id="sPreferred" style="width:18px;height:18px;margin-right:8px;accent-color:#10b981"><label for="sPreferred" style="font-size:13px;color:#e2e8f0;cursor:pointer">Preferred Supplier</label></div>
+        <div class="field"><label>Unit Price ($)</label><input id="sPrice" type="number" step="0.01" min="0" placeholder="0.00"></div>
+        <div class="field" style="display:flex;align-items:center;padding-top:18px"><input type="checkbox" id="sPreferred" style="width:18px;height:18px;margin-right:8px;accent-color:#10b981"><label for="sPreferred" style="font-size:13px;color:#e2e8f0">Preferred</label></div>
       </div>
       <button onclick="addSupplier()" style="width:100%;padding:8px;background:#1e3048;color:#64b5c8;border:1px solid #2a4060;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:4px">+ Add Supplier</button>
     </div>
@@ -429,15 +426,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <button onclick="addTool()" style="padding:3px 10px;background:#1e3048;border:1px solid #2a4060;border-radius:6px;color:#64b5c8;cursor:pointer;font-size:11px;font-weight:600">+ Add Tool</button>
     </div>
     <div id="jobToolsList"></div>
-
-    <div class="section-label">Parts Required</div>
-    <div class="parts-search-area">
-      <div class="parts-search-row">
-        <input id="partSearchInput" placeholder="Search by part number or description..." oninput="searchPartsForJob()" autocomplete="off">
-      </div>
-      <div class="parts-search-results" id="partSearchResults"></div>
-    </div>
-    <div class="job-parts-list" id="jobPartsList"></div>
 
     <div class="section-label">Costs</div>
     <div class="g2">
@@ -533,8 +521,8 @@ var partSuppliers = [];
 function addSupplier() {
   var name = document.getElementById('sName').value.trim();
   if (!name) { showToast('Supplier name required', 'error'); return; }
-  partSuppliers.push({ name: name, part_no: document.getElementById('sPartNo').value.trim(), contact: document.getElementById('sContact') ? document.getElementById('sContact').value.trim() : '', phone: document.getElementById('sPhone') ? document.getElementById('sPhone').value.trim() : '', email: document.getElementById('sEmail') ? document.getElementById('sEmail').value.trim() : '', price: parseFloat(document.getElementById('sPrice').value) || null, preferred: document.getElementById('sPreferred').checked });
-  ['sName','sPartNo','sContact','sPhone','sEmail','sPrice'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); document.getElementById('sPreferred').checked = false;
+  partSuppliers.push({ name: name, part_no: document.getElementById('sPartNo').value.trim(), price: parseFloat(document.getElementById('sPrice').value) || null, preferred: document.getElementById('sPreferred').checked });
+  document.getElementById('sName').value = ''; document.getElementById('sPartNo').value = ''; document.getElementById('sPrice').value = ''; document.getElementById('sPreferred').checked = false;
   renderSuppliersList();
 }
  
@@ -544,14 +532,11 @@ function renderSuppliersList() {
   var el = document.getElementById('suppliersList'); if (!el) return;
   if (!partSuppliers.length) { el.innerHTML = ''; return; }
   el.innerHTML = partSuppliers.map(function(s, i) {
-    var details = [s.part_no, s.contact, s.phone, s.email].filter(Boolean).join(' · ');
-    return '<div style="display:flex;align-items:center;gap:8px;background:#0d1a28;border-radius:6px;padding:7px 10px;margin-bottom:4px;border-left:3px solid ' + (s.preferred?'#10b981':'#2a4060') + '">' +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="font-weight:700;color:' + (s.preferred?'#10b981':'#64b5c8') + ';font-size:13px">' + s.name + (s.preferred?' ★ Preferred':'') + '</div>' +
-        (details ? '<div style="font-size:11px;color:#5a8090;margin-top:2px">' + details + '</div>' : '') +
-      '</div>' +
-      (s.price ? '<span style="color:#10b981;font-size:12px;font-weight:700;flex-shrink:0">$' + s.price.toFixed(2) + '</span>' : '') +
-      '<button onclick="removeSupplier(' + i + ')" style="background:none;border:none;color:#4a6080;cursor:pointer;font-size:14px;padding:0 3px;flex-shrink:0">x</button>' +
+    return '<div style="display:flex;align-items:center;gap:8px;background:#0d1a28;border-radius:6px;padding:6px 10px;margin-bottom:4px">' +
+      '<span style="font-weight:700;color:' + (s.preferred?'#10b981':'#64b5c8') + ';flex:0 0 auto">' + s.name + (s.preferred?' \u2605':'') + '</span>' +
+      '<span style="font-size:11px;color:#5a8090;font-family:monospace;flex:1">' + (s.part_no || '') + '</span>' +
+      (s.price ? '<span style="color:#10b981;font-size:12px;font-weight:700">$' + s.price.toFixed(2) + '</span>' : '') +
+      '<button onclick="removeSupplier(' + i + ')" style="background:none;border:none;color:#4a6080;cursor:pointer;font-size:14px;padding:0 3px">x</button>' +
       '</div>';
   }).join('');
 }
@@ -690,7 +675,7 @@ function renderOrderList(rows) {
     grpRows.forEach(function(r) {
       var sc = STATUS_COLOURS[r.status] || '#4a6080';
       var sl = STATUS_LABELS[r.status] || r.status;
-      var jobRef = r.job_id ? (r.notes && r.notes !== 'Stock order' ? r.notes : 'Job ' + r.job_id.substring(0,8)) : 'Stock Order';
+      var jobRef = r.job_id ? r.job_id.substring(0,8) : 'Stock Order';
       html += '<div class="order-row ' + r.status + '">' +
         '<div style="flex:1;min-width:0">' +
           '<div style="display:flex;align-items:center;gap:8px">' +
@@ -699,7 +684,7 @@ function renderOrderList(rows) {
             '<span class="order-qty">x' + r.quantity + '</span>' +
             '<span class="order-status-badge" style="background:' + sc + '20;color:' + sc + ';border:1px solid ' + sc + '40">' + sl + '</span>' +
           '</div>' +
-          '<div class="order-job">' + (r.job_id ? 'Job ID: ' + r.job_id.substring(0,8) : 'Stock Order') + (r.notes && r.notes !== 'Stock order' ? ' | ' + r.notes : '') + '</div>' +
+          '<div class="order-job">' + (r.job_id ? 'Job: ' + r.job_id.substring(0,8) : 'Stock Order') + (r.notes && r.notes !== 'Stock order' ? ' | ' + r.notes : '') + '</div>' +
         '</div>' +
         '<div class="order-actions">' +
           (r.status === 'to_order' ? '<button class="btn-sm amber" onclick="markOrdered(\'' + r.id + '\')">Mark Ordered</button>' : '') +
@@ -769,9 +754,13 @@ function printOrderList() {
 
 // ── PARTS SEARCH IN JOB ───────────────────────────────────────────
 
-function searchPartsForJob() {
-  var q = document.getElementById('partSearchInput').value.toLowerCase().trim();
-  var res = document.getElementById('partSearchResults');
+function searchPartsForJob(toolTempId) {
+  var inputId = 'psi_' + toolTempId;
+  var resId   = 'psr_' + toolTempId;
+  var inp = document.getElementById(inputId);
+  var res = document.getElementById(resId);
+  if (!inp || !res) return;
+  var q = inp.value.toLowerCase().trim();
   if (!q) { res.innerHTML = ''; return; }
   var matches = allParts.filter(function(p) {
     return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
@@ -782,7 +771,7 @@ function searchPartsForJob() {
     var qty = s ? s.quantity : null;
     var st = qty === null ? 'unset' : qty === 0 ? 'empty' : qty <= (s.reorder_threshold || 1) ? 'low' : 'ok';
     var stockLabel = qty === null ? 'No stock data' : 'Stock: ' + qty;
-    return '<div class="part-search-item" onclick="addPartToJob(\'' + p.id + '\')">' +
+    return '<div class="part-search-item" onclick="addPartToJob(\'' + p.id + '\',\'' + toolTempId + '\')">'+
       '<div class="psi-left">' +
         '<div class="psi-keyno">' + p.key_no + '</div>' +
         '<div class="psi-desc">' + p.description + '</div>' +
@@ -793,50 +782,61 @@ function searchPartsForJob() {
   }).join('');
 }
 
-function addPartToJob(partId) {
+function addPartToJob(partId, toolTempId) {
   var p = allParts.find(function(x) { return x.id === partId; }); if (!p) return;
   var s = p.stock && p.stock[0];
   var qty = s ? s.quantity : 0;
   var status = qty > 0 ? 'use_stock' : 'to_order';
-  var existing = jobPartsLocal.find(function(x) { return x.part_id === partId; });
-  if (existing) { showToast('Already added', 'error'); return; }
+  var existing = jobPartsLocal.find(function(x) { return x.part_id === partId && x._toolTempId === toolTempId; });
+  if (existing) { showToast('Already added to this tool', 'error'); return; }
+  var toolNum = 1;
+  if (toolTempId) {
+    var t = jobToolsLocal.find(function(x) { return x._tempId === toolTempId; });
+    if (t) toolNum = t.tool_number;
+  }
   jobPartsLocal.push({
     _tempId: 'tmp_' + Date.now(),
+    _toolTempId: toolTempId || null,
     part_id: partId,
     part_key_no: p.key_no,
     part_description: p.description,
     machine_name: p.machineName || '',
     quantity: 1,
     status: status,
+    tool_number: toolNum,
     notes: ''
   });
-  document.getElementById('partSearchInput').value = '';
-  document.getElementById('partSearchResults').innerHTML = '';
-  renderJobPartsList();
+  var inp = document.getElementById('psi_' + toolTempId);
+  var res = document.getElementById('psr_' + toolTempId);
+  if (inp) inp.value = '';
+  if (res) res.innerHTML = '';
+  renderToolPartsList(toolTempId);
 }
 
 function removeJobPart(tempId) {
+  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  var tid = jp ? jp._toolTempId : null;
   jobPartsLocal = jobPartsLocal.filter(function(x) { return x._tempId !== tempId; });
-  renderJobPartsList();
+  renderToolPartsList(tid);
 }
 
 function setJobPartStatus(tempId, status) {
-  var p = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
-  if (p) p.status = status;
-  renderJobPartsList();
+  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  if (jp) { jp.status = status; renderToolPartsList(jp._toolTempId); }
 }
 
 function setJobPartQty(tempId, val) {
-  var p = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
-  if (p) p.quantity = Math.max(1, parseInt(val) || 1);
+  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  if (jp) jp.quantity = Math.max(1, parseInt(val) || 1);
 }
 
-function renderJobPartsList() {
-  var el = document.getElementById('jobPartsList');
-  if (!jobPartsLocal.length) { el.innerHTML = ''; return; }
-  el.innerHTML = jobPartsLocal.map(function(jp) {
+function renderToolPartsList(toolTempId) {
+  var el = document.getElementById('tpl_' + toolTempId);
+  if (!el) return;
+  var parts = jobPartsLocal.filter(function(x) { return x._toolTempId === toolTempId; });
+  if (!parts.length) { el.innerHTML = ''; return; }
+  el.innerHTML = parts.map(function(jp) {
     var sc = STATUS_COLOURS[jp.status] || '#4a6080';
-    var sl = STATUS_LABELS[jp.status] || jp.status;
     return '<div class="job-part-row ' + jp.status + '">' +
       '<span class="jpr-keyno">' + jp.part_key_no + '</span>' +
       '<span class="jpr-desc">' + jp.part_description + '</span>' +
@@ -848,6 +848,11 @@ function renderJobPartsList() {
       '<button class="jpr-remove" onclick="removeJobPart(\'' + jp._tempId + '\')">x</button>' +
       '</div>';
   }).join('');
+}
+
+function renderJobPartsList() {
+  // Legacy - re-render all tools
+  jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
 }
 
 // ── JOBS ──────────────────────────────────────────────────────────
@@ -985,10 +990,8 @@ function clearJobForm() {
   document.getElementById('jLabour').value = '';
   document.getElementById('jParts').value = '';
   document.getElementById('jFollowup').checked = false;
-  document.getElementById('partSearchInput').value = '';
-  document.getElementById('partSearchResults').innerHTML = '';
   jobLinks = []; renderLinksList();
-  jobPartsLocal = []; renderJobPartsList();
+  jobPartsLocal = [];
   jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' }];
   renderToolsList();
 }
@@ -1022,8 +1025,7 @@ async function openEditJobModal(jobId) {
   renderLinksList();
   document.getElementById('lLinkName').value = '';
   document.getElementById('lLinkUrl').value = '';
-  document.getElementById('partSearchInput').value = '';
-  document.getElementById('partSearchResults').innerHTML = '';
+  // parts now live inside tool cards
   // Load job tools - fall back to legacy job fields if none exist
   try {
     var existingTools = await db('GET', 'job_tools?job_id=eq.' + j.id + '&select=*&order=tool_number.asc');
@@ -1037,14 +1039,17 @@ async function openEditJobModal(jobId) {
     }
   } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' }]; }
   renderToolsList();
-  // Load existing job parts
+  // Load existing job parts — parts will be rendered into tool cards after load
   try {
     var existing = await db('GET', 'job_parts?job_id=eq.' + j.id + '&select=*&order=created_at.asc');
     jobPartsLocal = existing.map(function(ep) {
-      return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id }, ep);
+      // Match _toolTempId to the loaded jobToolsLocal entry by tool_number
+      var matchTool = jobToolsLocal.find(function(t) { return t.tool_number === ep.tool_number; });
+      return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id, _toolTempId: matchTool ? matchTool._tempId : null }, ep);
     });
   } catch(e) { jobPartsLocal = []; }
-  renderJobPartsList();
+  // Render parts into each tool card now that tools and parts are both loaded
+  jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
   document.getElementById('btnDeleteJob').style.display = 'block';
   document.getElementById('jobOverlay').classList.add('show');
 }
@@ -1654,6 +1659,16 @@ function renderToolsList() {
         '<div class="field full"><label>Customer Reported Issue</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'customer_issue\',this.value)" placeholder="What the customer reported..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.customer_issue||'') + '</textarea></div>' +
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
+      '</div>' +
+      '<div style="margin-top:10px;border-top:1px solid #1e3048;padding-top:10px">' +
+        '<div style="font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Parts for this Tool</div>' +
+        '<div class="parts-search-area" style="margin-bottom:6px">' +
+          '<div class="parts-search-row">' +
+            '<input id="psi_' + t._tempId + '" placeholder="Search part number or description..." oninput="searchPartsForJob(\'' + t._tempId + '\')" autocomplete="off">' +
+          '</div>' +
+          '<div class="parts-search-results" id="psr_' + t._tempId + '"></div>' +
+        '</div>' +
+        '<div class="job-parts-list" id="tpl_' + t._tempId + '"></div>' +
       '</div>' +
       '</div>';
   }).join('');
