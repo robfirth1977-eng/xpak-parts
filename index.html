@@ -19,6 +19,27 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .tab.jobs-tab:hover,.tab.jobs-tab.active{background:#f97316;border-color:#f97316;color:#0f1923}
 .tab.order-tab{border-color:#10b981;color:#10b981}
 .tab.order-tab:hover,.tab.order-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
+.tab.loan-tab{border-color:#a78bfa;color:#a78bfa}
+.tab.loan-tab:hover,.tab.loan-tab.active{background:#a78bfa;border-color:#a78bfa;color:#0f1923}
+.loan-toolbar{padding:12px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.loan-section{padding:0 14px 20px}
+.loan-view-toggle{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.loan-view-btn{padding:5px 16px;border-radius:16px;border:1px solid #2a4060;background:transparent;color:#8aa8c0;cursor:pointer;font-size:11px;font-weight:700}
+.loan-view-btn.active{background:#1e3048;border-color:#a78bfa;color:#a78bfa}
+.loan-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #a78bfa;cursor:default;transition:background 0.1s}
+.loan-card.overdue{border-left-color:#ef4444}
+.loan-card.returned{border-left-color:#4a6080;opacity:0.6}
+.loan-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px}
+.loan-number{font-size:11px;font-weight:700;color:#a78bfa;font-family:"Courier New",monospace}
+.loan-status-badge{font-size:10px;font-weight:700;border-radius:10px;padding:2px 9px;white-space:nowrap;flex-shrink:0}
+.loan-customer{font-size:15px;font-weight:700;color:#e2e8f0}
+.loan-meta{font-size:11px;color:#5a8090;margin-top:4px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.loan-overdue-flag{color:#ef4444;font-weight:700}
+.tool-reg-card{background:#141f2d;border-radius:10px;padding:11px 13px;margin-bottom:7px;border-left:3px solid #a78bfa;display:flex;align-items:center;gap:10px}
+.tool-reg-card.unavailable{border-left-color:#ef4444;opacity:0.8}
+.tool-reg-name{font-size:13px;font-weight:700;color:#e2e8f0;flex:1}
+.tool-reg-sn{font-size:11px;color:#5a8090}
+.tool-reg-status{font-size:11px;font-weight:700;border-radius:8px;padding:3px 10px;flex-shrink:0}
 .tab-add{padding:6px 12px;border-radius:20px;border:1px dashed #3a6050;background:transparent;color:#3a9070;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .tab-add:hover{border-color:#10b981;color:#10b981}
 .tab-del{padding:4px 7px;border-radius:20px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;margin-left:-6px}
@@ -294,6 +315,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   <div id="orderList"></div>
 </div>
 
+<!-- Loans toolbar -->
+<div class="loan-toolbar" id="loanToolbar" style="display:none">
+  <div class="loan-view-toggle">
+    <button class="loan-view-btn active" id="btnLoanActive" onclick="setLoanView('active')">Active / Overdue</button>
+    <button class="loan-view-btn" id="btnLoanRegister" onclick="setLoanView('register')">Tool Register</button>
+  </div>
+  <button class="btn-add" style="background:#a78bfa;margin-left:auto" onclick="openNewLoanModal()">+ New Loan</button>
+  <button class="btn-add" style="background:#1e3048;border:1px solid #a78bfa;color:#a78bfa" onclick="openLoanToolModal()">+ Add Loan Tool</button>
+</div>
+<div class="loan-section" id="loanSection" style="display:none">
+  <div id="loanList"></div>
+</div>
+
 <div class="label-panel" id="labelPanel">
   <div class="label-panel-header">
     <div><div class="label-panel-title">Label Queue - DYMO 99012</div><div class="label-count" id="labelCount"></div></div>
@@ -427,6 +461,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     </div>
     <div id="jobToolsList"></div>
 
+    <div class="section-label">Parts Required</div>
+    <div class="parts-search-area">
+      <div class="parts-search-row">
+        <input id="partSearchInput" placeholder="Search by part number or description..." oninput="searchPartsForJob()" autocomplete="off">
+      </div>
+      <div class="parts-search-results" id="partSearchResults"></div>
+    </div>
+    <div class="job-parts-list" id="jobPartsList"></div>
+
     <div class="section-label">Costs</div>
     <div class="g2">
       <div class="field"><label>Service Fee ($)</label><input id="jLabour" type="number" step="0.01" min="0" placeholder="350.00"></div>
@@ -453,6 +496,62 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 
     <button class="btn-save orange" id="btnSaveJob" onclick="saveJob()">Save Service Case</button>
     <button class="btn-delete" id="btnDeleteJob" onclick="deleteJob()" style="display:none">Delete This Service Case</button>
+  </div>
+</div>
+
+<!-- Loan Modal -->
+<div class="overlay" id="loanOverlay" onclick="if(event.target===this)closeLoanModal()">
+  <div class="modal" style="border-top-color:#a78bfa">
+    <div class="modal-header"><div class="modal-title" id="loanModalTitle">New Loan</div><button class="modal-close" onclick="closeLoanModal()">x</button></div>
+    <div class="section-label">Tool</div>
+    <div class="field"><label>Loan Tool *</label>
+      <select id="lToolId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+        <option value="">-- Select tool --</option>
+      </select>
+    </div>
+    <div class="field"><label>Condition Out</label><input id="lConditionOut" placeholder="e.g. Good, Minor wear"></div>
+    <div class="section-label">Customer</div>
+    <div class="g2">
+      <div class="field full"><label>Customer / Company *</label><input id="lCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour"></div>
+      <div class="field"><label>Contact Name</label><input id="lContact" placeholder="e.g. John Smith"></div>
+      <div class="field"><label>Phone</label><input id="lPhone" placeholder="e.g. 02 6652 0000"></div>
+      <div class="field"><label>Mobile</label><input id="lMobile" placeholder="e.g. 0412 345 678"></div>
+      <div class="field"><label>Email</label><input id="lEmail" type="email" placeholder="e.g. john@example.com.au"></div>
+    </div>
+    <div class="section-label">Loan Details</div>
+    <div class="g2">
+      <div class="field"><label>Loaned Date</label><input id="lLoanedDate" type="date"></div>
+      <div class="field"><label>Expected Return</label><input id="lExpectedReturn" type="date"></div>
+      <div class="field"><label>Loaned By</label><input id="lLoanedBy" placeholder="e.g. Rob, Dave"></div>
+      <div class="field"><label>Linked Job (optional)</label><input id="lLinkedJob" placeholder="e.g. XPS-008"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="lNotes" placeholder="Any notes about the loan..." style="min-height:60px"></textarea></div>
+    <div id="lReturnSection" style="display:none">
+      <div class="section-label">Return</div>
+      <div class="g2">
+        <div class="field"><label>Returned Date</label><input id="lReturnedDate" type="date"></div>
+        <div class="field"><label>Condition In</label><input id="lConditionIn" placeholder="e.g. Good, Damaged"></div>
+      </div>
+    </div>
+    <button class="btn-save" style="background:#a78bfa" id="btnSaveLoan" onclick="saveLoan()">Save Loan</button>
+    <button id="btnMarkReturned" onclick="markLoanReturned()" style="display:none;width:100%;padding:11px;background:transparent;color:#10b981;border:1px solid #10b981;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Mark as Returned</button>
+    <button class="btn-delete" id="btnDeleteLoan" onclick="deleteLoan()" style="display:none">Delete This Loan</button>
+  </div>
+</div>
+
+<!-- Loan Tool Register Modal -->
+<div class="overlay" id="loanToolOverlay" onclick="if(event.target===this)closeLoanToolModal()">
+  <div class="modal" style="border-top-color:#a78bfa">
+    <div class="modal-header"><div class="modal-title" id="loanToolModalTitle">Add Loan Tool</div><button class="modal-close" onclick="closeLoanToolModal()">x</button></div>
+    <div class="section-label">Tool Details</div>
+    <div class="field"><label>Tool Name / Model *</label><input id="ltName" placeholder="e.g. Titan TA220, OR-T 250"></div>
+    <div class="g2">
+      <div class="field"><label>Serial Number</label><input id="ltSerial" placeholder="e.g. 56096"></div>
+      <div class="field"><label>Condition</label><input id="ltCondition" placeholder="e.g. Good, Fair"></div>
+    </div>
+    <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
+    <button class="btn-save" style="background:#a78bfa" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
+    <button class="btn-delete" id="btnDeleteLoanTool" onclick="deleteLoanTool()" style="display:none">Remove from Register</button>
   </div>
 </div>
 
@@ -492,6 +591,7 @@ var H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'applicat
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
 var jobs = [], editingJob = null, jobFilter = 'ALL', currentView = 'parts', jobViewMode = 'list';
+var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
 var jobLinks = [], jobPartsLocal = [], jobToolsLocal = [], machineModalFromJob = false;
 var partsFilter = 'all';
 
@@ -576,6 +676,8 @@ function hideAllViews() {
   document.getElementById('jobsBoardSection').style.display = 'none';
   document.getElementById('orderToolbar').style.display = 'none';
   document.getElementById('orderSection').style.display = 'none';
+  document.getElementById('loanToolbar').style.display = 'none';
+  document.getElementById('loanSection').style.display = 'none';
 }
 
 function switchToJobs() {
@@ -603,6 +705,269 @@ function switchToParts() {
   if (selectedMachine) { renderDocsBar(); renderParts(); }
 }
 
+function switchToLoans() {
+  currentView = 'loan'; hideAllViews(); renderTabs();
+  document.getElementById('loanToolbar').style.display = 'flex';
+  document.getElementById('loanSection').style.display = 'block';
+  document.getElementById('hSub').textContent = 'Loan Tools';
+  document.getElementById('lowBadge').innerHTML = '';
+  loadLoans();
+}
+
+function setLoanView(v) {
+  loanView = v;
+  document.getElementById('btnLoanActive').classList.toggle('active', v === 'active');
+  document.getElementById('btnLoanRegister').classList.toggle('active', v === 'register');
+  renderLoanView();
+}
+
+function xplNum(n) { return 'XPL-' + String(n).padStart(3, '0'); }
+
+async function loadLoans() {
+  document.getElementById('loanList').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
+  try {
+    loanTools = await db('GET', 'loan_tools?select=*&order=name.asc');
+    loans     = await db('GET', 'loans?select=*&order=loan_number.desc');
+    renderLoanView();
+  } catch(e) {
+    document.getElementById('loanList').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load loans. Run SQL to create loan tables.</div></div>';
+  }
+}
+
+function renderLoanView() {
+  if (loanView === 'register') renderToolRegister();
+  else renderActiveLoans();
+}
+
+function renderActiveLoans() {
+  var today = new Date(); today.setHours(0,0,0,0);
+  var active = loans.filter(function(l) { return l.status !== 'RETURNED'; });
+  var overdue = active.filter(function(l) { return l.expected_return && new Date(l.expected_return) < today; });
+  var badge = overdue.length ? '<span style="background:#ef4444;color:white;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:8px">' + overdue.length + ' OVERDUE</span>' : '';
+  document.getElementById('hSub').textContent = 'Loan Tools — ' + active.length + ' active';
+  document.getElementById('lowBadge').innerHTML = overdue.length ? '<div class="badge-low">' + overdue.length + ' OVERDUE</div>' : '';
+
+  if (!active.length) {
+    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">✓</div><div style="color:#10b981">No active loans</div></div>';
+    return;
+  }
+  document.getElementById('loanList').innerHTML = active.map(function(l) {
+    var tool = loanTools.find(function(t) { return t.id === l.loan_tool_id; });
+    var toolName = tool ? tool.name + (tool.serial_number ? ' S/N:' + tool.serial_number : '') : 'Unknown Tool';
+    var isOverdue = l.expected_return && new Date(l.expected_return) < today;
+    var daysOut = l.loaned_date ? Math.floor((today - new Date(l.loaned_date)) / 86400000) : 0;
+    var dueStr = l.expected_return ? 'Due ' + fmtDate(l.expected_return) : 'No return date';
+    var col = isOverdue ? '#ef4444' : '#a78bfa';
+    return '<div class="loan-card' + (isOverdue?' overdue':'') + '" onclick="openEditLoanModal(\'' + l.id + '\')">'+
+      '<div class="loan-card-top">'+
+        '<div><div class="loan-number">' + xplNum(l.loan_number) + '</div><div class="loan-customer">' + (l.customer||'No customer') + '</div></div>'+
+        '<span class="loan-status-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + (isOverdue?'OVERDUE':'ACTIVE') + '</span>'+
+      '</div>'+
+      '<div class="loan-meta">'+
+        '<span>' + toolName + '</span>'+
+        (l.contact_name ? '<span>' + l.contact_name + (l.mobile ? ' ' + l.mobile : '') + '</span>' : '') +
+        '<span>Out: ' + fmtDate(l.loaned_date) + (daysOut > 0 ? ' (' + daysOut + 'd)' : '') + '</span>'+
+        '<span' + (isOverdue?' class="loan-overdue-flag"':'') + '>' + dueStr + '</span>'+
+        (l.loaned_by ? '<span>By: ' + l.loaned_by + '</span>' : '') +
+      '</div>'+
+      (l.notes ? '<div style="font-size:11px;color:#7a9ab0;margin-top:5px;font-style:italic">' + l.notes + '</div>' : '') +
+      '</div>';
+  }).join('');
+}
+
+function renderToolRegister() {
+  if (!loanTools.length) {
+    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">+</div><div>No loan tools yet. Click + Add Loan Tool to get started.</div></div>';
+    return;
+  }
+  document.getElementById('loanList').innerHTML = loanTools.map(function(t) {
+    var activeLoan = loans.find(function(l) { return l.loan_tool_id === t.id && l.status !== 'RETURNED'; });
+    var avail = !activeLoan;
+    var col = avail ? '#10b981' : '#ef4444';
+    var statusLabel = avail ? 'Available' : 'On Loan — ' + (activeLoan.customer || '');
+    return '<div class="tool-reg-card' + (avail?'':' unavailable') + '" onclick="openLoanToolModal(\'' + t.id + '\')">'+
+      '<div style="flex:1">'+
+        '<div class="tool-reg-name">' + t.name + '</div>'+
+        (t.serial_number ? '<div class="tool-reg-sn">S/N: ' + t.serial_number + (t.condition ? ' · ' + t.condition : '') + '</div>' : '') +
+        (t.notes ? '<div style="font-size:11px;color:#5a8090;margin-top:3px">' + t.notes + '</div>' : '') +
+      '</div>'+
+      '<span class="tool-reg-status" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + statusLabel + '</span>'+
+      '</div>';
+  }).join('');
+}
+
+// ── Loan Modal ─────────────────────────────────────────────────────
+
+function populateLoanToolSelect(selectedId) {
+  var sel = document.getElementById('lToolId');
+  sel.innerHTML = '<option value="">-- Select tool --</option>' +
+    loanTools.filter(function(t) { return t.is_available || t.id === selectedId; }).map(function(t) {
+      return '<option value="' + t.id + '"' + (t.id === selectedId ? ' selected' : '') + '>' + t.name + (t.serial_number ? ' (' + t.serial_number + ')' : '') + '</option>';
+    }).join('');
+}
+
+function openNewLoanModal() {
+  editingLoan = null;
+  document.getElementById('loanModalTitle').textContent = 'New Loan';
+  ['lCustomer','lContact','lPhone','lMobile','lEmail','lConditionOut','lConditionIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('lLoanedDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('lExpectedReturn').value = '';
+  document.getElementById('lReturnedDate').value = '';
+  document.getElementById('lReturnSection').style.display = 'none';
+  document.getElementById('btnMarkReturned').style.display = 'none';
+  document.getElementById('btnDeleteLoan').style.display = 'none';
+  // Only show available tools for new loans
+  var sel = document.getElementById('lToolId');
+  sel.innerHTML = '<option value="">-- Select tool --</option>' +
+    loanTools.map(function(t) {
+      var activeLoan = loans.find(function(l) { return l.loan_tool_id === t.id && l.status !== 'RETURNED'; });
+      if (activeLoan) return '';
+      return '<option value="' + t.id + '">' + t.name + (t.serial_number ? ' (' + t.serial_number + ')' : '') + '</option>';
+    }).join('');
+  document.getElementById('loanOverlay').classList.add('show');
+  setTimeout(function() { document.getElementById('lCustomer').focus(); }, 100);
+}
+
+function openEditLoanModal(loanId) {
+  var l = loans.find(function(x) { return x.id === loanId; }); if (!l) return;
+  editingLoan = l;
+  document.getElementById('loanModalTitle').textContent = xplNum(l.loan_number) + ' — ' + (l.customer || '');
+  populateLoanToolSelect(l.loan_tool_id);
+  document.getElementById('lToolId').value = l.loan_tool_id || '';
+  document.getElementById('lCustomer').value = l.customer || '';
+  document.getElementById('lContact').value = l.contact_name || '';
+  document.getElementById('lPhone').value = l.phone || '';
+  document.getElementById('lMobile').value = l.mobile || '';
+  document.getElementById('lEmail').value = l.email || '';
+  document.getElementById('lConditionOut').value = l.condition_out || '';
+  document.getElementById('lConditionIn').value = l.condition_in || '';
+  document.getElementById('lLoanedDate').value = l.loaned_date || '';
+  document.getElementById('lExpectedReturn').value = l.expected_return || '';
+  document.getElementById('lReturnedDate').value = l.returned_date || '';
+  document.getElementById('lLoanedBy').value = l.loaned_by || '';
+  document.getElementById('lLinkedJob').value = l.linked_job || '';
+  document.getElementById('lNotes').value = l.notes || '';
+  var isReturned = l.status === 'RETURNED';
+  document.getElementById('lReturnSection').style.display = isReturned ? 'block' : 'none';
+  document.getElementById('btnMarkReturned').style.display = isReturned ? 'none' : 'block';
+  document.getElementById('btnDeleteLoan').style.display = 'block';
+  document.getElementById('loanOverlay').classList.add('show');
+}
+
+function closeLoanModal() { document.getElementById('loanOverlay').classList.remove('show'); }
+
+async function saveLoan() {
+  var toolId = document.getElementById('lToolId').value;
+  var customer = document.getElementById('lCustomer').value.trim();
+  if (!toolId) { showToast('Select a tool', 'error'); return; }
+  if (!customer) { showToast('Customer name is required', 'error'); return; }
+  var btn = document.getElementById('btnSaveLoan'); btn.disabled = true; btn.textContent = 'Saving...';
+  var payload = {
+    loan_tool_id: toolId, customer: customer,
+    contact_name: document.getElementById('lContact').value || null,
+    phone: document.getElementById('lPhone').value || null,
+    mobile: document.getElementById('lMobile').value || null,
+    email: document.getElementById('lEmail').value || null,
+    condition_out: document.getElementById('lConditionOut').value || null,
+    condition_in: document.getElementById('lConditionIn').value || null,
+    loaned_date: document.getElementById('lLoanedDate').value || null,
+    expected_return: document.getElementById('lExpectedReturn').value || null,
+    returned_date: document.getElementById('lReturnedDate').value || null,
+    loaned_by: document.getElementById('lLoanedBy').value || null,
+    linked_job: document.getElementById('lLinkedJob').value || null,
+    notes: document.getElementById('lNotes').value || null,
+    status: 'ACTIVE', updated_at: new Date().toISOString()
+  };
+  try {
+    if (editingLoan) {
+      await db('PATCH', 'loans?id=eq.' + editingLoan.id, payload);
+    } else {
+      await db('POST', 'loans', payload);
+      // Mark tool unavailable
+      await db('PATCH', 'loan_tools?id=eq.' + toolId, { is_available: false, updated_at: new Date().toISOString() });
+    }
+    showToast(editingLoan ? 'Loan updated' : 'Loan created'); closeLoanModal(); await loadLoans();
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Save Loan'; }
+}
+
+async function markLoanReturned() {
+  if (!editingLoan) return;
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('lReturnedDate').value = today;
+  document.getElementById('lReturnSection').style.display = 'block';
+  try {
+    await db('PATCH', 'loans?id=eq.' + editingLoan.id, { status: 'RETURNED', returned_date: today, condition_in: document.getElementById('lConditionIn').value || null, updated_at: new Date().toISOString() });
+    await db('PATCH', 'loan_tools?id=eq.' + editingLoan.loan_tool_id, { is_available: true, updated_at: new Date().toISOString() });
+    showToast('Marked as returned'); closeLoanModal(); await loadLoans();
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+}
+
+async function deleteLoan() {
+  if (!editingLoan) return;
+  if (!confirm('Delete this loan record? Cannot be undone.')) return;
+  try {
+    await db('DELETE', 'loans?id=eq.' + editingLoan.id);
+    // Restore tool availability if no other active loans
+    var otherActive = loans.filter(function(l) { return l.loan_tool_id === editingLoan.loan_tool_id && l.id !== editingLoan.id && l.status !== 'RETURNED'; });
+    if (!otherActive.length) await db('PATCH', 'loan_tools?id=eq.' + editingLoan.loan_tool_id, { is_available: true, updated_at: new Date().toISOString() });
+    showToast('Deleted'); closeLoanModal(); await loadLoans();
+  } catch(e) { showToast('Delete failed', 'error'); }
+}
+
+// ── Loan Tool Register Modal ───────────────────────────────────────
+
+function openLoanToolModal(toolId) {
+  if (toolId) {
+    var t = loanTools.find(function(x) { return x.id === toolId; }); if (!t) return;
+    editingLoanTool = t;
+    document.getElementById('loanToolModalTitle').textContent = 'Edit Loan Tool';
+    document.getElementById('ltName').value = t.name || '';
+    document.getElementById('ltSerial').value = t.serial_number || '';
+    document.getElementById('ltCondition').value = t.condition || '';
+    document.getElementById('ltNotes').value = t.notes || '';
+    document.getElementById('btnDeleteLoanTool').style.display = 'block';
+  } else {
+    editingLoanTool = null;
+    document.getElementById('loanToolModalTitle').textContent = 'Add Loan Tool';
+    ['ltName','ltSerial','ltCondition','ltNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('btnDeleteLoanTool').style.display = 'none';
+  }
+  document.getElementById('loanToolOverlay').classList.add('show');
+  setTimeout(function() { document.getElementById('ltName').focus(); }, 100);
+}
+
+function closeLoanToolModal() { document.getElementById('loanToolOverlay').classList.remove('show'); }
+
+async function saveLoanTool() {
+  var name = document.getElementById('ltName').value.trim();
+  if (!name) { showToast('Tool name is required', 'error'); return; }
+  var btn = document.getElementById('btnSaveLoanTool'); btn.disabled = true; btn.textContent = 'Saving...';
+  var payload = { name: name, serial_number: document.getElementById('ltSerial').value || null, condition: document.getElementById('ltCondition').value || null, notes: document.getElementById('ltNotes').value || null, is_available: true, updated_at: new Date().toISOString() };
+  try {
+    if (editingLoanTool) {
+      await db('PATCH', 'loan_tools?id=eq.' + editingLoanTool.id, payload);
+      showToast('Tool updated');
+    } else {
+      await db('POST', 'loan_tools', payload);
+      showToast('Tool added to register');
+    }
+    closeLoanToolModal(); await loadLoans();
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Save Tool'; }
+}
+
+async function deleteLoanTool() {
+  if (!editingLoanTool) return;
+  var activeLoan = loans.find(function(l) { return l.loan_tool_id === editingLoanTool.id && l.status !== 'RETURNED'; });
+  if (activeLoan) { showToast('Cannot remove — tool is currently on loan', 'error'); return; }
+  if (!confirm('Remove "' + editingLoanTool.name + '" from the register?')) return;
+  try {
+    await db('DELETE', 'loan_tools?id=eq.' + editingLoanTool.id);
+    showToast('Removed'); closeLoanToolModal(); await loadLoans();
+  } catch(e) { showToast('Delete failed', 'error'); }
+}
+
 function setJobView(mode) {
   jobViewMode = mode;
   document.getElementById('btnListView').classList.toggle('active', mode === 'list');
@@ -617,6 +982,7 @@ function renderTabs() {
   var html = '<button class="tab' + (v==='parts'?' active':'') + '" onclick="' + (v==='parts'?'':'switchToParts()') + '">Parts</button>';
   html += '<button class="tab jobs-tab' + (v==='jobs'?' active':'') + '" onclick="' + (v==='jobs'?'':'switchToJobs()') + '">Jobs</button>';
   html += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()') + '">Order List</button>';
+  html += '<button class="tab loan-tab' + (v==='loan'?' active':'') + '" onclick="' + (v==='loan'?'':'switchToLoans()') + '">Loans</button>';
   if (v === 'parts') {
     html += machines.map(function(m) {
       var active = selectedMachine && selectedMachine.id === m.id, isC = m.is_consumables;
@@ -754,13 +1120,9 @@ function printOrderList() {
 
 // ── PARTS SEARCH IN JOB ───────────────────────────────────────────
 
-function searchPartsForJob(toolTempId) {
-  var inputId = 'psi_' + toolTempId;
-  var resId   = 'psr_' + toolTempId;
-  var inp = document.getElementById(inputId);
-  var res = document.getElementById(resId);
-  if (!inp || !res) return;
-  var q = inp.value.toLowerCase().trim();
+function searchPartsForJob() {
+  var q = document.getElementById('partSearchInput').value.toLowerCase().trim();
+  var res = document.getElementById('partSearchResults');
   if (!q) { res.innerHTML = ''; return; }
   var matches = allParts.filter(function(p) {
     return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
@@ -771,7 +1133,7 @@ function searchPartsForJob(toolTempId) {
     var qty = s ? s.quantity : null;
     var st = qty === null ? 'unset' : qty === 0 ? 'empty' : qty <= (s.reorder_threshold || 1) ? 'low' : 'ok';
     var stockLabel = qty === null ? 'No stock data' : 'Stock: ' + qty;
-    return '<div class="part-search-item" onclick="addPartToJob(\'' + p.id + '\',\'' + toolTempId + '\')">'+
+    return '<div class="part-search-item" onclick="addPartToJob(\'' + p.id + '\')">' +
       '<div class="psi-left">' +
         '<div class="psi-keyno">' + p.key_no + '</div>' +
         '<div class="psi-desc">' + p.description + '</div>' +
@@ -782,61 +1144,50 @@ function searchPartsForJob(toolTempId) {
   }).join('');
 }
 
-function addPartToJob(partId, toolTempId) {
+function addPartToJob(partId) {
   var p = allParts.find(function(x) { return x.id === partId; }); if (!p) return;
   var s = p.stock && p.stock[0];
   var qty = s ? s.quantity : 0;
   var status = qty > 0 ? 'use_stock' : 'to_order';
-  var existing = jobPartsLocal.find(function(x) { return x.part_id === partId && x._toolTempId === toolTempId; });
-  if (existing) { showToast('Already added to this tool', 'error'); return; }
-  var toolNum = 1;
-  if (toolTempId) {
-    var t = jobToolsLocal.find(function(x) { return x._tempId === toolTempId; });
-    if (t) toolNum = t.tool_number;
-  }
+  var existing = jobPartsLocal.find(function(x) { return x.part_id === partId; });
+  if (existing) { showToast('Already added', 'error'); return; }
   jobPartsLocal.push({
     _tempId: 'tmp_' + Date.now(),
-    _toolTempId: toolTempId || null,
     part_id: partId,
     part_key_no: p.key_no,
     part_description: p.description,
     machine_name: p.machineName || '',
     quantity: 1,
     status: status,
-    tool_number: toolNum,
     notes: ''
   });
-  var inp = document.getElementById('psi_' + toolTempId);
-  var res = document.getElementById('psr_' + toolTempId);
-  if (inp) inp.value = '';
-  if (res) res.innerHTML = '';
-  renderToolPartsList(toolTempId);
+  document.getElementById('partSearchInput').value = '';
+  document.getElementById('partSearchResults').innerHTML = '';
+  renderJobPartsList();
 }
 
 function removeJobPart(tempId) {
-  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
-  var tid = jp ? jp._toolTempId : null;
   jobPartsLocal = jobPartsLocal.filter(function(x) { return x._tempId !== tempId; });
-  renderToolPartsList(tid);
+  renderJobPartsList();
 }
 
 function setJobPartStatus(tempId, status) {
-  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
-  if (jp) { jp.status = status; renderToolPartsList(jp._toolTempId); }
+  var p = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  if (p) p.status = status;
+  renderJobPartsList();
 }
 
 function setJobPartQty(tempId, val) {
-  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
-  if (jp) jp.quantity = Math.max(1, parseInt(val) || 1);
+  var p = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  if (p) p.quantity = Math.max(1, parseInt(val) || 1);
 }
 
-function renderToolPartsList(toolTempId) {
-  var el = document.getElementById('tpl_' + toolTempId);
-  if (!el) return;
-  var parts = jobPartsLocal.filter(function(x) { return x._toolTempId === toolTempId; });
-  if (!parts.length) { el.innerHTML = ''; return; }
-  el.innerHTML = parts.map(function(jp) {
+function renderJobPartsList() {
+  var el = document.getElementById('jobPartsList');
+  if (!jobPartsLocal.length) { el.innerHTML = ''; return; }
+  el.innerHTML = jobPartsLocal.map(function(jp) {
     var sc = STATUS_COLOURS[jp.status] || '#4a6080';
+    var sl = STATUS_LABELS[jp.status] || jp.status;
     return '<div class="job-part-row ' + jp.status + '">' +
       '<span class="jpr-keyno">' + jp.part_key_no + '</span>' +
       '<span class="jpr-desc">' + jp.part_description + '</span>' +
@@ -848,11 +1199,6 @@ function renderToolPartsList(toolTempId) {
       '<button class="jpr-remove" onclick="removeJobPart(\'' + jp._tempId + '\')">x</button>' +
       '</div>';
   }).join('');
-}
-
-function renderJobPartsList() {
-  // Legacy - re-render all tools
-  jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
 }
 
 // ── JOBS ──────────────────────────────────────────────────────────
@@ -990,8 +1336,10 @@ function clearJobForm() {
   document.getElementById('jLabour').value = '';
   document.getElementById('jParts').value = '';
   document.getElementById('jFollowup').checked = false;
+  document.getElementById('partSearchInput').value = '';
+  document.getElementById('partSearchResults').innerHTML = '';
   jobLinks = []; renderLinksList();
-  jobPartsLocal = [];
+  jobPartsLocal = []; renderJobPartsList();
   jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' }];
   renderToolsList();
 }
@@ -1025,7 +1373,8 @@ async function openEditJobModal(jobId) {
   renderLinksList();
   document.getElementById('lLinkName').value = '';
   document.getElementById('lLinkUrl').value = '';
-  // parts now live inside tool cards
+  document.getElementById('partSearchInput').value = '';
+  document.getElementById('partSearchResults').innerHTML = '';
   // Load job tools - fall back to legacy job fields if none exist
   try {
     var existingTools = await db('GET', 'job_tools?job_id=eq.' + j.id + '&select=*&order=tool_number.asc');
@@ -1039,17 +1388,14 @@ async function openEditJobModal(jobId) {
     }
   } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' }]; }
   renderToolsList();
-  // Load existing job parts — parts will be rendered into tool cards after load
+  // Load existing job parts
   try {
     var existing = await db('GET', 'job_parts?job_id=eq.' + j.id + '&select=*&order=created_at.asc');
     jobPartsLocal = existing.map(function(ep) {
-      // Match _toolTempId to the loaded jobToolsLocal entry by tool_number
-      var matchTool = jobToolsLocal.find(function(t) { return t.tool_number === ep.tool_number; });
-      return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id, _toolTempId: matchTool ? matchTool._tempId : null }, ep);
+      return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id }, ep);
     });
   } catch(e) { jobPartsLocal = []; }
-  // Render parts into each tool card now that tools and parts are both loaded
-  jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
+  renderJobPartsList();
   document.getElementById('btnDeleteJob').style.display = 'block';
   document.getElementById('jobOverlay').classList.add('show');
 }
@@ -1329,16 +1675,12 @@ function openAddModal() {
 function autoCalcSell() {
   var cost = parseFloat(document.getElementById('fCost').value);
   var gp   = parseFloat(document.getElementById('fGP').value);
-  if (!isNaN(cost) && !isNaN(gp) && gp < 100) {
-    document.getElementById('fSell').value = (cost / (1 - gp / 100)).toFixed(2);
-  }
+  if (!isNaN(cost) && !isNaN(gp) && gp < 100) { document.getElementById('fSell').value = (cost / (1 - gp / 100)).toFixed(2); }
 }
 function autoCalcGP() {
   var cost = parseFloat(document.getElementById('fCost').value);
   var sell = parseFloat(document.getElementById('fSell').value);
-  if (!isNaN(cost) && !isNaN(sell) && sell > 0) {
-    document.getElementById('fGP').value = Math.round((1 - cost / sell) * 100);
-  }
+  if (!isNaN(cost) && !isNaN(sell) && sell > 0) { document.getElementById('fGP').value = Math.round((1 - cost / sell) * 100); }
 }
 function autoGenPartNo() {
   var cat = document.getElementById('fCategory').value, mat = document.getElementById('fMaterial').value;
@@ -1659,16 +2001,6 @@ function renderToolsList() {
         '<div class="field full"><label>Customer Reported Issue</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'customer_issue\',this.value)" placeholder="What the customer reported..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.customer_issue||'') + '</textarea></div>' +
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
-      '</div>' +
-      '<div style="margin-top:10px;border-top:1px solid #1e3048;padding-top:10px">' +
-        '<div style="font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Parts for this Tool</div>' +
-        '<div class="parts-search-area" style="margin-bottom:6px">' +
-          '<div class="parts-search-row">' +
-            '<input id="psi_' + t._tempId + '" placeholder="Search part number or description..." oninput="searchPartsForJob(\'' + t._tempId + '\')" autocomplete="off">' +
-          '</div>' +
-          '<div class="parts-search-results" id="psr_' + t._tempId + '"></div>' +
-        '</div>' +
-        '<div class="job-parts-list" id="tpl_' + t._tempId + '"></div>' +
       '</div>' +
       '</div>';
   }).join('');
