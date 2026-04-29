@@ -26,7 +26,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .loan-view-toggle{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .loan-view-btn{padding:5px 16px;border-radius:16px;border:1px solid #2a4060;background:transparent;color:#8aa8c0;cursor:pointer;font-size:11px;font-weight:700}
 .loan-view-btn.active{background:#1e3048;border-color:#a78bfa;color:#a78bfa}
-.loan-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #a78bfa;cursor:default;transition:background 0.1s}
+.loan-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #a78bfa;cursor:pointer;transition:background 0.1s}
+.loan-card:hover{background:#1a2a3d}
 .loan-card.overdue{border-left-color:#ef4444}
 .loan-card.returned{border-left-color:#4a6080;opacity:0.6}
 .loan-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px}
@@ -509,7 +510,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
         <option value="">-- Select tool --</option>
       </select>
     </div>
-    <div class="field"><label>Condition Out</label><input id="lConditionOut" placeholder="e.g. Good, Minor wear"></div>
+    <div class="g2">
+      <div class="field"><label>Condition Out</label><input id="lConditionOut" placeholder="e.g. Good, Minor wear"></div>
+      <div class="field"><label>Cycle Count Out</label><input id="lCycleCountOut" type="number" min="0" placeholder="e.g. 12500"></div>
+    </div>
+    <div class="field"><label>Reason for Loan</label><input id="lReason" placeholder="e.g. Customer tool in for service, Replacement while repaired"></div>
+    <div class="field"><label>Photo Out (link or ref)</label><input id="lPhotoOut" placeholder="e.g. SharePoint link or photo reference"></div>
     <div class="section-label">Customer</div>
     <div class="g2">
       <div class="field full"><label>Customer / Company *</label><input id="lCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour"></div>
@@ -523,7 +529,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field"><label>Loaned Date</label><input id="lLoanedDate" type="date"></div>
       <div class="field"><label>Expected Return</label><input id="lExpectedReturn" type="date"></div>
       <div class="field"><label>Loaned By</label><input id="lLoanedBy" placeholder="e.g. Rob, Dave"></div>
-      <div class="field"><label>Linked Job (optional)</label><input id="lLinkedJob" placeholder="e.g. XPS-008"></div>
+      <div class="field"><label>Linked Job</label><input id="lLinkedJob" placeholder="e.g. XPS-008"></div>
     </div>
     <div class="field"><label>Notes</label><textarea id="lNotes" placeholder="Any notes about the loan..." style="min-height:60px"></textarea></div>
     <div id="lReturnSection" style="display:none">
@@ -531,6 +537,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="g2">
         <div class="field"><label>Returned Date</label><input id="lReturnedDate" type="date"></div>
         <div class="field"><label>Condition In</label><input id="lConditionIn" placeholder="e.g. Good, Damaged"></div>
+        <div class="field"><label>Cycle Count In</label><input id="lCycleCountIn" type="number" min="0" placeholder="e.g. 13200"></div>
+        <div class="field"><label>Photo In (link or ref)</label><input id="lPhotoIn" placeholder="e.g. SharePoint link or photo reference"></div>
       </div>
     </div>
     <button class="btn-save" style="background:#a78bfa" id="btnSaveLoan" onclick="saveLoan()">Save Loan</button>
@@ -743,12 +751,11 @@ function renderActiveLoans() {
   var today = new Date(); today.setHours(0,0,0,0);
   var active = loans.filter(function(l) { return l.status !== 'RETURNED'; });
   var overdue = active.filter(function(l) { return l.expected_return && new Date(l.expected_return) < today; });
-  var badge = overdue.length ? '<span style="background:#ef4444;color:white;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:8px">' + overdue.length + ' OVERDUE</span>' : '';
   document.getElementById('hSub').textContent = 'Loan Tools — ' + active.length + ' active';
   document.getElementById('lowBadge').innerHTML = overdue.length ? '<div class="badge-low">' + overdue.length + ' OVERDUE</div>' : '';
 
   if (!active.length) {
-    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">✓</div><div style="color:#10b981">No active loans</div></div>';
+    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">&#10003;</div><div style="color:#10b981">No active loans</div></div>';
     return;
   }
   document.getElementById('loanList').innerHTML = active.map(function(l) {
@@ -756,7 +763,7 @@ function renderActiveLoans() {
     var toolName = tool ? tool.name + (tool.serial_number ? ' S/N:' + tool.serial_number : '') : 'Unknown Tool';
     var isOverdue = l.expected_return && new Date(l.expected_return) < today;
     var daysOut = l.loaned_date ? Math.floor((today - new Date(l.loaned_date)) / 86400000) : 0;
-    var dueStr = l.expected_return ? 'Due ' + fmtDate(l.expected_return) : 'No return date';
+    var dueStr = l.expected_return ? 'Due ' + fmtDate(l.expected_return) : 'No return date set';
     var col = isOverdue ? '#ef4444' : '#a78bfa';
     return '<div class="loan-card' + (isOverdue?' overdue':'') + '" onclick="openEditLoanModal(\'' + l.id + '\')">'+
       '<div class="loan-card-top">'+
@@ -769,6 +776,7 @@ function renderActiveLoans() {
         '<span>Out: ' + fmtDate(l.loaned_date) + (daysOut > 0 ? ' (' + daysOut + 'd)' : '') + '</span>'+
         '<span' + (isOverdue?' class="loan-overdue-flag"':'') + '>' + dueStr + '</span>'+
         (l.loaned_by ? '<span>By: ' + l.loaned_by + '</span>' : '') +
+        (l.reason_for_loan ? '<span style="color:#a78bfa">' + l.reason_for_loan + '</span>' : '') +
       '</div>'+
       (l.notes ? '<div style="font-size:11px;color:#7a9ab0;margin-top:5px;font-style:italic">' + l.notes + '</div>' : '') +
       '</div>';
@@ -796,27 +804,24 @@ function renderToolRegister() {
   }).join('');
 }
 
-// ── Loan Modal ─────────────────────────────────────────────────────
-
-function populateLoanToolSelect(selectedId) {
-  var sel = document.getElementById('lToolId');
-  sel.innerHTML = '<option value="">-- Select tool --</option>' +
-    loanTools.filter(function(t) { return t.is_available || t.id === selectedId; }).map(function(t) {
-      return '<option value="' + t.id + '"' + (t.id === selectedId ? ' selected' : '') + '>' + t.name + (t.serial_number ? ' (' + t.serial_number + ')' : '') + '</option>';
-    }).join('');
+function clearLoanForm() {
+  ['lCustomer','lContact','lPhone','lMobile','lEmail','lConditionOut','lConditionIn',
+   'lLoanedBy','lLinkedJob','lNotes','lReason','lPhotoOut','lPhotoIn'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  ['lCycleCountOut','lCycleCountIn'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('lLoanedDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('lExpectedReturn').value = '';
+  document.getElementById('lReturnedDate').value = '';
 }
 
 function openNewLoanModal() {
   editingLoan = null;
   document.getElementById('loanModalTitle').textContent = 'New Loan';
-  ['lCustomer','lContact','lPhone','lMobile','lEmail','lConditionOut','lConditionIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('lLoanedDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('lExpectedReturn').value = '';
-  document.getElementById('lReturnedDate').value = '';
+  clearLoanForm();
   document.getElementById('lReturnSection').style.display = 'none';
   document.getElementById('btnMarkReturned').style.display = 'none';
   document.getElementById('btnDeleteLoan').style.display = 'none';
-  // Only show available tools for new loans
   var sel = document.getElementById('lToolId');
   sel.innerHTML = '<option value="">-- Select tool --</option>' +
     loanTools.map(function(t) {
@@ -832,8 +837,11 @@ function openEditLoanModal(loanId) {
   var l = loans.find(function(x) { return x.id === loanId; }); if (!l) return;
   editingLoan = l;
   document.getElementById('loanModalTitle').textContent = xplNum(l.loan_number) + ' — ' + (l.customer || '');
-  populateLoanToolSelect(l.loan_tool_id);
-  document.getElementById('lToolId').value = l.loan_tool_id || '';
+  var sel = document.getElementById('lToolId');
+  sel.innerHTML = '<option value="">-- Select tool --</option>' +
+    loanTools.map(function(t) {
+      return '<option value="' + t.id + '"' + (t.id === l.loan_tool_id ? ' selected' : '') + '>' + t.name + (t.serial_number ? ' (' + t.serial_number + ')' : '') + '</option>';
+    }).join('');
   document.getElementById('lCustomer').value = l.customer || '';
   document.getElementById('lContact').value = l.contact_name || '';
   document.getElementById('lPhone').value = l.phone || '';
@@ -841,6 +849,11 @@ function openEditLoanModal(loanId) {
   document.getElementById('lEmail').value = l.email || '';
   document.getElementById('lConditionOut').value = l.condition_out || '';
   document.getElementById('lConditionIn').value = l.condition_in || '';
+  document.getElementById('lCycleCountOut').value = l.cycle_count_out || '';
+  document.getElementById('lCycleCountIn').value = l.cycle_count_in || '';
+  document.getElementById('lPhotoOut').value = l.photo_out || '';
+  document.getElementById('lPhotoIn').value = l.photo_in || '';
+  document.getElementById('lReason').value = l.reason_for_loan || '';
   document.getElementById('lLoanedDate').value = l.loaned_date || '';
   document.getElementById('lExpectedReturn').value = l.expected_return || '';
   document.getElementById('lReturnedDate').value = l.returned_date || '';
@@ -870,6 +883,11 @@ async function saveLoan() {
     email: document.getElementById('lEmail').value || null,
     condition_out: document.getElementById('lConditionOut').value || null,
     condition_in: document.getElementById('lConditionIn').value || null,
+    cycle_count_out: parseInt(document.getElementById('lCycleCountOut').value) || null,
+    cycle_count_in: parseInt(document.getElementById('lCycleCountIn').value) || null,
+    photo_out: document.getElementById('lPhotoOut').value || null,
+    photo_in: document.getElementById('lPhotoIn').value || null,
+    reason_for_loan: document.getElementById('lReason').value || null,
     loaned_date: document.getElementById('lLoanedDate').value || null,
     expected_return: document.getElementById('lExpectedReturn').value || null,
     returned_date: document.getElementById('lReturnedDate').value || null,
@@ -883,7 +901,6 @@ async function saveLoan() {
       await db('PATCH', 'loans?id=eq.' + editingLoan.id, payload);
     } else {
       await db('POST', 'loans', payload);
-      // Mark tool unavailable
       await db('PATCH', 'loan_tools?id=eq.' + toolId, { is_available: false, updated_at: new Date().toISOString() });
     }
     showToast(editingLoan ? 'Loan updated' : 'Loan created'); closeLoanModal(); await loadLoans();
@@ -893,14 +910,29 @@ async function saveLoan() {
 
 async function markLoanReturned() {
   if (!editingLoan) return;
-  var today = new Date().toISOString().split('T')[0];
-  document.getElementById('lReturnedDate').value = today;
   document.getElementById('lReturnSection').style.display = 'block';
-  try {
-    await db('PATCH', 'loans?id=eq.' + editingLoan.id, { status: 'RETURNED', returned_date: today, condition_in: document.getElementById('lConditionIn').value || null, updated_at: new Date().toISOString() });
-    await db('PATCH', 'loan_tools?id=eq.' + editingLoan.loan_tool_id, { is_available: true, updated_at: new Date().toISOString() });
-    showToast('Marked as returned'); closeLoanModal(); await loadLoans();
-  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+  document.getElementById('lReturnedDate').value = new Date().toISOString().split('T')[0];
+  showToast('Fill in return details then save', 'success');
+  // Update status inline on save
+  var btn = document.getElementById('btnSaveLoan');
+  btn.textContent = 'Save & Mark Returned';
+  btn.onclick = async function() {
+    var toolId = editingLoan.loan_tool_id;
+    var btn2 = document.getElementById('btnSaveLoan'); btn2.disabled = true;
+    try {
+      await db('PATCH', 'loans?id=eq.' + editingLoan.id, {
+        status: 'RETURNED',
+        returned_date: document.getElementById('lReturnedDate').value || new Date().toISOString().split('T')[0],
+        condition_in: document.getElementById('lConditionIn').value || null,
+        cycle_count_in: parseInt(document.getElementById('lCycleCountIn').value) || null,
+        photo_in: document.getElementById('lPhotoIn').value || null,
+        updated_at: new Date().toISOString()
+      });
+      await db('PATCH', 'loan_tools?id=eq.' + toolId, { is_available: true, updated_at: new Date().toISOString() });
+      showToast('Returned — tool now available'); closeLoanModal(); await loadLoans();
+    } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+    finally { btn2.disabled = false; }
+  };
 }
 
 async function deleteLoan() {
@@ -908,14 +940,11 @@ async function deleteLoan() {
   if (!confirm('Delete this loan record? Cannot be undone.')) return;
   try {
     await db('DELETE', 'loans?id=eq.' + editingLoan.id);
-    // Restore tool availability if no other active loans
     var otherActive = loans.filter(function(l) { return l.loan_tool_id === editingLoan.loan_tool_id && l.id !== editingLoan.id && l.status !== 'RETURNED'; });
     if (!otherActive.length) await db('PATCH', 'loan_tools?id=eq.' + editingLoan.loan_tool_id, { is_available: true, updated_at: new Date().toISOString() });
     showToast('Deleted'); closeLoanModal(); await loadLoans();
   } catch(e) { showToast('Delete failed', 'error'); }
 }
-
-// ── Loan Tool Register Modal ───────────────────────────────────────
 
 function openLoanToolModal(toolId) {
   if (toolId) {
