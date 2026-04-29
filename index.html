@@ -1400,8 +1400,6 @@ async function openEditJobModal(jobId) {
   renderLinksList();
   document.getElementById('lLinkName').value = '';
   document.getElementById('lLinkUrl').value = '';
-  document.getElementById('partSearchInput').value = '';
-  document.getElementById('partSearchResults').innerHTML = '';
   // Load job tools - fall back to legacy job fields if none exist
   try {
     var existingTools = await db('GET', 'job_tools?job_id=eq.' + j.id + '&select=*&order=tool_number.asc');
