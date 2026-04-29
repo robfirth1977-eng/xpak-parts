@@ -42,7 +42,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .tool-reg-sn{font-size:11px;color:#5a8090}
 .tool-reg-status{font-size:11px;font-weight:700;border-radius:8px;padding:3px 10px;flex-shrink:0}
 .filter-btn.alert{border-color:#ef4444;color:#ef4444}
-.filter-btn.alert:hover,.filter-btn.alert.active{background:#ef4444;color:white}
+.filter-btn.alert:hover,.filter-btn.alert.active{background:#ef4444;color:white;border-color:#ef4444}
 .tab-add{padding:6px 12px;border-radius:20px;border:1px dashed #3a6050;background:transparent;color:#3a9070;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .tab-add:hover{border-color:#10b981;color:#10b981}
 .tab-del{padding:4px 7px;border-radius:20px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;margin-left:-6px}
@@ -301,7 +301,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <button class="filter-btn" onclick="setJobFilter('ACTIVE',this)">Active</button>
     <button class="filter-btn" onclick="setJobFilter('FOLLOW',this)">Follow-Up</button>
     <button class="filter-btn" onclick="setJobFilter('COMPLETED',this)">Completed</button>
-    <button class="filter-btn alert" id="btnUnordered" onclick="setJobFilter('UNORDERED',this)">⚠ PARTS UNORDERED</button>
+    <button class="filter-btn alert" id="btnUnordered" onclick="setJobFilter('UNORDERED',this)">&#9888; PARTS UNORDERED</button>
   </div>
   <div id="jobsList"></div>
 </div>
@@ -328,9 +328,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   <button class="btn-add" style="background:#a78bfa;margin-left:auto" onclick="openNewLoanModal()">+ New Loan</button>
   <button class="btn-add" style="background:#1e3048;border:1px solid #a78bfa;color:#a78bfa" onclick="openLoanToolModal()">+ Add Loan Tool</button>
 </div>
-<div class="loan-section" id="loanSection" style="display:none">
-  <div id="loanList"></div>
-</div>
+<div class="loan-section" id="loanSection" style="display:none"><div id="loanList"></div></div>
 
 <div class="label-panel" id="labelPanel">
   <div class="label-panel-header">
@@ -393,7 +391,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field"><label>Cost Price ($)</label><input id="fCost" type="number" step="0.01" min="0" placeholder="0.00" oninput="autoCalcSell()"></div>
       <div class="field"><label>GP %</label><input id="fGP" type="number" step="1" min="0" max="100" placeholder="e.g. 80" oninput="autoCalcSell()"></div>
       <div class="field"><label>Sell Price ($)</label><input id="fSell" type="number" step="0.01" min="0" placeholder="0.00" oninput="autoCalcGP()"></div>
-      <div class="field" style="display:flex;align-items:flex-end;padding-bottom:2px"><span style="font-size:11px;color:#5a8090">Enter cost + GP% to auto-calc sell, or edit sell to auto-calc GP%.</span></div>
+      <div class="field" style="display:flex;align-items:flex-end;padding-bottom:2px"><span style="font-size:11px;color:#5a8090">Enter cost + GP% to auto-calc sell price.</span></div>
     </div>
     <div class="section-label">MYOB Accounts</div>
     <div class="field"><label>Income Account</label><input id="fMyobIncome" placeholder="e.g. 4-1000"></div>
@@ -465,19 +463,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     </div>
     <div id="jobToolsList"></div>
 
-    <div class="section-label">Parts Required</div>
-    <div class="parts-search-area">
-      <div class="parts-search-row">
-        <input id="partSearchInput" placeholder="Search by part number or description..." oninput="searchPartsForJob()" autocomplete="off">
-      </div>
-      <div class="parts-search-results" id="partSearchResults"></div>
-    </div>
-    <div class="job-parts-list" id="jobPartsList"></div>
-
     <div class="section-label">Costs</div>
     <div class="g2">
-      <div class="field"><label>Service Fee ($)</label><input id="jLabour" type="number" step="0.01" min="0" placeholder="350.00"></div>
-      <div class="field"><label>Parts ($)</label><input id="jParts" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="field"><label>Parts Total ($) <span style="font-size:10px;color:#5a8090;font-weight:400">auto from parts below</span></label><input id="jParts" type="number" step="0.01" min="0" placeholder="0.00" style="opacity:0.7"></div>
     </div>
 
     <div class="section-label">Files and Links</div>
@@ -508,9 +496,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   <div class="modal" style="border-top-color:#a78bfa">
     <div class="modal-header"><div class="modal-title" id="loanModalTitle">New Loan</div><button class="modal-close" onclick="closeLoanModal()">x</button></div>
     <div class="section-label">Tool</div>
-    <div class="field"><label>Loan Tool *</label>
-      <select id="lToolId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select tool --</option></select>
-    </div>
+    <div class="field"><label>Loan Tool *</label><select id="lToolId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select tool --</option></select></div>
     <div class="g2">
       <div class="field"><label>Condition Out</label><select id="lConditionOut" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
       <div class="field"><label>Cycle Count Out</label><input id="lCycleCountOut" type="number" min="0" placeholder="e.g. 12500"></div>
@@ -745,8 +731,7 @@ async function loadLoans() {
 }
 
 function renderLoanView() {
-  if (loanView === 'register') renderToolRegister();
-  else renderActiveLoans();
+  if (loanView === 'register') renderToolRegister(); else renderActiveLoans();
 }
 
 function renderActiveLoans() {
@@ -755,10 +740,7 @@ function renderActiveLoans() {
   var overdue = active.filter(function(l) { return l.expected_return && new Date(l.expected_return) < today; });
   document.getElementById('hSub').textContent = 'Loan Tools — ' + active.length + ' active';
   document.getElementById('lowBadge').innerHTML = overdue.length ? '<div class="badge-low">' + overdue.length + ' OVERDUE</div>' : '';
-  if (!active.length) {
-    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">✓</div><div style="color:#10b981">No active loans</div></div>';
-    return;
-  }
+  if (!active.length) { document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">✓</div><div style="color:#10b981">No active loans</div></div>'; return; }
   document.getElementById('loanList').innerHTML = active.map(function(l) {
     var tool = loanTools.find(function(t) { return t.id === l.loan_tool_id; });
     var toolName = tool ? tool.name + (tool.serial_number ? ' S/N:' + tool.serial_number : '') : 'Unknown Tool';
@@ -766,50 +748,38 @@ function renderActiveLoans() {
     var daysOut = l.loaned_date ? Math.floor((today - new Date(l.loaned_date)) / 86400000) : 0;
     var dueStr = l.expected_return ? 'Due ' + fmtDate(l.expected_return) : 'No return date set';
     var col = isOverdue ? '#ef4444' : '#a78bfa';
-    return '<div class="loan-card' + (isOverdue?' overdue':'') + '" onclick="openEditLoanModal(\'' + l.id + '\')">'+
-      '<div class="loan-card-top">'+
-        '<div><div class="loan-number">' + xplNum(l.loan_number) + '</div><div class="loan-customer">' + (l.customer||'No customer') + '</div></div>'+
-        '<span class="loan-status-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + (isOverdue?'OVERDUE':'ACTIVE') + '</span>'+
-      '</div>'+
-      '<div class="loan-meta">'+
-        '<span>' + toolName + '</span>'+
-        (l.contact_name ? '<span>' + l.contact_name + (l.mobile ? ' ' + l.mobile : '') + '</span>' : '') +
-        '<span>Out: ' + fmtDate(l.loaned_date) + (daysOut > 0 ? ' (' + daysOut + 'd)' : '') + '</span>'+
-        '<span' + (isOverdue?' class="loan-overdue-flag"':'') + '>' + dueStr + '</span>'+
-        (l.loaned_by ? '<span>By: ' + l.loaned_by + '</span>' : '') +
-        (l.reason_for_loan ? '<span style="color:#a78bfa">' + l.reason_for_loan + '</span>' : '') +
-      '</div>'+
-    '</div>';
+    return '<div class="loan-card' + (isOverdue?' overdue':'') + '" onclick="openEditLoanModal(\'' + l.id + '\')">' +
+      '<div class="loan-card-top"><div><div class="loan-number">' + xplNum(l.loan_number) + '</div><div class="loan-customer">' + (l.customer||'No customer') + '</div></div>' +
+      '<span class="loan-status-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + (isOverdue?'OVERDUE':'ACTIVE') + '</span></div>' +
+      '<div class="loan-meta"><span>' + toolName + '</span>' +
+      (l.contact_name ? '<span>' + l.contact_name + (l.mobile ? ' ' + l.mobile : '') + '</span>' : '') +
+      '<span>Out: ' + fmtDate(l.loaned_date) + (daysOut > 0 ? ' (' + daysOut + 'd)' : '') + '</span>' +
+      '<span' + (isOverdue?' class="loan-overdue-flag"':'') + '>' + dueStr + '</span>' +
+      (l.loaned_by ? '<span>By: ' + l.loaned_by + '</span>' : '') +
+      (l.reason_for_loan ? '<span style="color:#a78bfa">' + l.reason_for_loan + '</span>' : '') +
+      '</div></div>';
   }).join('');
 }
 
 function renderToolRegister() {
-  if (!loanTools.length) {
-    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">+</div><div>No loan tools yet. Click + Add Loan Tool.</div></div>';
-    return;
-  }
+  if (!loanTools.length) { document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">+</div><div>No loan tools yet. Click + Add Loan Tool.</div></div>'; return; }
   document.getElementById('loanList').innerHTML = loanTools.map(function(t) {
     var activeLoan = loans.find(function(l) { return l.loan_tool_id === t.id && l.status !== 'RETURNED'; });
     var avail = !activeLoan;
     var col = avail ? '#10b981' : '#ef4444';
     var statusLabel = avail ? 'Available' : 'On Loan — ' + (activeLoan.customer || '');
-    return '<div class="tool-reg-card' + (avail?'':' unavailable') + '" onclick="openLoanToolModal(\'' + t.id + '\')">'+
-      '<div style="flex:1">'+
-        '<div class="tool-reg-name">' + t.name + '</div>'+
-        (t.serial_number ? '<div class="tool-reg-sn">S/N: ' + t.serial_number + (t.condition ? ' · ' + t.condition : '') + '</div>' : '') +
-        (t.notes ? '<div style="font-size:11px;color:#5a8090;margin-top:3px">' + t.notes + '</div>' : '') +
-      '</div>'+
-      '<span class="tool-reg-status" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + statusLabel + '</span>'+
-    '</div>';
+    return '<div class="tool-reg-card' + (avail?'':' unavailable') + '" onclick="openLoanToolModal(\'' + t.id + '\')">' +
+      '<div style="flex:1"><div class="tool-reg-name">' + t.name + '</div>' +
+      (t.serial_number ? '<div class="tool-reg-sn">S/N: ' + t.serial_number + (t.condition ? ' · ' + t.condition : '') + '</div>' : '') +
+      (t.notes ? '<div style="font-size:11px;color:#5a8090;margin-top:3px">' + t.notes + '</div>' : '') +
+      '</div><span class="tool-reg-status" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + statusLabel + '</span></div>';
   }).join('');
 }
 
 function clearLoanForm() {
   ['lCustomer','lContact','lPhone','lMobile','lEmail','lReason','lPhotoOut','lPhotoIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('lConditionOut').value = '';
-  document.getElementById('lConditionIn').value = '';
-  document.getElementById('lCycleCountOut').value = '';
-  document.getElementById('lCycleCountIn').value = '';
+  ['lConditionOut','lConditionIn'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['lCycleCountOut','lCycleCountIn'].forEach(function(id) { document.getElementById(id).value = ''; });
   document.getElementById('lLoanedDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('lExpectedReturn').value = '';
   document.getElementById('lReturnedDate').value = '';
@@ -825,6 +795,7 @@ function openNewLoanModal() {
   document.getElementById('btnDeleteLoan').style.display = 'none';
   document.getElementById('btnSaveLoan').onclick = saveLoan;
   document.getElementById('btnSaveLoan').textContent = 'Save Loan';
+  document.getElementById('btnSaveLoan').style.background = '#a78bfa';
   var sel = document.getElementById('lToolId');
   sel.innerHTML = '<option value="">-- Select tool --</option>' +
     loanTools.map(function(t) {
@@ -842,27 +813,18 @@ function openEditLoanModal(loanId) {
   document.getElementById('loanModalTitle').textContent = xplNum(l.loan_number) + ' — ' + (l.customer || '');
   var sel = document.getElementById('lToolId');
   sel.innerHTML = '<option value="">-- Select tool --</option>' +
-    loanTools.map(function(t) {
-      return '<option value="' + t.id + '"' + (t.id === l.loan_tool_id ? ' selected' : '') + '>' + t.name + (t.serial_number ? ' (' + t.serial_number + ')' : '') + '</option>';
-    }).join('');
-  document.getElementById('lCustomer').value = l.customer || '';
-  document.getElementById('lContact').value = l.contact_name || '';
-  document.getElementById('lPhone').value = l.phone || '';
-  document.getElementById('lMobile').value = l.mobile || '';
-  document.getElementById('lEmail').value = l.email || '';
+    loanTools.map(function(t) { return '<option value="' + t.id + '"' + (t.id === l.loan_tool_id ? ' selected' : '') + '>' + t.name + (t.serial_number ? ' (' + t.serial_number + ')' : '') + '</option>'; }).join('');
+  ['lCustomer','lContact','lPhone','lMobile','lEmail','lReason','lPhotoOut','lPhotoIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id) {
+    var key = { lCustomer:'customer', lContact:'contact_name', lPhone:'phone', lMobile:'mobile', lEmail:'email', lReason:'reason_for_loan', lPhotoOut:'photo_out', lPhotoIn:'photo_in', lLoanedBy:'loaned_by', lLinkedJob:'linked_job', lNotes:'notes' }[id];
+    document.getElementById(id).value = l[key] || '';
+  });
   document.getElementById('lConditionOut').value = l.condition_out || '';
   document.getElementById('lConditionIn').value = l.condition_in || '';
   document.getElementById('lCycleCountOut').value = l.cycle_count_out || '';
   document.getElementById('lCycleCountIn').value = l.cycle_count_in || '';
-  document.getElementById('lPhotoOut').value = l.photo_out || '';
-  document.getElementById('lPhotoIn').value = l.photo_in || '';
-  document.getElementById('lReason').value = l.reason_for_loan || '';
   document.getElementById('lLoanedDate').value = l.loaned_date || '';
   document.getElementById('lExpectedReturn').value = l.expected_return || '';
   document.getElementById('lReturnedDate').value = l.returned_date || '';
-  document.getElementById('lLoanedBy').value = l.loaned_by || '';
-  document.getElementById('lLinkedJob').value = l.linked_job || '';
-  document.getElementById('lNotes').value = l.notes || '';
   var isReturned = l.status === 'RETURNED';
   document.getElementById('lReturnSection').style.display = isReturned ? 'block' : 'none';
   document.getElementById('btnMarkReturned').style.display = isReturned ? 'none' : 'block';
@@ -870,6 +832,7 @@ function openEditLoanModal(loanId) {
   document.getElementById('btnDeleteLoan').style.display = 'block';
   document.getElementById('btnSaveLoan').onclick = saveLoan;
   document.getElementById('btnSaveLoan').textContent = 'Save Loan';
+  document.getElementById('btnSaveLoan').style.background = '#a78bfa';
   document.getElementById('loanOverlay').classList.add('show');
 }
 
@@ -903,12 +866,8 @@ async function saveLoan() {
     status: 'ACTIVE', updated_at: new Date().toISOString()
   };
   try {
-    if (editingLoan) {
-      await db('PATCH', 'loans?id=eq.' + editingLoan.id, payload);
-    } else {
-      await db('POST', 'loans', payload);
-      await db('PATCH', 'loan_tools?id=eq.' + toolId, { is_available: false, updated_at: new Date().toISOString() });
-    }
+    if (editingLoan) { await db('PATCH', 'loans?id=eq.' + editingLoan.id, payload); }
+    else { await db('POST', 'loans', payload); await db('PATCH', 'loan_tools?id=eq.' + toolId, { is_available: false, updated_at: new Date().toISOString() }); }
     showToast(editingLoan ? 'Loan updated' : 'Loan created'); closeLoanModal(); await loadLoans();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Loan'; }
@@ -923,17 +882,9 @@ async function markLoanReturned() {
   btn.textContent = 'Save & Mark Returned';
   btn.style.background = '#10b981';
   btn.onclick = async function() {
-    var toolId = editingLoan.loan_tool_id;
-    btn.disabled = true;
+    var toolId = editingLoan.loan_tool_id; btn.disabled = true;
     try {
-      await db('PATCH', 'loans?id=eq.' + editingLoan.id, {
-        status: 'RETURNED',
-        returned_date: document.getElementById('lReturnedDate').value || new Date().toISOString().split('T')[0],
-        condition_in: document.getElementById('lConditionIn').value || null,
-        cycle_count_in: parseInt(document.getElementById('lCycleCountIn').value) || null,
-        photo_in: document.getElementById('lPhotoIn').value || null,
-        updated_at: new Date().toISOString()
-      });
+      await db('PATCH', 'loans?id=eq.' + editingLoan.id, { status: 'RETURNED', returned_date: document.getElementById('lReturnedDate').value || new Date().toISOString().split('T')[0], condition_in: document.getElementById('lConditionIn').value || null, cycle_count_in: parseInt(document.getElementById('lCycleCountIn').value) || null, photo_in: document.getElementById('lPhotoIn').value || null, updated_at: new Date().toISOString() });
       await db('PATCH', 'loan_tools?id=eq.' + toolId, { is_available: true, updated_at: new Date().toISOString() });
       showToast('Returned — tool now available'); closeLoanModal(); await loadLoans();
     } catch(e) { showToast('Failed: ' + e.message, 'error'); }
@@ -948,37 +899,22 @@ function printLoanTag() {
   var toolSN = tool && tool.serial_number ? tool.serial_number : '';
   var w = window.open('', '_blank');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Loan Tag ' + xplNum(l.loan_number) + '</title>');
-  w.document.write('<style>');
-  w.document.write('@page { size: 89mm 50mm; margin: 2mm; }');
-  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
-  w.document.write('body { font-family: Arial, sans-serif; width: 85mm; }');
-  w.document.write('.tag { border: 0.5mm solid #000; border-radius: 2mm; padding: 3mm 4mm; }');
-  w.document.write('.header { display: flex; justify-content: space-between; align-items: center; border-bottom: 0.4mm solid #000; padding-bottom: 2mm; margin-bottom: 2.5mm; }');
-  w.document.write('.xpl { font-size: 18pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; }');
-  w.document.write('.brand { font-size: 8pt; font-weight: 700; color: #555; text-align: right; text-transform: uppercase; letter-spacing: 1px; }');
-  w.document.write('.tool-name { font-size: 13pt; font-weight: 900; color: #000; margin-bottom: 1mm; }');
-  w.document.write('.sn { font-size: 9pt; color: #333; margin-bottom: 2.5mm; }');
-  w.document.write('.row { display: flex; justify-content: space-between; margin-bottom: 1.5mm; }');
-  w.document.write('.lbl { font-size: 7.5pt; font-weight: 700; color: #666; text-transform: uppercase; }');
-  w.document.write('.val { font-size: 8.5pt; font-weight: 700; color: #000; text-align: right; max-width: 55mm; }');
-  w.document.write('</style></head><body>');
-  w.document.write('<div class="tag">');
-  w.document.write('<div class="header"><div class="xpl">' + xplNum(l.loan_number) + '</div><div class="brand">X-Pak<br>Loan Tool</div></div>');
+  w.document.write('<style>@page{size:89mm 50mm;margin:2mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;width:85mm}.tag{border:0.5mm solid #000;border-radius:2mm;padding:3mm 4mm}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:0.4mm solid #000;padding-bottom:2mm;margin-bottom:2.5mm}.xpl{font-size:18pt;font-weight:900;font-family:"Courier New",monospace}.brand{font-size:8pt;font-weight:700;color:#555;text-align:right;text-transform:uppercase;letter-spacing:1px}.tool-name{font-size:13pt;font-weight:900;margin-bottom:1mm}.sn{font-size:9pt;color:#333;margin-bottom:2.5mm}.row{display:flex;justify-content:space-between;margin-bottom:1.5mm}.lbl{font-size:7.5pt;font-weight:700;color:#666;text-transform:uppercase}.val{font-size:8.5pt;font-weight:700;text-align:right;max-width:55mm}</style></head><body>');
+  w.document.write('<div class="tag"><div class="header"><div class="xpl">' + xplNum(l.loan_number) + '</div><div class="brand">X-Pak<br>Loan Tool</div></div>');
   w.document.write('<div class="tool-name">' + toolName + '</div>');
-  if (toolSN) w.document.write('<div class="sn">S/N: ' + toolSN + (l.condition_out ? ' &nbsp;&middot;&nbsp; Condition: ' + l.condition_out : '') + '</div>');
-  w.document.write('<div class="row"><span class="lbl">Customer</span><span class="val">' + (l.customer || '') + '</span></div>');
+  if (toolSN) w.document.write('<div class="sn">S/N: ' + toolSN + (l.condition_out ? ' &middot; ' + l.condition_out : '') + '</div>');
+  w.document.write('<div class="row"><span class="lbl">Customer</span><span class="val">' + (l.customer||'') + '</span></div>');
   if (l.contact_name) w.document.write('<div class="row"><span class="lbl">Contact</span><span class="val">' + l.contact_name + (l.mobile ? ' ' + l.mobile : '') + '</span></div>');
   w.document.write('<div class="row"><span class="lbl">Date Out</span><span class="val">' + fmtDate(l.loaned_date) + '</span></div>');
   if (l.expected_return) w.document.write('<div class="row"><span class="lbl">Return By</span><span class="val">' + fmtDate(l.expected_return) + '</span></div>');
   if (l.loaned_by) w.document.write('<div class="row"><span class="lbl">Loaned By</span><span class="val">' + l.loaned_by + '</span></div>');
   w.document.write('</div></body></html>');
-  w.document.close();
-  setTimeout(function() { w.print(); }, 300);
+  w.document.close(); setTimeout(function() { w.print(); }, 300);
 }
 
 async function deleteLoan() {
   if (!editingLoan) return;
-  if (!confirm('Delete this loan record? Cannot be undone.')) return;
+  if (!confirm('Delete this loan record?')) return;
   try {
     await db('DELETE', 'loans?id=eq.' + editingLoan.id);
     var otherActive = loans.filter(function(l) { return l.loan_tool_id === editingLoan.loan_tool_id && l.id !== editingLoan.id && l.status !== 'RETURNED'; });
@@ -1012,7 +948,7 @@ function closeLoanToolModal() { document.getElementById('loanToolOverlay').class
 
 async function saveLoanTool() {
   var name = document.getElementById('ltName').value.trim();
-  if (!name) { showToast('Tool name is required', 'error'); return; }
+  if (!name) { showToast('Tool name required', 'error'); return; }
   var btn = document.getElementById('btnSaveLoanTool'); btn.disabled = true; btn.textContent = 'Saving...';
   var payload = { name: name, serial_number: document.getElementById('ltSerial').value || null, condition: document.getElementById('ltCondition').value || null, notes: document.getElementById('ltNotes').value || null, is_available: true, updated_at: new Date().toISOString() };
   try {
@@ -1026,12 +962,10 @@ async function saveLoanTool() {
 async function deleteLoanTool() {
   if (!editingLoanTool) return;
   var activeLoan = loans.find(function(l) { return l.loan_tool_id === editingLoanTool.id && l.status !== 'RETURNED'; });
-  if (activeLoan) { showToast('Cannot remove — tool is currently on loan', 'error'); return; }
-  if (!confirm('Remove "' + editingLoanTool.name + '" from the register?')) return;
-  try {
-    await db('DELETE', 'loan_tools?id=eq.' + editingLoanTool.id);
-    showToast('Removed'); closeLoanToolModal(); await loadLoans();
-  } catch(e) { showToast('Delete failed', 'error'); }
+  if (activeLoan) { showToast('Tool is currently on loan', 'error'); return; }
+  if (!confirm('Remove "' + editingLoanTool.name + '" from register?')) return;
+  try { await db('DELETE', 'loan_tools?id=eq.' + editingLoanTool.id); showToast('Removed'); closeLoanToolModal(); await loadLoans(); }
+  catch(e) { showToast('Delete failed', 'error'); }
 }
 
 function setJobView(mode) {
@@ -1186,74 +1120,87 @@ function printOrderList() {
 
 // ── PARTS SEARCH IN JOB ───────────────────────────────────────────
 
-function searchPartsForJob() {
-  var q = document.getElementById('partSearchInput').value.toLowerCase().trim();
-  var res = document.getElementById('partSearchResults');
+function searchPartsForJob(toolTempId) {
+  var inputId = 'psi_' + toolTempId;
+  var resId   = 'psr_' + toolTempId;
+  var inp = document.getElementById(inputId);
+  var res = document.getElementById(resId);
+  if (!inp || !res) return;
+  var q = inp.value.toLowerCase().trim();
   if (!q) { res.innerHTML = ''; return; }
-  var matches = allParts.filter(function(p) {
-    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+  var matches = allParts.filter(function(pt) {
+    return pt.key_no.toLowerCase().includes(q) || pt.description.toLowerCase().includes(q);
   }).slice(0, 8);
   if (!matches.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found</div>'; return; }
-  res.innerHTML = matches.map(function(p) {
-    var s = p.stock && p.stock[0];
+  res.innerHTML = matches.map(function(pt) {
+    var s = pt.stock && pt.stock[0];
     var qty = s ? s.quantity : null;
     var st = qty === null ? 'unset' : qty === 0 ? 'empty' : qty <= (s.reorder_threshold || 1) ? 'low' : 'ok';
     var stockLabel = qty === null ? 'No stock data' : 'Stock: ' + qty;
-    return '<div class="part-search-item" onclick="addPartToJob(\'' + p.id + '\')">' +
+    return '<div class="part-search-item" onclick="addPartToJob(\'' + pt.id + '\',\'' + toolTempId + '\')">' +
       '<div class="psi-left">' +
-        '<div class="psi-keyno">' + p.key_no + '</div>' +
-        '<div class="psi-desc">' + p.description + '</div>' +
-        '<div class="psi-machine">' + (p.machineName || '') + (p.spec ? ' | ' + p.spec : '') + '</div>' +
+        '<div class="psi-keyno">' + pt.key_no + '</div>' +
+        '<div class="psi-desc">' + pt.description + '</div>' +
+        '<div class="psi-machine">' + (pt.machineName || '') + (pt.spec ? ' | ' + pt.spec : '') + '</div>' +
       '</div>' +
       '<div class="psi-stock ' + st + '">' + stockLabel + '</div>' +
       '</div>';
   }).join('');
 }
 
-function addPartToJob(partId) {
-  var p = allParts.find(function(x) { return x.id === partId; }); if (!p) return;
-  var s = p.stock && p.stock[0];
+function addPartToJob(partId, toolTempId) {
+  var pt = allParts.find(function(x) { return x.id === partId; }); if (!pt) return;
+  var s = pt.stock && pt.stock[0];
   var qty = s ? s.quantity : 0;
   var status = qty > 0 ? 'use_stock' : 'to_order';
-  var existing = jobPartsLocal.find(function(x) { return x.part_id === partId; });
-  if (existing) { showToast('Already added', 'error'); return; }
+  var existing = jobPartsLocal.find(function(x) { return x.part_id === partId && x._toolTempId === toolTempId; });
+  if (existing) { showToast('Already added to this tool', 'error'); return; }
+  var toolNum = 1;
+  if (toolTempId) { var tt = jobToolsLocal.find(function(x) { return x._tempId === toolTempId; }); if (tt) toolNum = tt.tool_number; }
   jobPartsLocal.push({
     _tempId: 'tmp_' + Date.now(),
+    _toolTempId: toolTempId || null,
     part_id: partId,
-    part_key_no: p.key_no,
-    part_description: p.description,
-    machine_name: p.machineName || '',
+    part_key_no: pt.key_no,
+    part_description: pt.description,
+    machine_name: pt.machineName || '',
     quantity: 1,
     status: status,
+    tool_number: toolNum,
     notes: ''
   });
-  document.getElementById('partSearchInput').value = '';
-  document.getElementById('partSearchResults').innerHTML = '';
-  renderJobPartsList();
+  var inp = document.getElementById('psi_' + toolTempId);
+  var res = document.getElementById('psr_' + toolTempId);
+  if (inp) inp.value = '';
+  if (res) res.innerHTML = '';
+  renderToolPartsList(toolTempId);
 }
 
+
 function removeJobPart(tempId) {
+  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  var tid = jp ? jp._toolTempId : null;
   jobPartsLocal = jobPartsLocal.filter(function(x) { return x._tempId !== tempId; });
-  renderJobPartsList();
+  renderToolPartsList(tid);
 }
 
 function setJobPartStatus(tempId, status) {
-  var p = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
-  if (p) p.status = status;
-  renderJobPartsList();
+  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  if (jp) { jp.status = status; renderToolPartsList(jp._toolTempId); }
 }
 
 function setJobPartQty(tempId, val) {
-  var p = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
-  if (p) p.quantity = Math.max(1, parseInt(val) || 1);
+  var jp = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  if (jp) jp.quantity = Math.max(1, parseInt(val) || 1);
 }
 
-function renderJobPartsList() {
-  var el = document.getElementById('jobPartsList');
-  if (!jobPartsLocal.length) { el.innerHTML = ''; return; }
-  el.innerHTML = jobPartsLocal.map(function(jp) {
+function renderToolPartsList(toolTempId) {
+  var el = document.getElementById('tpl_' + toolTempId);
+  if (!el) return;
+  var parts = jobPartsLocal.filter(function(x) { return x._toolTempId === toolTempId; });
+  if (!parts.length) { el.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:6px 0">No parts added yet</div>'; return; }
+  el.innerHTML = parts.map(function(jp) {
     var sc = STATUS_COLOURS[jp.status] || '#4a6080';
-    var sl = STATUS_LABELS[jp.status] || jp.status;
     return '<div class="job-part-row ' + jp.status + '">' +
       '<span class="jpr-keyno">' + jp.part_key_no + '</span>' +
       '<span class="jpr-desc">' + jp.part_description + '</span>' +
@@ -1263,8 +1210,12 @@ function renderJobPartsList() {
         '<option value="to_order"' + (jp.status==='to_order'?' selected':'') + '>To Order</option>' +
       '</select>' +
       '<button class="jpr-remove" onclick="removeJobPart(\'' + jp._tempId + '\')">x</button>' +
-      '</div>';
+    '</div>';
   }).join('');
+}
+
+function renderJobPartsList() {
+  jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
 }
 
 // ── JOBS ──────────────────────────────────────────────────────────
@@ -1280,27 +1231,19 @@ function setJobFilter(f, btn) {
   jobFilter = f;
   document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
-  if (f === 'UNORDERED') {
-    loadUnorderedJobs();
-  } else {
-    renderJobs();
-  }
+  if (f === 'UNORDERED') { loadUnorderedJobs(); } else { renderJobs(); }
 }
 
 async function loadUnorderedJobs() {
   try {
-    // Get all job_ids that have to_order parts
     var unorderedParts = await db('GET', 'job_parts?status=eq.to_order&select=job_id');
     var unorderedIds = [...new Set(unorderedParts.map(function(p) { return p.job_id; }).filter(Boolean))];
-    // Filter jobs list to only those with unordered parts, excluding completed
-    var unorderedJobs = jobs.filter(function(j) { return unorderedIds.includes(j.id) && j.status !== 'COMPLETED'; });
-    // Temporarily override for render
     var orig = jobs;
-    jobs = unorderedJobs;
+    jobs = jobs.filter(function(j) { return unorderedIds.includes(j.id) && j.status !== 'COMPLETED'; });
     renderJobs();
-    jobs = orig;
     var btn = document.getElementById('btnUnordered');
-    if (btn) { btn.textContent = '⚠ PARTS UNORDERED (' + unorderedJobs.length + ')'; }
+    if (btn) btn.textContent = '⚠ PARTS UNORDERED (' + jobs.length + ')';
+    jobs = orig;
   } catch(e) { renderJobs(); }
 }
 
@@ -1421,13 +1364,10 @@ function clearJobForm() {
     document.getElementById(id).value = '';
   });
   document.getElementById('jStatus').value = 'NEW JOB';
-  document.getElementById('jLabour').value = '';
   document.getElementById('jParts').value = '';
   document.getElementById('jFollowup').checked = false;
-  document.getElementById('partSearchInput').value = '';
-  document.getElementById('partSearchResults').innerHTML = '';
   jobLinks = []; renderLinksList();
-  jobPartsLocal = []; renderJobPartsList();
+  jobPartsLocal = [];
   jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' }];
   renderToolsList();
 }
@@ -1452,7 +1392,6 @@ async function openEditJobModal(jobId) {
   document.getElementById('jMobile').value = j.mobile || '';
   document.getElementById('jEmail').value = j.email || '';
   document.getElementById('jShipping').value = j.shipping_address || '';
-  document.getElementById('jLabour').value = j.labour_cost || '';
   document.getElementById('jParts').value = j.parts_cost || '';
   document.getElementById('jFollowup').checked = !!j.followup_required;
   document.getElementById('jFollowupNotes').value = j.followup_notes || '';
@@ -1468,11 +1407,11 @@ async function openEditJobModal(jobId) {
     var existingTools = await db('GET', 'job_tools?job_id=eq.' + j.id + '&select=*&order=tool_number.asc');
     if (existingTools.length) {
       jobToolsLocal = existingTools.map(function(t) {
-        return Object.assign({ _tempId: 'tool_' + t.id, _existingId: t.id }, t);
+        return Object.assign({ _tempId: 'tool_' + t.id, _existingId: t.id, work_completed: t.work_completed || '', service_fee: t.service_fee || '' }, t);
       });
     } else {
       // Migrate legacy single-tool job fields into Tool 1
-      jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '' }];
+      jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '', work_completed: '', service_fee: j.labour_cost || '' }];
     }
   } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' }]; }
   renderToolsList();
@@ -1480,10 +1419,11 @@ async function openEditJobModal(jobId) {
   try {
     var existing = await db('GET', 'job_parts?job_id=eq.' + j.id + '&select=*&order=created_at.asc');
     jobPartsLocal = existing.map(function(ep) {
-      return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id }, ep);
+      var matchTool = jobToolsLocal.find(function(t) { return t.tool_number === ep.tool_number; });
+      return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id, _toolTempId: matchTool ? matchTool._tempId : (jobToolsLocal[0] ? jobToolsLocal[0]._tempId : null) }, ep);
     });
   } catch(e) { jobPartsLocal = []; }
-  renderJobPartsList();
+  jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
   document.getElementById('btnDeleteJob').style.display = 'block';
   document.getElementById('jobOverlay').classList.add('show');
 }
@@ -1511,7 +1451,6 @@ async function saveJob() {
     customer_issue: null,
     workshop_notes: null,
     error_code: null,
-    labour_cost: parseFloat(document.getElementById('jLabour').value) || null,
     parts_cost: parseFloat(document.getElementById('jParts').value) || null,
     followup_required: document.getElementById('jFollowup').checked,
     followup_notes: document.getElementById('jFollowupNotes').value || null,
@@ -1534,7 +1473,7 @@ async function saveJob() {
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, updated_at: new Date().toISOString() });
+      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, service_fee: parseFloat(jt.service_fee) || null, updated_at: new Date().toISOString() });
     }
     // Save job parts
     for (var i = 0; i < jobPartsLocal.length; i++) {
@@ -2045,7 +1984,7 @@ var FAULT_OPTIONS = ['Not cutting','Tension / force issue','Jammed / mechanical 
 
 function addTool() {
   var num = jobToolsLocal.length + 1;
-  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '' });
+  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '' });
   renderToolsList();
 }
 
@@ -2090,6 +2029,17 @@ function renderToolsList() {
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
         '<div class="field full"><label>Work Completed</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'work_completed\',this.value)" placeholder="Describe all work carried out..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.work_completed||'') + '</textarea></div>' +
+        '<div class="field"><label>Service Fee ($)</label><input type="number" step="0.01" min="0" value="' + (t.service_fee||'') + '" placeholder="350.00" oninput="setToolField(\'' + t._tempId + '\',\'service_fee\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #f97316;background:#0f1923;color:#f97316;font-size:13px;outline:none;font-weight:700"></div>' +
+      '</div>' +
+      '<div style="margin-top:10px;border-top:1px solid #1e3048;padding-top:10px">' +
+        '<div style="font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Parts Required — Tool ' + t.tool_number + '</div>' +
+        '<div class="parts-search-area" style="margin-bottom:6px">' +
+          '<div class="parts-search-row">' +
+            '<input id="psi_' + t._tempId + '" placeholder="Search part number or description..." oninput="searchPartsForJob(\'' + t._tempId + '\')" autocomplete="off">' +
+          '</div>' +
+          '<div class="parts-search-results" id="psr_' + t._tempId + '"></div>' +
+        '</div>' +
+        '<div class="job-parts-list" id="tpl_' + t._tempId + '"></div>' +
       '</div>' +
       '</div>';
   }).join('');
@@ -2134,12 +2084,13 @@ function renderAssessmentReport(j, tools, jparts) {
       (t.work_completed ? '<div class="field-block"><div class="field-label">Work Completed</div><div class="field-val">' + t.work_completed.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.workshop_notes ? '<div class="field-block"><div class="field-label">Workshop Notes</div><div class="field-val">' + t.workshop_notes.replace(/\n/g,'<br>') + '</div></div>' : '') +
       '<div class="field-block"><div class="field-label">Parts Required</div>' + partsTable + '</div>' +
+      (t.service_fee ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Service Fee</div><div class="field-val" style="color:#f97316;font-weight:700">$' + parseFloat(t.service_fee).toFixed(2) + '</div></div>' : '') +
       '</div>';
   }).join('');
 
   var partsTotal = jparts.reduce(function(sum, p) { var pd2 = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null; return sum + ((pd2&&pd2.sell_price ? parseFloat(pd2.sell_price) : 0) * (p.quantity||1)); }, 0);
-  var labour = parseFloat(j.labour_cost) || 0;
-  var grandTotal = partsTotal + labour;
+  var serviceFeeTotal = tools.reduce(function(sum, t) { return sum + (parseFloat(t.service_fee) || 0); }, 0);
+  var grandTotal = partsTotal + serviceFeeTotal;
 
   var w = window.open('', '_blank');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Assessment Report ' + xpsNum(j.job_number) + '</title><style>');
@@ -2194,9 +2145,9 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.write(toolSections);
 
   // Totals
-  if (grandTotal > 0 || labour > 0) {
+  if (grandTotal > 0 || serviceFeeTotal > 0) {
     w.document.write('<div class="totals-box"><table>');
-    if (labour > 0) w.document.write('<tr><td>Service Fee</td><td>$' + labour.toFixed(2) + '</td></tr>');
+    if (serviceFeeTotal > 0) w.document.write('<tr><td>Service Fee</td><td>$' + serviceFeeTotal.toFixed(2) + '</td></tr>');
     if (partsTotal > 0) w.document.write('<tr><td>Parts</td><td>$' + partsTotal.toFixed(2) + '</td></tr>');
     w.document.write('<tr class="total-row"><td>Total</td><td>$' + grandTotal.toFixed(2) + '</td></tr>');
     w.document.write('</table></div><div class="gst-note">All prices ex GST</div>');
