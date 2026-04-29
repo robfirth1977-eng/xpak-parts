@@ -29,18 +29,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .loan-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #a78bfa;cursor:pointer;transition:background 0.1s}
 .loan-card:hover{background:#1a2a3d}
 .loan-card.overdue{border-left-color:#ef4444}
-.loan-card.returned{border-left-color:#4a6080;opacity:0.6}
 .loan-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px}
 .loan-number{font-size:11px;font-weight:700;color:#a78bfa;font-family:"Courier New",monospace}
 .loan-status-badge{font-size:10px;font-weight:700;border-radius:10px;padding:2px 9px;white-space:nowrap;flex-shrink:0}
 .loan-customer{font-size:15px;font-weight:700;color:#e2e8f0}
 .loan-meta{font-size:11px;color:#5a8090;margin-top:4px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .loan-overdue-flag{color:#ef4444;font-weight:700}
-.tool-reg-card{background:#141f2d;border-radius:10px;padding:11px 13px;margin-bottom:7px;border-left:3px solid #a78bfa;display:flex;align-items:center;gap:10px}
-.tool-reg-card.unavailable{border-left-color:#ef4444;opacity:0.8}
+.tool-reg-card{background:#141f2d;border-radius:10px;padding:11px 13px;margin-bottom:7px;border-left:3px solid #a78bfa;display:flex;align-items:center;gap:10px;cursor:pointer}
+.tool-reg-card:hover{background:#1a2a3d}
+.tool-reg-card.unavailable{border-left-color:#ef4444}
 .tool-reg-name{font-size:13px;font-weight:700;color:#e2e8f0;flex:1}
 .tool-reg-sn{font-size:11px;color:#5a8090}
 .tool-reg-status{font-size:11px;font-weight:700;border-radius:8px;padding:3px 10px;flex-shrink:0}
+.filter-btn.alert{border-color:#ef4444;color:#ef4444}
+.filter-btn.alert:hover,.filter-btn.alert.active{background:#ef4444;color:white}
 .tab-add{padding:6px 12px;border-radius:20px;border:1px dashed #3a6050;background:transparent;color:#3a9070;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .tab-add:hover{border-color:#10b981;color:#10b981}
 .tab-del{padding:4px 7px;border-radius:20px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;margin-left:-6px}
@@ -299,6 +301,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <button class="filter-btn" onclick="setJobFilter('ACTIVE',this)">Active</button>
     <button class="filter-btn" onclick="setJobFilter('FOLLOW',this)">Follow-Up</button>
     <button class="filter-btn" onclick="setJobFilter('COMPLETED',this)">Completed</button>
+    <button class="filter-btn alert" id="btnUnordered" onclick="setJobFilter('UNORDERED',this)">⚠ PARTS UNORDERED</button>
   </div>
   <div id="jobsList"></div>
 </div>
@@ -506,16 +509,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div class="modal-header"><div class="modal-title" id="loanModalTitle">New Loan</div><button class="modal-close" onclick="closeLoanModal()">x</button></div>
     <div class="section-label">Tool</div>
     <div class="field"><label>Loan Tool *</label>
-      <select id="lToolId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
-        <option value="">-- Select tool --</option>
-      </select>
+      <select id="lToolId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select tool --</option></select>
     </div>
     <div class="g2">
-      <div class="field"><label>Condition Out</label><input id="lConditionOut" placeholder="e.g. Good, Minor wear"></div>
+      <div class="field"><label>Condition Out</label><select id="lConditionOut" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
       <div class="field"><label>Cycle Count Out</label><input id="lCycleCountOut" type="number" min="0" placeholder="e.g. 12500"></div>
     </div>
-    <div class="field"><label>Reason for Loan</label><input id="lReason" placeholder="e.g. Customer tool in for service, Replacement while repaired"></div>
-    <div class="field"><label>Photo Out (link or ref)</label><input id="lPhotoOut" placeholder="e.g. SharePoint link or photo reference"></div>
+    <div class="field"><label>Reason for Loan</label><input id="lReason" placeholder="e.g. Customer tool in for service"></div>
+    <div class="field"><label>Photo Out (SharePoint link)</label><input id="lPhotoOut" placeholder="Paste link to outgoing photos"></div>
     <div class="section-label">Customer</div>
     <div class="g2">
       <div class="field full"><label>Customer / Company *</label><input id="lCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour"></div>
@@ -528,7 +529,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div class="g2">
       <div class="field"><label>Loaned Date</label><input id="lLoanedDate" type="date"></div>
       <div class="field"><label>Expected Return</label><input id="lExpectedReturn" type="date"></div>
-      <div class="field"><label>Loaned By</label><input id="lLoanedBy" placeholder="e.g. Rob, Dave"></div>
+      <div class="field"><label>Loaned By</label><input id="lLoanedBy" placeholder="e.g. Rob"></div>
       <div class="field"><label>Linked Job</label><input id="lLinkedJob" placeholder="e.g. XPS-008"></div>
     </div>
     <div class="field"><label>Notes</label><textarea id="lNotes" placeholder="Any notes about the loan..." style="min-height:60px"></textarea></div>
@@ -536,13 +537,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="section-label">Return</div>
       <div class="g2">
         <div class="field"><label>Returned Date</label><input id="lReturnedDate" type="date"></div>
-        <div class="field"><label>Condition In</label><input id="lConditionIn" placeholder="e.g. Good, Damaged"></div>
+        <div class="field"><label>Condition In</label><select id="lConditionIn" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
         <div class="field"><label>Cycle Count In</label><input id="lCycleCountIn" type="number" min="0" placeholder="e.g. 13200"></div>
-        <div class="field"><label>Photo In (link or ref)</label><input id="lPhotoIn" placeholder="e.g. SharePoint link or photo reference"></div>
+        <div class="field"><label>Photo In (SharePoint link)</label><input id="lPhotoIn" placeholder="Paste link to return photos"></div>
       </div>
     </div>
     <button class="btn-save" style="background:#a78bfa" id="btnSaveLoan" onclick="saveLoan()">Save Loan</button>
-    <button id="btnMarkReturned" onclick="markLoanReturned()" style="display:none;width:100%;padding:11px;background:transparent;color:#10b981;border:1px solid #10b981;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Mark as Returned</button>
+    <button id="btnMarkReturned" onclick="markLoanReturned()" style="display:none;width:100%;padding:11px;background:transparent;color:#10b981;border:1px solid #10b981;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">&#10003; Mark as Returned</button>
+    <button id="btnPrintLoanTag" onclick="printLoanTag()" style="display:none;width:100%;padding:11px;background:transparent;color:#a78bfa;border:1px solid #a78bfa;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Print Loan Tag</button>
     <button class="btn-delete" id="btnDeleteLoan" onclick="deleteLoan()" style="display:none">Delete This Loan</button>
   </div>
 </div>
@@ -555,7 +557,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div class="field"><label>Tool Name / Model *</label><input id="ltName" placeholder="e.g. Titan TA220, OR-T 250"></div>
     <div class="g2">
       <div class="field"><label>Serial Number</label><input id="ltSerial" placeholder="e.g. 56096"></div>
-      <div class="field"><label>Condition</label><input id="ltCondition" placeholder="e.g. Good, Fair"></div>
+      <div class="field"><label>Condition</label><select id="ltCondition" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
     </div>
     <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
     <button class="btn-save" style="background:#a78bfa" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
@@ -753,9 +755,8 @@ function renderActiveLoans() {
   var overdue = active.filter(function(l) { return l.expected_return && new Date(l.expected_return) < today; });
   document.getElementById('hSub').textContent = 'Loan Tools — ' + active.length + ' active';
   document.getElementById('lowBadge').innerHTML = overdue.length ? '<div class="badge-low">' + overdue.length + ' OVERDUE</div>' : '';
-
   if (!active.length) {
-    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">&#10003;</div><div style="color:#10b981">No active loans</div></div>';
+    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">✓</div><div style="color:#10b981">No active loans</div></div>';
     return;
   }
   document.getElementById('loanList').innerHTML = active.map(function(l) {
@@ -778,14 +779,13 @@ function renderActiveLoans() {
         (l.loaned_by ? '<span>By: ' + l.loaned_by + '</span>' : '') +
         (l.reason_for_loan ? '<span style="color:#a78bfa">' + l.reason_for_loan + '</span>' : '') +
       '</div>'+
-      (l.notes ? '<div style="font-size:11px;color:#7a9ab0;margin-top:5px;font-style:italic">' + l.notes + '</div>' : '') +
-      '</div>';
+    '</div>';
   }).join('');
 }
 
 function renderToolRegister() {
   if (!loanTools.length) {
-    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">+</div><div>No loan tools yet. Click + Add Loan Tool to get started.</div></div>';
+    document.getElementById('loanList').innerHTML = '<div class="center"><div class="icon">+</div><div>No loan tools yet. Click + Add Loan Tool.</div></div>';
     return;
   }
   document.getElementById('loanList').innerHTML = loanTools.map(function(t) {
@@ -800,16 +800,16 @@ function renderToolRegister() {
         (t.notes ? '<div style="font-size:11px;color:#5a8090;margin-top:3px">' + t.notes + '</div>' : '') +
       '</div>'+
       '<span class="tool-reg-status" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + statusLabel + '</span>'+
-      '</div>';
+    '</div>';
   }).join('');
 }
 
 function clearLoanForm() {
-  ['lCustomer','lContact','lPhone','lMobile','lEmail','lConditionOut','lConditionIn',
-   'lLoanedBy','lLinkedJob','lNotes','lReason','lPhotoOut','lPhotoIn'].forEach(function(id) {
-    document.getElementById(id).value = '';
-  });
-  ['lCycleCountOut','lCycleCountIn'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['lCustomer','lContact','lPhone','lMobile','lEmail','lReason','lPhotoOut','lPhotoIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('lConditionOut').value = '';
+  document.getElementById('lConditionIn').value = '';
+  document.getElementById('lCycleCountOut').value = '';
+  document.getElementById('lCycleCountIn').value = '';
   document.getElementById('lLoanedDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('lExpectedReturn').value = '';
   document.getElementById('lReturnedDate').value = '';
@@ -821,7 +821,10 @@ function openNewLoanModal() {
   clearLoanForm();
   document.getElementById('lReturnSection').style.display = 'none';
   document.getElementById('btnMarkReturned').style.display = 'none';
+  document.getElementById('btnPrintLoanTag').style.display = 'none';
   document.getElementById('btnDeleteLoan').style.display = 'none';
+  document.getElementById('btnSaveLoan').onclick = saveLoan;
+  document.getElementById('btnSaveLoan').textContent = 'Save Loan';
   var sel = document.getElementById('lToolId');
   sel.innerHTML = '<option value="">-- Select tool --</option>' +
     loanTools.map(function(t) {
@@ -863,7 +866,10 @@ function openEditLoanModal(loanId) {
   var isReturned = l.status === 'RETURNED';
   document.getElementById('lReturnSection').style.display = isReturned ? 'block' : 'none';
   document.getElementById('btnMarkReturned').style.display = isReturned ? 'none' : 'block';
+  document.getElementById('btnPrintLoanTag').style.display = 'block';
   document.getElementById('btnDeleteLoan').style.display = 'block';
+  document.getElementById('btnSaveLoan').onclick = saveLoan;
+  document.getElementById('btnSaveLoan').textContent = 'Save Loan';
   document.getElementById('loanOverlay').classList.add('show');
 }
 
@@ -912,13 +918,13 @@ async function markLoanReturned() {
   if (!editingLoan) return;
   document.getElementById('lReturnSection').style.display = 'block';
   document.getElementById('lReturnedDate').value = new Date().toISOString().split('T')[0];
-  showToast('Fill in return details then save', 'success');
-  // Update status inline on save
+  document.getElementById('btnMarkReturned').style.display = 'none';
   var btn = document.getElementById('btnSaveLoan');
   btn.textContent = 'Save & Mark Returned';
+  btn.style.background = '#10b981';
   btn.onclick = async function() {
     var toolId = editingLoan.loan_tool_id;
-    var btn2 = document.getElementById('btnSaveLoan'); btn2.disabled = true;
+    btn.disabled = true;
     try {
       await db('PATCH', 'loans?id=eq.' + editingLoan.id, {
         status: 'RETURNED',
@@ -931,8 +937,43 @@ async function markLoanReturned() {
       await db('PATCH', 'loan_tools?id=eq.' + toolId, { is_available: true, updated_at: new Date().toISOString() });
       showToast('Returned — tool now available'); closeLoanModal(); await loadLoans();
     } catch(e) { showToast('Failed: ' + e.message, 'error'); }
-    finally { btn2.disabled = false; }
+    finally { btn.disabled = false; }
   };
+}
+
+function printLoanTag() {
+  var l = editingLoan; if (!l) return;
+  var tool = loanTools.find(function(t) { return t.id === l.loan_tool_id; });
+  var toolName = tool ? tool.name : 'Unknown Tool';
+  var toolSN = tool && tool.serial_number ? tool.serial_number : '';
+  var w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Loan Tag ' + xplNum(l.loan_number) + '</title>');
+  w.document.write('<style>');
+  w.document.write('@page { size: 89mm 50mm; margin: 2mm; }');
+  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
+  w.document.write('body { font-family: Arial, sans-serif; width: 85mm; }');
+  w.document.write('.tag { border: 0.5mm solid #000; border-radius: 2mm; padding: 3mm 4mm; }');
+  w.document.write('.header { display: flex; justify-content: space-between; align-items: center; border-bottom: 0.4mm solid #000; padding-bottom: 2mm; margin-bottom: 2.5mm; }');
+  w.document.write('.xpl { font-size: 18pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; }');
+  w.document.write('.brand { font-size: 8pt; font-weight: 700; color: #555; text-align: right; text-transform: uppercase; letter-spacing: 1px; }');
+  w.document.write('.tool-name { font-size: 13pt; font-weight: 900; color: #000; margin-bottom: 1mm; }');
+  w.document.write('.sn { font-size: 9pt; color: #333; margin-bottom: 2.5mm; }');
+  w.document.write('.row { display: flex; justify-content: space-between; margin-bottom: 1.5mm; }');
+  w.document.write('.lbl { font-size: 7.5pt; font-weight: 700; color: #666; text-transform: uppercase; }');
+  w.document.write('.val { font-size: 8.5pt; font-weight: 700; color: #000; text-align: right; max-width: 55mm; }');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="tag">');
+  w.document.write('<div class="header"><div class="xpl">' + xplNum(l.loan_number) + '</div><div class="brand">X-Pak<br>Loan Tool</div></div>');
+  w.document.write('<div class="tool-name">' + toolName + '</div>');
+  if (toolSN) w.document.write('<div class="sn">S/N: ' + toolSN + (l.condition_out ? ' &nbsp;&middot;&nbsp; Condition: ' + l.condition_out : '') + '</div>');
+  w.document.write('<div class="row"><span class="lbl">Customer</span><span class="val">' + (l.customer || '') + '</span></div>');
+  if (l.contact_name) w.document.write('<div class="row"><span class="lbl">Contact</span><span class="val">' + l.contact_name + (l.mobile ? ' ' + l.mobile : '') + '</span></div>');
+  w.document.write('<div class="row"><span class="lbl">Date Out</span><span class="val">' + fmtDate(l.loaned_date) + '</span></div>');
+  if (l.expected_return) w.document.write('<div class="row"><span class="lbl">Return By</span><span class="val">' + fmtDate(l.expected_return) + '</span></div>');
+  if (l.loaned_by) w.document.write('<div class="row"><span class="lbl">Loaned By</span><span class="val">' + l.loaned_by + '</span></div>');
+  w.document.write('</div></body></html>');
+  w.document.close();
+  setTimeout(function() { w.print(); }, 300);
 }
 
 async function deleteLoan() {
@@ -959,7 +1000,8 @@ function openLoanToolModal(toolId) {
   } else {
     editingLoanTool = null;
     document.getElementById('loanToolModalTitle').textContent = 'Add Loan Tool';
-    ['ltName','ltSerial','ltCondition','ltNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
+    ['ltName','ltSerial','ltNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('ltCondition').value = '';
     document.getElementById('btnDeleteLoanTool').style.display = 'none';
   }
   document.getElementById('loanToolOverlay').classList.add('show');
@@ -974,13 +1016,8 @@ async function saveLoanTool() {
   var btn = document.getElementById('btnSaveLoanTool'); btn.disabled = true; btn.textContent = 'Saving...';
   var payload = { name: name, serial_number: document.getElementById('ltSerial').value || null, condition: document.getElementById('ltCondition').value || null, notes: document.getElementById('ltNotes').value || null, is_available: true, updated_at: new Date().toISOString() };
   try {
-    if (editingLoanTool) {
-      await db('PATCH', 'loan_tools?id=eq.' + editingLoanTool.id, payload);
-      showToast('Tool updated');
-    } else {
-      await db('POST', 'loan_tools', payload);
-      showToast('Tool added to register');
-    }
+    if (editingLoanTool) { await db('PATCH', 'loan_tools?id=eq.' + editingLoanTool.id, payload); showToast('Tool updated'); }
+    else { await db('POST', 'loan_tools', payload); showToast('Tool added'); }
     closeLoanToolModal(); await loadLoans();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Tool'; }
@@ -1242,7 +1279,29 @@ async function loadJobs() {
 function setJobFilter(f, btn) {
   jobFilter = f;
   document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active'); renderJobs();
+  btn.classList.add('active');
+  if (f === 'UNORDERED') {
+    loadUnorderedJobs();
+  } else {
+    renderJobs();
+  }
+}
+
+async function loadUnorderedJobs() {
+  try {
+    // Get all job_ids that have to_order parts
+    var unorderedParts = await db('GET', 'job_parts?status=eq.to_order&select=job_id');
+    var unorderedIds = [...new Set(unorderedParts.map(function(p) { return p.job_id; }).filter(Boolean))];
+    // Filter jobs list to only those with unordered parts, excluding completed
+    var unorderedJobs = jobs.filter(function(j) { return unorderedIds.includes(j.id) && j.status !== 'COMPLETED'; });
+    // Temporarily override for render
+    var orig = jobs;
+    jobs = unorderedJobs;
+    renderJobs();
+    jobs = orig;
+    var btn = document.getElementById('btnUnordered');
+    if (btn) { btn.textContent = '⚠ PARTS UNORDERED (' + unorderedJobs.length + ')'; }
+  } catch(e) { renderJobs(); }
 }
 
 function fmtDate(dt) {
@@ -1475,7 +1534,7 @@ async function saveJob() {
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, updated_at: new Date().toISOString() });
+      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, updated_at: new Date().toISOString() });
     }
     // Save job parts
     for (var i = 0; i < jobPartsLocal.length; i++) {
@@ -1986,7 +2045,7 @@ var FAULT_OPTIONS = ['Not cutting','Tension / force issue','Jammed / mechanical 
 
 function addTool() {
   var num = jobToolsLocal.length + 1;
-  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' });
+  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '' });
   renderToolsList();
 }
 
@@ -2030,6 +2089,7 @@ function renderToolsList() {
         '<div class="field full"><label>Customer Reported Issue</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'customer_issue\',this.value)" placeholder="What the customer reported..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.customer_issue||'') + '</textarea></div>' +
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
+        '<div class="field full"><label>Work Completed</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'work_completed\',this.value)" placeholder="Describe all work carried out..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.work_completed||'') + '</textarea></div>' +
       '</div>' +
       '</div>';
   }).join('');
@@ -2057,7 +2117,7 @@ function renderAssessmentReport(j, tools, jparts) {
 
   var toolSections = tools.map(function(t) {
     var mName = mLookup(t.machine_id);
-    var toolParts = jparts.filter(function(p) { return !p.tool_number || p.tool_number === t.tool_number; });
+    var toolParts = jparts.filter(function(p) { return p.tool_number === t.tool_number || (!p.tool_number && t.tool_number === 1); });
     var partsRows = toolParts.map(function(p) {
       var partData = p.part_id ? allParts.find(function(x) { return x.id === p.part_id; }) : null;
       var sell = partData && partData.sell_price ? parseFloat(partData.sell_price) : 0;
@@ -2071,6 +2131,7 @@ function renderAssessmentReport(j, tools, jparts) {
       (t.customer_issue ? '<div class="field-block"><div class="field-label">Customer Description</div><div class="field-val">' + t.customer_issue.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.diagnosis ? '<div class="field-block"><div class="field-label">Assessment / Findings</div><div class="field-val">' + t.diagnosis.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.recommendation ? '<div class="field-block"><div class="field-label">Recommendation</div><div class="field-val">' + t.recommendation.replace(/\n/g,'<br>') + '</div></div>' : '') +
+      (t.work_completed ? '<div class="field-block"><div class="field-label">Work Completed</div><div class="field-val">' + t.work_completed.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.workshop_notes ? '<div class="field-block"><div class="field-label">Workshop Notes</div><div class="field-val">' + t.workshop_notes.replace(/\n/g,'<br>') + '</div></div>' : '') +
       '<div class="field-block"><div class="field-label">Parts Required</div>' + partsTable + '</div>' +
       '</div>';
@@ -2135,7 +2196,7 @@ function renderAssessmentReport(j, tools, jparts) {
   // Totals
   if (grandTotal > 0 || labour > 0) {
     w.document.write('<div class="totals-box"><table>');
-    if (labour > 0) w.document.write('<tr><td>Labour</td><td>$' + labour.toFixed(2) + '</td></tr>');
+    if (labour > 0) w.document.write('<tr><td>Service Fee</td><td>$' + labour.toFixed(2) + '</td></tr>');
     if (partsTotal > 0) w.document.write('<tr><td>Parts</td><td>$' + partsTotal.toFixed(2) + '</td></tr>');
     w.document.write('<tr class="total-row"><td>Total</td><td>$' + grandTotal.toFixed(2) + '</td></tr>');
     w.document.write('</table></div><div class="gst-note">All prices ex GST</div>');
