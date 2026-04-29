@@ -1484,6 +1484,7 @@ async function saveJob() {
         machine_name: jp.machine_name,
         quantity: jp.quantity,
         status: jp.status,
+        tool_number: jp.tool_number || 1,
         notes: jp.notes || null,
         updated_at: new Date().toISOString()
       };
