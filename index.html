@@ -409,7 +409,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div class="section-label">Pricing</div>
     <div class="g2">
       <div class="field"><label>Cost Price ($)</label><input id="fCost" type="number" step="0.01" min="0" placeholder="0.00" oninput="autoCalcSell()"></div>
-      <div class="field"><label>GP %</label><input id="fGP" type="number" step="1" min="0" max="100" placeholder="e.g. 80" oninput="autoCalcSell()"></div>
+      <div class="field"><label>GP %</label><input id="fGP" type="number" step="1" min="0" max="100" placeholder="40" oninput="autoCalcSell()"></div>
       <div class="field"><label>Sell Price ($)</label><input id="fSell" type="number" step="0.01" min="0" placeholder="0.00" oninput="autoCalcGP()"></div>
       <div class="field" style="display:flex;align-items:flex-end;padding-bottom:2px"><span style="font-size:11px;color:#5a8090">Enter cost + GP% to auto-calc sell.</span></div>
     </div>
@@ -1839,7 +1839,8 @@ async function updateQty(partId, delta) {
 
 function openAddModal() {
   editingPart = null; document.getElementById('modalTitle').textContent = '+ New Part';
-  ['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fGP','fSell','fMyobIncome','fMyobAsset','fMyobCogs'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fSell','fMyobIncome','fMyobAsset','fMyobCogs'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('fGP').value = '40';
   document.getElementById('fCategory').value = ''; document.getElementById('fMaterial').value = ''; document.getElementById('fUom').value = '';
   document.getElementById('fQty').value = '0'; document.getElementById('fThreshold').value = '1';
   document.getElementById('btnDeletePart').style.display = 'none'; document.getElementById('autoGenBtn').style.display = 'block';
@@ -1876,7 +1877,19 @@ function openEditModal(partId) {
   document.getElementById('fMaterial').value = p.material || ''; document.getElementById('fUom').value = p.uom || '';
   document.getElementById('autoGenBtn').style.display = 'block';
   document.getElementById('fSection').value = p.assembly_section || ''; document.getElementById('fDiagramRefs').value = p.diagram_refs || '';
-  document.getElementById('fCost').value = p.cost_price || ''; document.getElementById('fSell').value = p.sell_price || ''; if(p.cost_price&&p.sell_price&&parseFloat(p.sell_price)>0){document.getElementById('fGP').value=Math.round((1-parseFloat(p.cost_price)/parseFloat(p.sell_price))*100);}else{document.getElementById('fGP').value='';}
+  document.getElementById('fCost').value = p.cost_price || '';
+  document.getElementById('fSell').value = p.sell_price || '';
+  if (p.cost_price && p.sell_price && parseFloat(p.sell_price) > 0) {
+    // Existing prices — calculate actual GP%
+    document.getElementById('fGP').value = Math.round((1 - parseFloat(p.cost_price) / parseFloat(p.sell_price)) * 100);
+  } else if (p.cost_price && parseFloat(p.cost_price) > 0) {
+    // Cost exists but no sell price — default to 40% and auto-calc sell
+    document.getElementById('fGP').value = '40';
+    autoCalcSell();
+  } else {
+    // No prices at all — default GP to 40%, leave sell blank
+    document.getElementById('fGP').value = '40';
+  }
   document.getElementById('fMyobIncome').value = p.myob_account_income || ''; document.getElementById('fMyobAsset').value = p.myob_account_asset || '';
   document.getElementById('fMyobCogs').value = p.myob_account_cogs || ''; document.getElementById('fNotes').value = p.notes || '';
   try { partSuppliers = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e) { partSuppliers = []; }
@@ -2102,7 +2115,7 @@ function printCaseLabel(jobId) {
     var w = window.open('', '_blank');
     w.document.write('<html><head><title>Label ' + xpsNum(j.job_number) + '</title>');
     w.document.write('<style>');
-    w.document.write('@page { size: 89mm 36mm; margin: 2.5mm 3.5mm; }');
+    w.document.write('@page { size: 89mm 36mm; margin: 2.5mm 5mm 2.5mm 3.5mm; }');
     w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
     w.document.write('body { font-family: Arial, sans-serif; width: 82mm; height: 31mm; overflow: hidden; }');
     w.document.write('.label { display: flex; width: 82mm; height: 31mm; align-items: stretch; border: 0.4mm solid #000; border-radius: 1mm; overflow: hidden; }');
