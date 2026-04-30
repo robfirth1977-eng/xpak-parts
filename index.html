@@ -830,7 +830,7 @@ function renderActiveLoans(){
     var isOverdue=l.expected_return&&new Date(l.expected_return)<today;
     var daysOut=l.loaned_date?Math.floor((today-new Date(l.loaned_date))/86400000):0;
     var col=isOverdue?'#ef4444':'#a78bfa';
-    return '<div class="loan-card'+(isOverdue?' overdue':'')+'" onclick="openEditLoanModal(''+l.id+'')">'+
+    return '<div class="loan-card'+(isOverdue?' overdue':'')+'" onclick="openEditLoanModal(\'' + l.id + '\')">'+
       '<div class="loan-card-top"><div><div class="loan-number">'+xplNum(l.loan_number)+'</div><div class="loan-customer">'+(l.customer||'No customer')+'</div></div>'+
       '<span class="loan-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+(isOverdue?'OVERDUE':'ACTIVE')+'</span></div>'+
       '<div class="loan-meta"><span>'+toolName+'</span>'+(l.contact_name?'<span>'+l.contact_name+(l.mobile?' '+l.mobile:'')+'</span>':'')+
@@ -846,7 +846,7 @@ function renderToolRegister(){
   document.getElementById('loanList').innerHTML=loanTools.map(function(t){
     var al=loans.find(function(l){return l.loan_tool_id===t.id&&l.status!=='RETURNED';});
     var col=!al?'#10b981':'#ef4444'; var sl=!al?'Available':'On Loan — '+(al.customer||'');
-    return '<div class="tool-reg-card'+(al?' unavailable':'')+'" onclick="openLoanToolModal(''+t.id+'')">'+
+    return '<div class="tool-reg-card'+(al?' unavailable':'')+'" onclick="openLoanToolModal(\'' + t.id + '\')">'+
       '<div style="flex:1"><div class="tool-reg-name">'+t.name+'</div>'+
       (t.serial_number?'<div class="tool-reg-sn">S/N: '+t.serial_number+(t.condition?' · '+t.condition:'')+'</div>':'')+
       (t.notes?'<div style="font-size:11px;color:#5a8090;margin-top:3px">'+t.notes+'</div>':'')+
@@ -988,7 +988,7 @@ function renderAgreements(){
   if(!agreements.length){document.getElementById('agrList').innerHTML='<div class="center"><div class="icon">+</div><div>No agreements yet. Click + New Agreement.</div></div>';return;}
   document.getElementById('agrList').innerHTML=agreements.map(function(a){
     var active=a.status==='ACTIVE';
-    return '<div class="agr-card'+(active?'':' inactive')+'" onclick="openAgrDetail(''+a.id+'')">'+
+    return '<div class="agr-card'+(active?'':' inactive')+'" onclick="openAgrDetail(\'' + a.id + '\')">'+
       '<div class="agr-card-top">'+
         '<div><div class="agr-customer">'+a.customer+'</div>'+(a.contact_name?'<div style="font-size:12px;color:#8aa8c0;margin-top:2px">'+a.contact_name+(a.phone?' · '+a.phone:'')+'</div>':'')+
         (a.machines_covered?'<div style="font-size:11px;color:#5a8090;margin-top:3px">'+a.machines_covered+'</div>':'')+
@@ -1063,7 +1063,7 @@ async function openAgrDetail(agrId){
   var html2='<div style="margin-bottom:12px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
       '<div style="font-size:12px;font-weight:700;color:#f59e0b">'+monthLabel+'</div>'+
-      '<button onclick="openAgrModal(''+a.id+'')" style="background:none;border:1px solid #2a4060;color:#8aa8c0;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer">Edit Agreement</button>'+
+      '<button onclick="openAgrModal(\'' + a.id + '\')" style="background:none;border:1px solid #2a4060;color:#8aa8c0;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer">Edit Agreement</button>'+
     '</div>'+
     '<div style="display:flex;gap:16px;font-size:12px;color:#8aa8c0;margin-bottom:10px">'+
       '<span>Monthly fee: <strong style="color:#f59e0b">$'+parseFloat(a.monthly_fee||0).toFixed(2)+'</strong></span>'+
