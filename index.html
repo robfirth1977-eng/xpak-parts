@@ -17,6 +17,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .tab.active,.tab:hover{background:#00c8e0;border-color:#00c8e0;color:#0f1923}
 .tab.jobs-tab{border-color:#f97316;color:#f97316}
 .tab.jobs-tab:hover,.tab.jobs-tab.active{background:#f97316;border-color:#f97316;color:#0f1923}
+.tab.parts-tab{border-color:#64b5c8;color:#64b5c8}
+.tab.parts-tab:hover,.tab.parts-tab.active{background:#64b5c8;border-color:#64b5c8;color:#0f1923}
+.tab.tools-tab{border-color:#10b981;color:#10b981}
+.tab.tools-tab:hover,.tab.tools-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
 .tab.order-tab{border-color:#10b981;color:#10b981}
 .tab.order-tab:hover,.tab.order-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
 .tab.loan-tab{border-color:#a78bfa;color:#a78bfa}
@@ -51,6 +55,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .tool-reg-status{font-size:11px;font-weight:700;border-radius:8px;padding:3px 10px;flex-shrink:0}
 .filter-btn.alert{border-color:#ef4444;color:#ef4444}
 .filter-btn.alert:hover,.filter-btn.alert.active{background:#ef4444;color:white;border-color:#ef4444}
+.machine-card-list{padding:12px 14px}
+.machine-brand-section{margin-bottom:18px}
+.machine-brand-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;padding:4px 0 8px 2px;border-bottom:1px solid #1e3048;margin-bottom:8px}
+.machine-card{background:#141f2d;border-radius:10px;padding:11px 14px;margin-bottom:7px;border-left:4px solid #2a4060;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background 0.15s}
+.machine-card:hover{background:#1a2a3d}
+.machine-card-name{font-size:14px;font-weight:700;color:#e2e8f0}
+.machine-card-meta{font-size:11px;color:#5a8090;margin-top:3px}
+.machine-card-arrow{font-size:16px;color:#3a5070}
+.parts-breadcrumb{padding:8px 14px;font-size:12px;color:#5a8090;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1e3048;cursor:pointer}
+.parts-breadcrumb:hover{color:#e2e8f0}
+.parts-breadcrumb-name{color:#00c8e0;font-weight:700}
+.tab.tools-tab{border-color:#10b981;color:#10b981}
+.tab.tools-tab:hover,.tab.tools-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
 .agr-card{background:#141f2d;border-radius:10px;padding:13px 14px;margin-bottom:8px;border-left:4px solid #f59e0b;cursor:pointer;transition:background 0.1s}
 .agr-card:hover{background:#1a2a3d}
 .agr-card.inactive{border-left-color:#4a6080;opacity:0.6}
@@ -355,6 +372,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   <button class="btn-add" style="background:#f59e0b;margin-left:auto;color:#0f1923;font-weight:700" onclick="openAgrModal()">+ New Agreement</button>
 </div>
 <div class="loan-section" id="agrSection" style="display:none"><div id="agrList"></div></div>
+
+<!-- Machine card list (parts landing) -->
+<div id="machineCardSection" style="display:none"></div>
+
+<!-- Parts breadcrumb -->
+<div class="parts-breadcrumb" id="partsBreadcrumb" style="display:none" onclick="backToMachineList()">
+  <span style="color:#3a5070">&#9664;</span>
+  <span>Parts /</span>
+  <span class="parts-breadcrumb-name" id="breadcrumbName"></span>
+</div>
 
 <div class="label-panel" id="labelPanel">
   <div class="label-panel-header">
@@ -722,6 +749,8 @@ async function init() {
   try {
     machines = await db('GET', 'machines?select=*&order=brand_order.asc,name.asc');
     renderTabs(); await loadAllParts();
+  // Start on Jobs view
+  switchToJobs();
   try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=id,customer'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
     if (machines.length) await selectMachine(machines[0]);
     else document.getElementById('partsList').innerHTML = '<div class="center"><div class="icon">+</div><div>No machines yet.</div></div>';
@@ -758,6 +787,11 @@ function hideAllViews() {
   var ls = document.getElementById('loanSection'); if(ls) ls.style.display = 'none';
   var at = document.getElementById('agrToolbar'); if(at) at.style.display = 'none';
   var as2 = document.getElementById('agrSection'); if(as2) as2.style.display = 'none';
+  var mcs = document.getElementById('machineCardSection'); if(mcs) mcs.style.display = 'none';
+  var pb = document.getElementById('partsBreadcrumb'); if(pb) pb.style.display = 'none';
+  document.getElementById('mainToolbar').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('partsList').style.display = 'none';
 }
 
 function switchToJobs() {
@@ -789,8 +823,9 @@ function switchToLoans() {
   currentView='loan'; hideAllViews(); renderTabs();
   document.getElementById('loanToolbar').style.display='flex';
   document.getElementById('loanSection').style.display='block';
-  document.getElementById('hSub').textContent='Loan Tools';
+  document.getElementById('hSub').textContent='Loans';
   document.getElementById('lowBadge').innerHTML='';
+  setLoanView('active');
   loadLoans();
 }
 function switchToAgreements() {
@@ -1163,49 +1198,86 @@ function setJobView(mode) {
 
 function renderTabs() {
   var v = currentView;
-  var html = '<button class="tab' + (v==='parts'?' active':'') + '" onclick="' + (v==='parts'?'':'switchToParts()') + '">Parts</button>';
-  html += '<button class="tab jobs-tab' + (v==='jobs'?' active':'') + '" onclick="' + (v==='jobs'?'':'switchToJobs()') + '">Jobs</button>';
-  html += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()') + '">Order List</button>';
-  html += '<button class="tab loan-tab' + (v==='loan'?' active':'') + '" onclick="' + (v==='loan'?'':'switchToLoans()') + '">Loans</button>';
-  html += '<button class="tab agr-tab' + (v==='agr'?' active':'') + '" onclick="' + (v==='agr'?'':'switchToAgreements()') + '">Agreements</button>';
-  if (v === 'parts') {
-    // Group machines by brand
-    var brandColors = {
-      'Cyklop':'#64b5c8','Kronos':'#f59e0b','Titan':'#10b981',
-      'Strapack':'#f97316','Orgapack OR-T':'#a78bfa',
-      'X-Pak':'#00c8e0','Consumables':'#5a8090','Other':'#3a5070'
-    };
-    var groups = {}, groupOrder = [];
-    machines.forEach(function(m) {
-      var brand = m.brand || 'Other';
-      if (!groups[brand]) { groups[brand] = []; groupOrder.push(brand); }
-      groups[brand].push(m);
-    });
-    groupOrder.forEach(function(brand) {
-      var ms = groups[brand];
-      var col = brandColors[brand] || '#3a5070';
-      var isOpen = openBrandGroups[brand] !== false;
-      var bgId = 'bg_' + brand.replace(/[^a-z0-9]/gi,'_');
-      html += '<span class="brand-group-header' + (isOpen?' open':'') + '" style="border-color:' + col + ';color:' + col + '" onclick="toggleBrandGroup(\'' + brand + '\')">' +
-        brand + ' <span class="bgh-chevron">&#9654;</span></span>';
-      if (isOpen) {
-        html += '<span class="brand-group-machines">';
-        ms.forEach(function(m) {
-          var active = selectedMachine && selectedMachine.id === m.id;
-          var isC = brand === 'Consumables';
-          var aStyle = active ? ' style="background:' + col + ';border-color:' + col + ';color:#0f1923"' : (isC ? ' style="border-color:' + col + ';color:' + col + '"' : '');
-          html += '<button class="tab' + (active?' active':'') + '"' + aStyle +
-            ' onclick="selectMachine(' + JSON.stringify(m).replace(/"/g, '&quot;') + ')">' +
-            m.name + '</button>' +
-            (active ? '<button class="tab-del" onclick="openDeleteMachineModal()">x</button>' : '');
-        });
-        html += '</span>';
-      }
-    });
-    html += '<button class="tab-add" onclick="openMachineModal()">+ Machine</button>';
-  }
-  document.getElementById('machineTabs').innerHTML = html;
+  var html2 = '';
+  html2 += '<button class="tab jobs-tab'  + (v==='jobs' ?' active':'') + '" onclick="' + (v==='jobs' ?'':'switchToJobs()')    + '">Jobs</button>';
+  html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
+  html2 += '<button class="tab parts-tab' + (v==='parts'?' active':'') + '" onclick="' + (v==='parts'?'':'switchToParts()')  + '">Parts</button>';
+  html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
+  html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
+  document.getElementById('machineTabs').innerHTML = html2;
 }
+
+function switchToParts() {
+  currentView = 'parts'; hideAllViews(); renderTabs();
+  document.getElementById('mainToolbar').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('partsList').style.display = 'none';
+  document.getElementById('hSub').textContent = 'Parts';
+  document.getElementById('lowBadge').innerHTML = '';
+  renderMachineCardList();
+  document.getElementById('machineCardSection').style.display = 'block';
+}
+
+function renderMachineCardList() {
+  var brandColors = {
+    'Cyklop':'#64b5c8','Kronos':'#f59e0b','Titan':'#10b981',
+    'Strapack':'#f97316','Orgapack OR-T':'#a78bfa',
+    'X-Pak':'#00c8e0','Consumables':'#5a8090','Other':'#3a5070'
+  };
+  var groups = {}, groupOrder = [];
+  machines.forEach(function(m) {
+    var brand = m.brand || 'Other';
+    if (!groups[brand]) { groups[brand] = []; groupOrder.push(brand); }
+    groups[brand].push(m);
+  });
+  var html2 = '<div class="machine-card-list">';
+  groupOrder.forEach(function(brand) {
+    var col = brandColors[brand] || '#3a5070';
+    html2 += '<div class="machine-brand-section">';
+    html2 += '<div class="machine-brand-label" style="color:' + col + '">' + brand + '</div>';
+    groups[brand].forEach(function(m) {
+      var partCount = '';
+      html2 += '<div class="machine-card" style="border-left-color:' + col + '" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">' +
+        '<div><div class="machine-card-name">' + m.name + '</div>' +
+        (m.description ? '<div class="machine-card-meta">' + m.description + '</div>' : '') +
+        '</div><span class="machine-card-arrow">&#9654;</span></div>';
+    });
+    html2 += '</div>';
+  });
+  html2 += '<div style="padding:8px 2px"><button class="tab-add" onclick="openMachineModal()">+ Add Machine</button></div>';
+  html2 += '</div>';
+  document.getElementById('machineCardSection').innerHTML = html2;
+}
+
+async function drillIntoMachine(m) {
+  document.getElementById('machineCardSection').style.display = 'none';
+  document.getElementById('mainToolbar').style.display = 'flex';
+  document.getElementById('statsBar').style.display = 'flex';
+  document.getElementById('partsList').style.display = 'block';
+  document.getElementById('partsBreadcrumb').style.display = 'flex';
+  document.getElementById('breadcrumbName').textContent = m.name;
+  await selectMachine(m);
+}
+
+function backToMachineList() {
+  document.getElementById('partsBreadcrumb').style.display = 'none';
+  document.getElementById('mainToolbar').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('partsList').style.display = 'none';
+  document.getElementById('machineCardSection').style.display = 'block';
+  document.getElementById('hSub').textContent = 'Parts';
+}
+
+function switchToTools() {
+  currentView = 'tools'; hideAllViews(); renderTabs();
+  document.getElementById('loanToolbar').style.display = 'flex';
+  document.getElementById('loanSection').style.display = 'block';
+  document.getElementById('hSub').textContent = 'Loan Tools';
+  document.getElementById('lowBadge').innerHTML = '';
+  setLoanView('register');
+  loadLoans();
+}
+
 
 async function selectMachine(m) {
   currentView = 'parts'; hideAllViews();
