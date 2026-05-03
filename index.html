@@ -373,13 +373,26 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 </div>
 <div class="loan-section" id="agrSection" style="display:none"><div id="agrList"></div></div>
 
-<!-- Machine card list (parts landing) -->
+<!-- All Parts flat list section -->
+<div id="allPartsSection" style="display:none">
+  <div style="padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #1e3048">
+    <input id="allPartsSearch" placeholder="Search part number or description..." oninput="filterAllParts()" autocomplete="off" style="flex:1;min-width:200px;padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+    <div style="display:flex;gap:5px">
+      <button class="filter-chip active" id="apChip_all" onclick="setAllPartsFilter('all',this)">All</button>
+      <button class="filter-chip" id="apChip_in" onclick="setAllPartsFilter('in',this)">In Stock</button>
+      <button class="filter-chip" id="apChip_low" onclick="setAllPartsFilter('low',this)">Low</button>
+      <button class="filter-chip" id="apChip_zero" onclick="setAllPartsFilter('zero',this)">Zero</button>
+    </div>
+  </div>
+  <div id="allPartsList" style="padding:0 14px 20px"></div>
+</div>
+
+<!-- Machine card list (tools landing) -->
 <div id="machineCardSection" style="display:none"></div>
 
 <!-- Parts breadcrumb -->
 <div class="parts-breadcrumb" id="partsBreadcrumb" style="display:none" onclick="backToMachineList()">
-  <span style="color:#3a5070">&#9664;</span>
-  <span>Parts /</span>
+  <span id="breadcrumbBack" style="color:#5a8090;font-size:11px">&#9664; Tools /</span>
   <span class="parts-breadcrumb-name" id="breadcrumbName"></span>
 </div>
 
@@ -610,6 +623,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field"><label>Serial Number</label><input id="ltSerial" placeholder="e.g. 56096"></div>
       <div class="field"><label>Condition</label><select id="ltCondition" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
     </div>
+    <div class="field"><label>Location</label>
+      <input id="ltLocation" list="ltLocationList" placeholder="e.g. Tamworth Stock">
+      <datalist id="ltLocationList">
+        <option value="Tamworth Stock">
+        <option value="Rep Stock — Tom">
+        <option value="Customer">
+      </datalist>
+    </div>
     <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
     <button class="btn-save" style="background:#a78bfa" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
     <button class="btn-delete" id="btnDeleteLoanTool" onclick="deleteLoanTool()" style="display:none">Remove from Register</button>
@@ -695,6 +716,62 @@ var machines = [], parts = [], allParts = [], selectedMachine = null, editingPar
 var jobs = [], editingJob = null, jobFilter = 'ALL', currentView = 'parts', jobViewMode = 'list';
 var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
 var openBrandGroups = {};
+var allPartsFilter = 'all';
+var allPartsSearchTerm = '';
+
+function renderAllPartsList() {
+  filterAllParts();
+}
+
+function setAllPartsFilter(f, btn) {
+  allPartsFilter = f;
+  document.querySelectorAll('#allPartsSection .filter-chip').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  filterAllParts();
+}
+
+function filterAllParts() {
+  allPartsSearchTerm = (document.getElementById('allPartsSearch').value||'').toLowerCase().trim();
+  var filtered = allParts.filter(function(p) {
+    var s = p.stock && p.stock[0];
+    var qty = s ? s.quantity : null;
+    if (allPartsFilter === 'in'   && !(qty > 0)) return false;
+    if (allPartsFilter === 'low'  && !(qty !== null && qty > 0 && qty <= (s.reorder_threshold||1))) return false;
+    if (allPartsFilter === 'zero' && !(qty === 0)) return false;
+    if (allPartsSearchTerm) {
+      return p.key_no.toLowerCase().includes(allPartsSearchTerm) ||
+             p.description.toLowerCase().includes(allPartsSearchTerm) ||
+             (p.machineName||'').toLowerCase().includes(allPartsSearchTerm);
+    }
+    return true;
+  });
+  var el = document.getElementById('allPartsList');
+  if (!filtered.length) { el.innerHTML = '<div class="center" style="padding:30px;color:#3a5070">No parts match</div>'; return; }
+  // Group by machine
+  var byMachine = {}, machineOrder = [];
+  filtered.forEach(function(p) {
+    var mn = p.machineName || 'Unknown';
+    if (!byMachine[mn]) { byMachine[mn] = []; machineOrder.push(mn); }
+    byMachine[mn].push(p);
+  });
+  var html2 = '';
+  machineOrder.forEach(function(mn) {
+    html2 += '<div style="margin-top:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#3a5070;padding:4px 0 6px;border-bottom:1px solid #1a2a3d">' + mn + '</div>';
+    byMachine[mn].forEach(function(p) {
+      var s = p.stock && p.stock[0];
+      var qty = s ? s.quantity : null;
+      var st = qty === null ? 'unset' : qty === 0 ? 'empty' : qty <= (s.reorder_threshold||1) ? 'low' : 'ok';
+      var stCol = {ok:'#10b981',low:'#f59e0b',empty:'#ef4444',unset:'#3a5070'}[st];
+      html2 += '<div class="part-row" onclick="openEditPartModal(\'' + p.id + '\')" style="cursor:pointer">' +
+        '<div class="pr-keyno">' + p.key_no + '</div>' +
+        '<div class="pr-desc">' + p.description + (p.spec ? '<span class="pr-spec"> ' + p.spec + '</span>' : '') + '</div>' +
+        '<div class="pr-right"><span class="stock-chip ' + st + '">' + (qty===null?'-':qty) + '</span></div>' +
+      '</div>';
+    });
+    html2 += '</div>';
+  });
+  el.innerHTML = html2;
+}
 var agreements = [], editingAgr = null, viewingAgr = null, viewingPeriod = null;
 var jobLinks = [], jobPartsLocal = [], jobToolsLocal = [], machineModalFromJob = false;
 var partsFilter = 'all';
@@ -788,6 +865,7 @@ function hideAllViews() {
   var at = document.getElementById('agrToolbar'); if(at) at.style.display = 'none';
   var as2 = document.getElementById('agrSection'); if(as2) as2.style.display = 'none';
   var mcs = document.getElementById('machineCardSection'); if(mcs) mcs.style.display = 'none';
+  var aps = document.getElementById('allPartsSection'); if(aps) aps.style.display = 'none';
   var pb = document.getElementById('partsBreadcrumb'); if(pb) pb.style.display = 'none';
   document.getElementById('mainToolbar').style.display = 'none';
   document.getElementById('statsBar').style.display = 'none';
@@ -811,13 +889,7 @@ function switchToOrder() {
   loadOrderList();
 }
 
-function switchToParts() {
-  currentView = 'parts'; hideAllViews(); renderTabs();
-  document.getElementById('mainToolbar').style.display = 'flex';
-  document.getElementById('statsBar').style.display = 'flex';
-  document.getElementById('partsList').style.display = 'block';
-  if (selectedMachine) { renderDocsBar(); renderParts(); }
-}
+// switchToParts is defined later in the nav section
 
 function switchToLoans() {
   currentView='loan'; hideAllViews(); renderTabs();
@@ -826,7 +898,7 @@ function switchToLoans() {
   document.getElementById('hSub').textContent='Loans';
   document.getElementById('lowBadge').innerHTML='';
   setLoanView('active');
-  loadLoans();
+  if (!loans.length) loadLoans(); else renderLoanView();
 }
 function switchToAgreements() {
   currentView='agr'; hideAllViews(); renderTabs();
@@ -883,7 +955,7 @@ function renderToolRegister(){
     return '<div class="tool-reg-card'+(al?' unavailable':'')+'" onclick="openLoanToolModal(\'' + t.id + '\')">'+
       '<div style="flex:1"><div class="tool-reg-name">'+t.name+'</div>'+
       (t.serial_number?'<div class="tool-reg-sn">S/N: '+t.serial_number+(t.condition?' · '+t.condition:'')+'</div>':'')+
-      (t.notes?'<div style="font-size:11px;color:#5a8090;margin-top:3px">'+t.notes+'</div>':'')+
+      (t.location?'<div style="font-size:11px;color:#f59e0b;margin-top:2px">● '+t.location+'</div>':'')+(t.notes?'<div style="font-size:11px;color:#5a8090;margin-top:2px">'+t.notes+'</div>':'')+
       '</div><span class="tool-reg-status" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+sl+'</span></div>';
   }).join('');
 }
@@ -983,8 +1055,8 @@ async function deleteLoan(){
   }catch(e){showToast('Delete failed','error');}
 }
 function openLoanToolModal(toolId){
-  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('btnDeleteLoanTool').style.display='block';}
-  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
+  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('btnDeleteLoanTool').style.display='block';}
+  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
   document.getElementById('loanToolOverlay').classList.add('show');
   setTimeout(function(){document.getElementById('ltName').focus();},100);
 }
@@ -992,7 +1064,7 @@ function closeLoanToolModal(){document.getElementById('loanToolOverlay').classLi
 async function saveLoanTool(){
   var name=document.getElementById('ltName').value.trim(); if(!name){showToast('Tool name required','error');return;}
   var btn=document.getElementById('btnSaveLoanTool'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
+  var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,location:document.getElementById('ltLocation').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
   try{if(editingLoanTool){await db('PATCH','loan_tools?id=eq.'+editingLoanTool.id,payload);showToast('Tool updated');}else{await db('POST','loan_tools',payload);showToast('Tool added');} closeLoanToolModal(); await loadLoans();}
   catch(e){showToast('Save failed: '+e.message,'error');}finally{btn.disabled=false;btn.textContent='Save Tool';}
 }
@@ -1209,13 +1281,10 @@ function renderTabs() {
 
 function switchToParts() {
   currentView = 'parts'; hideAllViews(); renderTabs();
-  document.getElementById('mainToolbar').style.display = 'none';
-  document.getElementById('statsBar').style.display = 'none';
-  document.getElementById('partsList').style.display = 'none';
-  document.getElementById('hSub').textContent = 'Parts';
+  document.getElementById('hSub').textContent = 'All Parts';
   document.getElementById('lowBadge').innerHTML = '';
-  renderMachineCardList();
-  document.getElementById('machineCardSection').style.display = 'block';
+  renderAllPartsList();
+  document.getElementById('allPartsSection').style.display = 'block';
 }
 
 function renderMachineCardList() {
@@ -1256,6 +1325,7 @@ async function drillIntoMachine(m) {
   document.getElementById('partsList').style.display = 'block';
   document.getElementById('partsBreadcrumb').style.display = 'flex';
   document.getElementById('breadcrumbName').textContent = m.name;
+  document.getElementById('breadcrumbBack').textContent = currentView === 'tools' ? '◀ Tools /' : '◀ Parts /';
   await selectMachine(m);
 }
 
@@ -1265,17 +1335,15 @@ function backToMachineList() {
   document.getElementById('statsBar').style.display = 'none';
   document.getElementById('partsList').style.display = 'none';
   document.getElementById('machineCardSection').style.display = 'block';
-  document.getElementById('hSub').textContent = 'Parts';
+  document.getElementById('hSub').textContent = currentView === 'tools' ? 'Tools' : 'All Parts';
 }
 
 function switchToTools() {
   currentView = 'tools'; hideAllViews(); renderTabs();
-  document.getElementById('loanToolbar').style.display = 'flex';
-  document.getElementById('loanSection').style.display = 'block';
-  document.getElementById('hSub').textContent = 'Loan Tools';
+  document.getElementById('hSub').textContent = 'Tools';
   document.getElementById('lowBadge').innerHTML = '';
-  setLoanView('register');
-  loadLoans();
+  renderMachineCardList();
+  document.getElementById('machineCardSection').style.display = 'block';
 }
 
 
@@ -1408,17 +1476,34 @@ function searchPartsForJob(toolTempId) {
   if (!inp || !res) return;
   var q = inp.value.toLowerCase().trim();
   if (!q) { res.innerHTML = ''; return; }
-  var matches = allParts.filter(function(pt) {
+  // Get machine for this tool
+  var tool = jobToolsLocal.find(function(t){return t._tempId===toolTempId;});
+  var toolMachineId = tool ? (tool.machine_id || null) : null;
+  var toolMachineName = toolMachineId ? (allParts.find(function(p){return p.machine_id===toolMachineId;}) || {machineName:''}).machineName : null;
+  var allMatches = allParts.filter(function(pt) {
     return pt.key_no.toLowerCase().includes(q) || pt.description.toLowerCase().includes(q);
-  }).slice(0, 8);
-  if (!matches.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found</div>'; return; }
-  res.innerHTML = matches.map(function(pt) {
+  });
+  // Split: this machine first, then others
+  var thisMachine = toolMachineId ? allMatches.filter(function(pt){return pt.machine_id===toolMachineId;}) : [];
+  var others = allMatches.filter(function(pt){return !toolMachineId || pt.machine_id!==toolMachineId;}).slice(0,6);
+  function makeRow(pt) {
     var s = pt.stock && pt.stock[0]; var qty = s ? s.quantity : null;
-    var st = qty === null ? 'unset' : qty === 0 ? 'empty' : qty <= (s.reorder_threshold||1) ? 'low' : 'ok';
+    var st = qty===null?'unset':qty===0?'empty':qty<=(s.reorder_threshold||1)?'low':'ok';
     return '<div class="part-search-item" onclick="addPartToJob(\'' + pt.id + '\',\'' + toolTempId + '\')">' +
-      '<div class="psi-left"><div class="psi-keyno">' + pt.key_no + '</div><div class="psi-desc">' + pt.description + '</div><div class="psi-machine">' + (pt.machineName||'') + '</div></div>' +
-      '<div class="psi-stock ' + st + '">' + (qty===null?'No stock':'Stock: '+qty) + '</div></div>';
-  }).join('');
+      '<div class="psi-left"><div class="psi-keyno">' + pt.key_no + '</div><div class="psi-desc">' + pt.description + '</div>' +
+      (toolMachineId && pt.machine_id!==toolMachineId ? '<div class="psi-machine" style="color:#5a8090">' + (pt.machineName||'') + '</div>' : '') +
+      '</div><div class="psi-stock ' + st + '">' + (qty===null?'No stock':'Stock: '+qty) + '</div></div>';
+  }
+  if (!thisMachine.length && !others.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found</div>'; return; }
+  var html2 = '';
+  if (thisMachine.length) {
+    html2 += thisMachine.map(makeRow).join('');
+  }
+  if (others.length) {
+    if (thisMachine.length) html2 += '<div style="font-size:9px;color:#3a5070;text-transform:uppercase;letter-spacing:1px;padding:4px 8px;background:#0a1420">Other machines</div>';
+    html2 += others.map(makeRow).join('');
+  }
+  res.innerHTML = html2;
 }
 
 function addPartToJob(partId, toolTempId) {
