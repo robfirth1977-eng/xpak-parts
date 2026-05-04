@@ -618,7 +618,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   <div class="modal" style="border-top-color:#a78bfa">
     <div class="modal-header"><div class="modal-title" id="loanToolModalTitle">Add Loan Tool</div><button class="modal-close" onclick="closeLoanToolModal()">x</button></div>
     <div class="section-label">Tool Details</div>
-    <div class="field"><label>Tool Name / Model *</label><input id="ltName" placeholder="e.g. Titan TA220, OR-T 250"></div>
+    <div class="field"><label>Tool Name / Model *</label><input id="ltName" placeholder="e.g. CHT 460, OR-T 250"></div>
+    <div class="g2">
+      <div class="field"><label>X-Pak Name</label><input id="ltXpakName" placeholder="e.g. CHT-460 Battery Tensioner"></div>
+      <div class="field"><label>X-Pak Code</label><input id="ltXpakCode" placeholder="e.g. 03.008-460"></div>
+    </div>
     <div class="g2">
       <div class="field"><label>Serial Number</label><input id="ltSerial" placeholder="e.g. 56096"></div>
       <div class="field"><label>Condition</label><select id="ltCondition" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
@@ -633,6 +637,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     </div>
     <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
     <button class="btn-save" style="background:#a78bfa" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
+    <button id="btnPrintIdLabel" onclick="printToolIdLabel()" style="display:none;width:100%;padding:11px;background:transparent;color:#00c8e0;border:1px solid #00c8e0;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Print ID Label</button>
     <button class="btn-delete" id="btnDeleteLoanTool" onclick="deleteLoanTool()" style="display:none">Remove from Register</button>
   </div>
 </div>
@@ -954,6 +959,7 @@ function renderToolRegister(){
     var col=!al?'#10b981':'#ef4444'; var sl=!al?'Available':'On Loan — '+(al.customer||'');
     return '<div class="tool-reg-card'+(al?' unavailable':'')+'" onclick="openLoanToolModal(\'' + t.id + '\')">'+
       '<div style="flex:1"><div class="tool-reg-name">'+t.name+'</div>'+
+      (t.xpak_name?'<div style="font-size:12px;font-weight:700;color:#00c8e0;margin-bottom:2px">'+t.xpak_name+(t.xpak_code?' <span style="font-size:10px;color:#3a5070;font-weight:400">['+t.xpak_code+']</span>':'')+'</div>':'')+
       (t.serial_number?'<div class="tool-reg-sn">S/N: '+t.serial_number+(t.condition?' · '+t.condition:'')+'</div>':'')+
       (t.location?'<div style="font-size:11px;color:#f59e0b;margin-top:2px">● '+t.location+'</div>':'')+(t.notes?'<div style="font-size:11px;color:#5a8090;margin-top:2px">'+t.notes+'</div>':'')+
       '</div><span class="tool-reg-status" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+sl+'</span></div>';
@@ -1055,16 +1061,65 @@ async function deleteLoan(){
   }catch(e){showToast('Delete failed','error');}
 }
 function openLoanToolModal(toolId){
-  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('btnDeleteLoanTool').style.display='block';}
-  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
+  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltXpakName').value=t.xpak_name||''; document.getElementById('ltXpakCode').value=t.xpak_code||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('btnDeleteLoanTool').style.display='block'; document.getElementById('btnPrintIdLabel').style.display='block';}
+  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation','ltXpakName','ltXpakCode'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
   document.getElementById('loanToolOverlay').classList.add('show');
   setTimeout(function(){document.getElementById('ltName').focus();},100);
 }
 function closeLoanToolModal(){document.getElementById('loanToolOverlay').classList.remove('show');}
+
+function printToolIdLabel() {
+  var t = editingLoanTool; if (!t) return;
+  var w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ID Label ' + t.name + '</title>');
+  w.document.write('<style>');
+  w.document.write('@page { size: 101mm 54mm; margin: 3mm 3.5mm; }');
+  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
+  w.document.write('body { font-family: Arial, sans-serif; width: 94mm; height: 48mm; overflow: hidden; }');
+  w.document.write('.label { width: 94mm; height: 48mm; border: 0.4mm solid #000; border-radius: 1.5mm; display: flex; flex-direction: column; justify-content: space-between; padding: 3mm 4mm; overflow: hidden; }');
+  w.document.write('.top { display: flex; justify-content: space-between; align-items: flex-start; }');
+  w.document.write('.xpl { font-size: 11pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; letter-spacing: 1px; }');
+  w.document.write('.brand { text-align: right; }');
+  w.document.write('.brand-top { font-size: 7pt; font-weight: 900; color: #000; letter-spacing: 2px; text-transform: uppercase; }');
+  w.document.write('.brand-sub { font-size: 6pt; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 1px; }');
+  w.document.write('.mid { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 2mm 0; }');
+  w.document.write('.tool-name { font-size: 22pt; font-weight: 900; color: #000; line-height: 1; letter-spacing: -0.5px; }');
+  w.document.write('.tool-type { font-size: 8pt; color: #444; margin-top: 1mm; }');
+  w.document.write('.bot { display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.3mm solid #ccc; padding-top: 2mm; }');
+  w.document.write('.sn-label { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }');
+  w.document.write('.sn-val { font-size: 9pt; font-weight: 700; color: #000; font-family: "Courier New", monospace; margin-top: 0.5mm; }');
+  w.document.write('.loc { text-align: right; }');
+  w.document.write('.loc-label { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }');
+  w.document.write('.loc-val { font-size: 8pt; font-weight: 700; color: #000; margin-top: 0.5mm; }');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="label">');
+  w.document.write('<div class="top">');
+  w.document.write('<div class="xpl">LOAN TOOL</div>');
+  w.document.write('<div class="brand"><div class="brand-top">X-PAK</div><div class="brand-sub">SERVICE</div></div>');
+  w.document.write('</div>');
+  w.document.write('<div class="mid">');
+  w.document.write('<div class="tool-name">' + t.name + '</div>');
+  if (t.condition) w.document.write('<div class="tool-type">Condition: ' + t.condition + '</div>');
+  w.document.write('</div>');
+  w.document.write('<div class="bot">');
+  if (t.serial_number) {
+    w.document.write('<div><div class="sn-label">Serial No.</div><div class="sn-val">' + t.serial_number + '</div></div>');
+  } else {
+    w.document.write('<div></div>');
+  }
+  if (t.location) {
+    w.document.write('<div class="loc"><div class="loc-label">Location</div><div class="loc-val">' + t.location + '</div></div>');
+  }
+  w.document.write('</div>');
+  w.document.write('</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function() { w.print(); }, 300);
+}
 async function saveLoanTool(){
   var name=document.getElementById('ltName').value.trim(); if(!name){showToast('Tool name required','error');return;}
   var btn=document.getElementById('btnSaveLoanTool'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,location:document.getElementById('ltLocation').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
+  var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
   try{if(editingLoanTool){await db('PATCH','loan_tools?id=eq.'+editingLoanTool.id,payload);showToast('Tool updated');}else{await db('POST','loan_tools',payload);showToast('Tool added');} closeLoanToolModal(); await loadLoans();}
   catch(e){showToast('Save failed: '+e.message,'error');}finally{btn.disabled=false;btn.textContent='Save Tool';}
 }
@@ -2036,6 +2091,50 @@ function openAddModal() {
   partSuppliers = []; renderSuppliersList();
   document.getElementById('overlay').classList.add('show');
   setTimeout(function() { document.getElementById('fKeyno').focus(); }, 100);
+}
+
+function printToolIdLabel() {
+  var t = editingLoanTool; if (!t) return;
+  var w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ID Label</title>');
+  w.document.write('<style>');
+  w.document.write('@page { size: 101mm 54mm; margin: 3mm 3.5mm; }');
+  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
+  w.document.write('body { font-family: Arial, sans-serif; width: 94mm; height: 48mm; overflow: hidden; }');
+  w.document.write('.label { display: flex; flex-direction: column; width: 94mm; height: 48mm; border: 0.4mm solid #000; border-radius: 1.5mm; padding: 3mm 3.5mm; }');
+  w.document.write('.top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2mm; border-bottom: 0.3mm solid #ccc; padding-bottom: 2mm; }');
+  w.document.write('.xpl { font-size: 22pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; line-height: 1; }');
+  w.document.write('.brand { text-align: right; }');
+  w.document.write('.brand-name { font-size: 9pt; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #000; }');
+  w.document.write('.brand-sub { font-size: 7pt; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }');
+  w.document.write('.middle { flex: 1; display: flex; flex-direction: column; justify-content: center; }');
+  w.document.write('.xpak-name { font-size: 14pt; font-weight: 900; color: #000; line-height: 1.1; margin-bottom: 1.5mm; }');
+  w.document.write('.model-line { font-size: 9pt; color: #333; margin-bottom: 1mm; }');
+  w.document.write('.sn-line { font-size: 8.5pt; color: #444; }');
+  w.document.write('.bottom { display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.3mm solid #ccc; padding-top: 1.5mm; margin-top: 1.5mm; }');
+  w.document.write('.code { font-size: 8pt; font-weight: 700; color: #000; font-family: "Courier New", monospace; }');
+  w.document.write('.location { font-size: 7.5pt; color: #555; }');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="label">');
+  // Top: XPL number + brand
+  w.document.write('<div class="top">');
+  w.document.write('<div class="xpl">' + xplNum(t.loan_number || 0) + '</div>');
+  w.document.write('<div class="brand"><div class="brand-name">X-PAK</div><div class="brand-sub">SERVICE</div></div>');
+  w.document.write('</div>');
+  // Middle: name + model + SN
+  w.document.write('<div class="middle">');
+  w.document.write('<div class="xpak-name">' + (t.xpak_name || t.name) + '</div>');
+  // No manufacturer model line
+  if (t.serial_number) w.document.write('<div class="sn-line">S/N: ' + t.serial_number + '</div>');
+  w.document.write('</div>');
+  // Bottom: code + location
+  w.document.write('<div class="bottom">');
+  w.document.write('<div class="code">' + (t.xpak_code || '') + '</div>');
+  if (t.location) w.document.write('<div class="location">' + t.location + '</div>');
+  w.document.write('</div>');
+  w.document.write('</div></body></html>');
+  w.document.close();
+  setTimeout(function() { w.print(); }, 300);
 }
 
 function toggleBrandGroup(brand) {
