@@ -1016,7 +1016,9 @@ async function saveLoan(){
   try{
     if(editingLoan) await db('PATCH','loans?id=eq.'+editingLoan.id,payload);
     else{await db('POST','loans',payload); await db('PATCH','loan_tools?id=eq.'+toolId,{is_available:false,updated_at:new Date().toISOString()});}
-    showToast(editingLoan?'Loan updated':'Loan created'); closeLoanModal(); await loadLoans();
+    showToast(editingLoan?'Loan updated':'Loan created');
+    await loadLoans();
+    if (!editingLoan) closeLoanModal(); // Only close on new loan, stay open when editing
   }catch(e){showToast('Save failed: '+e.message,'error');}
   finally{btn.disabled=false; btn.textContent='Save Loan';}
 }
@@ -1120,7 +1122,7 @@ async function saveLoanTool(){
   var name=document.getElementById('ltName').value.trim(); if(!name){showToast('Tool name required','error');return;}
   var btn=document.getElementById('btnSaveLoanTool'); btn.disabled=true; btn.textContent='Saving...';
   var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
-  try{if(editingLoanTool){await db('PATCH','loan_tools?id=eq.'+editingLoanTool.id,payload);showToast('Tool updated');}else{await db('POST','loan_tools',payload);showToast('Tool added');} closeLoanToolModal(); await loadLoans();}
+  try{if(editingLoanTool){await db('PATCH','loan_tools?id=eq.'+editingLoanTool.id,payload);showToast('Tool updated');await loadLoans();var r2=loanTools.find(function(x){return x.id===editingLoanTool.id;});if(r2)editingLoanTool=r2;}else{await db('POST','loan_tools',payload);showToast('Tool added');closeLoanToolModal();await loadLoans();}}
   catch(e){showToast('Save failed: '+e.message,'error');}finally{btn.disabled=false;btn.textContent='Save Tool';}
 }
 async function deleteLoanTool(){
@@ -1190,7 +1192,9 @@ async function saveAgr(){
   try{
     if(editingAgr) await db('PATCH','service_agreements?id=eq.'+editingAgr.id,payload);
     else await db('POST','service_agreements',payload);
-    showToast(editingAgr?'Agreement updated':'Agreement created'); closeAgrModal(); await loadAgreements();
+    showToast(editingAgr?'Agreement updated':'Agreement created');
+    await loadAgreements();
+    if (!editingAgr) closeAgrModal(); // Only close on new, not on edit
   }catch(e){showToast('Save failed: '+e.message,'error');}
   finally{btn.disabled=false;btn.textContent='Save Agreement';}
 }
@@ -1894,7 +1898,8 @@ async function saveJob() {
     }
     await loadAllParts();
     showToast(editingJob ? 'Service case updated' : 'Service case created');
-    closeJobModal(); await loadJobs();
+    await loadJobs();
+    if (!editingJob) closeJobModal();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Service Case'; }
 }
@@ -2103,6 +2108,7 @@ function printToolIdLabel() {
   w.document.write('body { font-family: Arial, sans-serif; width: 94mm; height: 48mm; overflow: hidden; }');
   w.document.write('.label { display: flex; flex-direction: column; width: 94mm; height: 48mm; border: 0.4mm solid #000; border-radius: 1.5mm; padding: 3mm 3.5mm; }');
   w.document.write('.top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2mm; border-bottom: 0.3mm solid #ccc; padding-bottom: 2mm; }');
+  w.document.write('.loan-badge { background: #000; color: #fff; font-size: 7pt; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; }');
   w.document.write('.xpl { font-size: 22pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; line-height: 1; }');
   w.document.write('.brand { text-align: right; }');
   w.document.write('.brand-name { font-size: 9pt; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #000; }');
@@ -2118,7 +2124,7 @@ function printToolIdLabel() {
   w.document.write('<div class="label">');
   // Top: XPL number + brand
   w.document.write('<div class="top">');
-  w.document.write('<div class="xpl">' + xplNum(t.loan_number || 0) + '</div>');
+  w.document.write('<div><span class="loan-badge">Loan Tool</span></div>');
   w.document.write('<div class="brand"><div class="brand-name">X-PAK</div><div class="brand-sub">SERVICE</div></div>');
   w.document.write('</div>');
   // Middle: name + model + SN
@@ -2126,6 +2132,7 @@ function printToolIdLabel() {
   w.document.write('<div class="xpak-name">' + (t.xpak_name || t.name) + '</div>');
   // No manufacturer model line
   if (t.serial_number) w.document.write('<div class="sn-line">S/N: ' + t.serial_number + '</div>');
+  if (t.xpak_code) w.document.write('<div class="sn-line" style="margin-top:1mm;font-weight:700">' + t.xpak_code + '</div>');
   w.document.write('</div>');
   // Bottom: code + location
   w.document.write('<div class="bottom">');
