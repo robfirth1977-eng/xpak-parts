@@ -764,7 +764,8 @@ function filterAllParts() {
     if (allPartsSearchTerm) {
       return p.key_no.toLowerCase().includes(allPartsSearchTerm) ||
              p.description.toLowerCase().includes(allPartsSearchTerm) ||
-             (p.machineName||'').toLowerCase().includes(allPartsSearchTerm);
+             (p.machineName||'').toLowerCase().includes(allPartsSearchTerm) ||
+             (p.diagram_ref && p.diagram_ref.toLowerCase().includes(allPartsSearchTerm));
     }
     return true;
   });
@@ -2065,7 +2066,7 @@ function renderParts() {
       if (partsFilter === 'low'     && !(s && s.quantity <= (s.reorder_threshold || 1) && s.quantity >= 0)) return false;
       if (partsFilter === 'empty'   && !(s && s.quantity === 0 || !s)) return false;
     }
-    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) ||
+    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.diagram_ref && p.diagram_ref.toLowerCase().includes(q)) ||
       ((p.stock && p.stock[0] && p.stock[0].location) || '').toLowerCase().includes(q) ||
       (p.machineName || '').toLowerCase().includes(q) || (p.alt_part_no || '').toLowerCase().includes(q);
   });
@@ -2317,7 +2318,7 @@ function searchPartsForDirectOrder() {
   var res = document.getElementById('doPartResults');
   if (!q) { res.innerHTML = ''; return; }
   var matches = allParts.filter(function(p) {
-    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.diagram_ref && p.diagram_ref.toLowerCase().includes(q));
   }).slice(0, 8);
   if (!matches.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found - use free text below</div>'; return; }
   res.innerHTML = matches.map(function(p) {
