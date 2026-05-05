@@ -338,6 +338,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <button class="filter-btn" onclick="setJobFilter('ACTIVE',this)">Active</button>
     <button class="filter-btn" onclick="setJobFilter('FOLLOW',this)">Follow-Up</button>
     <button class="filter-btn" onclick="setJobFilter('COMPLETED',this)">Completed</button>
+    <button class="filter-btn" onclick="setJobFilter('QUOTE SENT',this)">Quote Sent</button>
+    <button class="filter-btn" onclick="setJobFilter('ON HOLD',this)">On Hold</button>
     <button class="filter-btn alert" id="btnUnordered" onclick="setJobFilter('UNORDERED',this)">&#9888; PARTS UNORDERED</button>
   </div>
   <div id="jobsList"></div>
@@ -477,7 +479,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     </div>
     <button id="autoGenBtn"
     <button id="autoGenBtn" onclick="autoGenPartNo()" style="display:none;width:100%;padding:10px;background:#1e3048;color:#f59e0b;border:1px solid #f59e0b;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px;margin-bottom:8px">Auto-Generate Part Number</button>
-    <button class="btn-save" id="btnSave" onclick="savePart()">Save Part</button>
+    <div style="display:flex;gap:8px">
+    <button class="btn-save" id="btnSave" onclick="savePart()" style="flex:1">Save Part</button>
+    <button onclick="closeModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+    </div>
     <button class="btn-delete" id="btnDeletePart" onclick="deletePart()" style="display:none">Delete This Part</button>
   </div>
 </div>
@@ -501,10 +506,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 
     <div class="field"><label>Status</label>
       <select id="jStatus">
-        <option value="NEW JOB">NEW JOB</option>
-        <option value="AWAITING ASSESSMENT">AWAITING ASSESSMENT</option>
-        <option value="AWAITING GOODS">AWAITING GOODS</option>
-        <option value="QUOTED - AWAITING APPROVAL">QUOTED - AWAITING APPROVAL</option>
+        <option value="NEW JOB">New Job</option>
+        <option value="AWAITING ASSESSMENT">Awaiting Assessment</option>
+        <option value="AWAITING GOODS">Awaiting Goods</option>
+        <option value="QUOTED - AWAITING APPROVAL">Quote Sent — Awaiting Approval</option>
         <option value="WAITING ON PARTS">WAITING ON PARTS</option>
         <option value="IN WORKSHOP">IN WORKSHOP</option>
         <option value="WAITING TO BE RETURNED">WAITING TO BE RETURNED</option>
@@ -533,7 +538,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div class="section-label">Costs</div>
     <div class="g2">
       
-      <div class="field"><label>Parts ($)</label><input id="jParts" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="field"><label>Parts ($) <span style="font-size:10px;color:#5a8090;font-weight:400">auto</span></label><input id="jParts" type="number" step="0.01" min="0" placeholder="0.00" readonly style="opacity:0.65;cursor:default;background:#0a1420"></div>
     </div>
 
     <div class="section-label">Files and Links</div>
@@ -547,7 +552,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="links-list" id="linksList"></div>
     </div>
 
-    <div class="section-label">Service Agreement</div>
+    <div class="section-label">Agreement &amp; Time</div>
     <div class="g2">
       <div class="field"><label>Linked Agreement</label>
         <select id="jAgreementId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
@@ -564,7 +569,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field full"><label>Internal Notes</label><textarea id="jInternalNotes" placeholder="Internal notes only..."></textarea></div>
     </div>
 
-    <button class="btn-save orange" id="btnSaveJob" onclick="saveJob()">Save Service Case</button>
+    <div style="display:flex;gap:8px">
+    <button class="btn-save orange" id="btnSaveJob" onclick="saveJob()" style="flex:1">Save Service Case</button>
+    <button onclick="closeJobModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+    </div>
     <button class="btn-delete" id="btnDeleteJob" onclick="deleteJob()" style="display:none">Delete This Service Case</button>
   </div>
 </div>
@@ -606,7 +614,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
         <div class="field"><label>Photo In (SharePoint link)</label><input id="lPhotoIn" placeholder="Paste link"></div>
       </div>
     </div>
-    <button class="btn-save" style="background:#a78bfa" id="btnSaveLoan" onclick="saveLoan()">Save Loan</button>
+    <div style="display:flex;gap:8px">
+    <button class="btn-save" style="background:#a78bfa;flex:1" id="btnSaveLoan" onclick="saveLoan()">Save Loan</button>
+    <button id="btnCloseLoan" onclick="closeLoanModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+    </div>
     <button id="btnMarkReturned" onclick="markLoanReturned()" style="display:none;width:100%;padding:11px;background:transparent;color:#10b981;border:1px solid #10b981;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">&#10003; Mark as Returned</button>
     <button id="btnPrintLoanTag" onclick="printLoanTag()" style="display:none;width:100%;padding:11px;background:transparent;color:#a78bfa;border:1px solid #a78bfa;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Print Loan Tag</button>
     <button class="btn-delete" id="btnDeleteLoan" onclick="deleteLoan()" style="display:none">Delete This Loan</button>
@@ -636,7 +647,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       </datalist>
     </div>
     <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
-    <button class="btn-save" style="background:#a78bfa" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
+    <div style="display:flex;gap:8px">
+    <button class="btn-save" style="background:#a78bfa;flex:1" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
+    <button onclick="closeLoanToolModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+    </div>
     <button id="btnPrintIdLabel" onclick="printToolIdLabel()" style="display:none;width:100%;padding:11px;background:transparent;color:#00c8e0;border:1px solid #00c8e0;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Print ID Label</button>
     <button class="btn-delete" id="btnDeleteLoanTool" onclick="deleteLoanTool()" style="display:none">Remove from Register</button>
   </div>
@@ -668,7 +682,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
         <option value="INACTIVE">Inactive</option>
       </select>
     </div>
-    <button class="btn-save" style="background:#f59e0b;color:#0f1923;font-weight:700" id="btnSaveAgr" onclick="saveAgr()">Save Agreement</button>
+    <div style="display:flex;gap:8px">
+    <button class="btn-save" style="background:#f59e0b;color:#0f1923;font-weight:700;flex:1" id="btnSaveAgr" onclick="saveAgr()">Save Agreement</button>
+    <button onclick="closeAgrModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+    </div>
     <button class="btn-delete" id="btnDeleteAgr" onclick="deleteAgr()" style="display:none">Delete Agreement</button>
   </div>
 </div>
@@ -792,7 +809,7 @@ var OPEN_ST  = ['NEW JOB','AWAITING ASSESSMENT','AWAITING GOODS','QUOTED - AWAIT
 var ACT_ST   = ['WAITING ON PARTS','IN WORKSHOP','WAITING TO BE RETURNED'];
 var FOL_ST   = ['AFTER SERVICE FOLLOW-UP'];
 
-var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981' };
+var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981', 'NEW JOB':'#f59e0b', 'IN PROGRESS':'#64b5c8', 'WAITING ON PARTS':'#f97316', 'AWAITING ASSESSMENT':'#a78bfa', 'AWAITING GOODS':'#f97316', 'QUOTED - AWAITING APPROVAL':'#a78bfa', COMPLETED:'#10b981', 'ON HOLD':'#5a8090' };
 var STATUS_LABELS  = { to_order:'To Order', ordered:'Ordered', arrived:'Arrived', use_stock:'Use Stock' };
 
 async function db(method, path, body) {
@@ -827,6 +844,15 @@ function renderSuppliersList() {
   }).join('');
 }
  
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  var overlays = ['overlay','jobOverlay','loanOverlay','loanToolOverlay','agrOverlay','agrPeriodOverlay','machineOverlay','directOrderOverlay'];
+  for (var i=0; i<overlays.length; i++) {
+    var el = document.getElementById(overlays[i]);
+    if (el && el.classList.contains('show')) { el.classList.remove('show'); return; }
+  }
+});
+
 async function init() {
   try {
     machines = await db('GET', 'machines?select=*&order=brand_order.asc,name.asc');
@@ -1576,11 +1602,22 @@ function addPartToJob(partId, toolTempId) {
   var inp = document.getElementById('psi_'+toolTempId); if(inp) inp.value='';
   var res = document.getElementById('psr_'+toolTempId); if(res) res.innerHTML='';
   renderToolPartsList(toolTempId);
+  recalcPartsTotal();
+}
+
+function recalcPartsTotal() {
+  var el = document.getElementById('jParts'); if (!el) return;
+  var total = jobPartsLocal.reduce(function(sum, jp) {
+    var pt = jp.part_id ? allParts.find(function(x){ return x.id === jp.part_id; }) : null;
+    var sell = pt && pt.sell_price ? parseFloat(pt.sell_price) : 0;
+    return sum + (sell * (jp.quantity || 1));
+  }, 0);
+  el.value = total > 0 ? total.toFixed(2) : '';
 }
 
 function removeJobPart(tempId) {
   var jp = jobPartsLocal.find(function(x){return x._tempId===tempId;}); var tid=jp?jp._toolTempId:null;
-  jobPartsLocal = jobPartsLocal.filter(function(x){return x._tempId!==tempId;}); renderToolPartsList(tid);
+  jobPartsLocal = jobPartsLocal.filter(function(x){return x._tempId!==tempId;}); renderToolPartsList(tid); recalcPartsTotal();
 }
 function setJobPartStatus(tempId, status) {
   var jp = jobPartsLocal.find(function(x){return x._tempId===tempId;});
@@ -1588,7 +1625,7 @@ function setJobPartStatus(tempId, status) {
 }
 function setJobPartQty(tempId, val) {
   var jp = jobPartsLocal.find(function(x){return x._tempId===tempId;});
-  if(jp) jp.quantity = Math.max(1, parseInt(val)||1);
+  if(jp) { jp.quantity = Math.max(1, parseInt(val)||1); recalcPartsTotal(); }
 }
 function renderToolPartsList(toolTempId) {
   var el = document.getElementById('tpl_'+toolTempId); if(!el) return;
@@ -1603,12 +1640,14 @@ function renderToolPartsList(toolTempId) {
       '<select onchange="setJobPartStatus(\''+jp._tempId+'\',this.value)" style="padding:4px 7px;border-radius:5px;border:1px solid '+sc+';background:#0f1923;color:'+sc+';font-size:11px;font-weight:700">' +
         '<option value="use_stock"'+(jp.status==='use_stock'?' selected':'')+'>Use Stock</option>' +
         '<option value="to_order"'+(jp.status==='to_order'?' selected':'')+'>To Order</option>' +
+        '<option value="ordered"'+(jp.status==="ordered"?' selected':'')+'>Ordered</option>' +
+        '<option value="arrived"'+(jp.status==="arrived"?' selected':'')+'>Arrived</option>' +
       '</select>' +
       '<button class="jpr-remove" onclick="removeJobPart(\''+jp._tempId+'\')">x</button>' +
     '</div>';
   }).join('');
 }
-function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsList(t._tempId);});}
+function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsList(t._tempId);}); recalcPartsTotal();}
 
 // ── JOBS ──────────────────────────────────────────────────────────
 
@@ -1784,7 +1823,7 @@ async function openEditJobModal(jobId) {
   document.getElementById('jEmail').value = j.email || '';
   document.getElementById('jShipping').value = j.shipping_address || '';
   // labour_cost now per-tool as service_fee
-  document.getElementById('jParts').value = j.parts_cost || '';
+  // jParts is auto-calculated from job_parts - do not pre-fill
   document.getElementById('jFollowup').checked = !!j.followup_required;
   document.getElementById('jFollowupNotes').value = j.followup_notes || '';
   document.getElementById('jInternalNotes').value = j.internal_notes || '';
@@ -2098,51 +2137,6 @@ function openAddModal() {
   setTimeout(function() { document.getElementById('fKeyno').focus(); }, 100);
 }
 
-function printToolIdLabel() {
-  var t = editingLoanTool; if (!t) return;
-  var w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ID Label</title>');
-  w.document.write('<style>');
-  w.document.write('@page { size: 101mm 54mm; margin: 3mm 3.5mm; }');
-  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
-  w.document.write('body { font-family: Arial, sans-serif; width: 94mm; height: 48mm; overflow: hidden; }');
-  w.document.write('.label { display: flex; flex-direction: column; width: 94mm; height: 48mm; border: 0.4mm solid #000; border-radius: 1.5mm; padding: 3mm 3.5mm; }');
-  w.document.write('.top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2mm; border-bottom: 0.3mm solid #ccc; padding-bottom: 2mm; }');
-  w.document.write('.loan-badge { background: #000; color: #fff; font-size: 7pt; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; }');
-  w.document.write('.xpl { font-size: 22pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; line-height: 1; }');
-  w.document.write('.brand { text-align: right; }');
-  w.document.write('.brand-name { font-size: 9pt; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #000; }');
-  w.document.write('.brand-sub { font-size: 7pt; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }');
-  w.document.write('.middle { flex: 1; display: flex; flex-direction: column; justify-content: center; }');
-  w.document.write('.xpak-name { font-size: 14pt; font-weight: 900; color: #000; line-height: 1.1; margin-bottom: 1.5mm; }');
-  w.document.write('.model-line { font-size: 9pt; color: #333; margin-bottom: 1mm; }');
-  w.document.write('.sn-line { font-size: 8.5pt; color: #444; }');
-  w.document.write('.bottom { display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.3mm solid #ccc; padding-top: 1.5mm; margin-top: 1.5mm; }');
-  w.document.write('.code { font-size: 8pt; font-weight: 700; color: #000; font-family: "Courier New", monospace; }');
-  w.document.write('.location { font-size: 7.5pt; color: #555; }');
-  w.document.write('</style></head><body>');
-  w.document.write('<div class="label">');
-  // Top: XPL number + brand
-  w.document.write('<div class="top">');
-  w.document.write('<div><span class="loan-badge">Loan Tool</span></div>');
-  w.document.write('<div class="brand"><div class="brand-name">X-PAK</div><div class="brand-sub">SERVICE</div></div>');
-  w.document.write('</div>');
-  // Middle: name + model + SN
-  w.document.write('<div class="middle">');
-  w.document.write('<div class="xpak-name">' + (t.xpak_name || t.name) + '</div>');
-  // No manufacturer model line
-  if (t.serial_number) w.document.write('<div class="sn-line">S/N: ' + t.serial_number + '</div>');
-  if (t.xpak_code) w.document.write('<div class="sn-line" style="margin-top:1mm;font-weight:700">' + t.xpak_code + '</div>');
-  w.document.write('</div>');
-  // Bottom: code + location
-  w.document.write('<div class="bottom">');
-  w.document.write('<div class="code">' + (t.xpak_code || '') + '</div>');
-  if (t.location) w.document.write('<div class="location">' + t.location + '</div>');
-  w.document.write('</div>');
-  w.document.write('</div></body></html>');
-  w.document.close();
-  setTimeout(function() { w.print(); }, 300);
-}
 
 function toggleBrandGroup(brand) {
   openBrandGroups[brand] = openBrandGroups[brand] === false ? true : false;
@@ -2226,12 +2220,14 @@ async function savePart() {
       if (s && s.id) await db('PATCH', 'stock?id=eq.' + s.id, stock);
       else await db('POST', 'stock', Object.assign({ part_id: editingPart.id }, stock));
       showToast('Part updated');
+    if (selectedMachine) { renderDocsBar(); renderParts(); }
     } else {
       var res = await db('POST', 'parts', Object.assign({ machine_id: selectedMachine.id }, pd));
       await db('POST', 'stock', Object.assign({ part_id: res[0].id }, stock));
       showToast('Part added');
-    }
-    closeModal(); await selectMachine(selectedMachine); await loadAllParts();
+    closeModal();
+    } 
+    await loadAllParts(); if (selectedMachine) { renderDocsBar(); renderParts(); } await loadAllParts();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Part'; }
 }
