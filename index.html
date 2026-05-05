@@ -2648,10 +2648,9 @@ async function exportQuoteExcel(jobId) {
     var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
     var cover = [
       ['QUOTE REQUEST'],[''],
-      ['Job Reference', xpsNum(j.job_number)],
-      ['Customer', j.customer || ''],
+      ['Reference', xpsNum(j.job_number)],
       ['Date', today],
-      ['Prepared by', 'X-Pak Service'],[''],
+      ['From', 'X-Pak Service'],[''],
       ['Please supply unit prices (ex GST) and estimated lead times for the parts listed on the Parts sheet.']
     ];
     var ws_cover = XLSX.utils.aoa_to_sheet(cover);
@@ -2668,7 +2667,7 @@ async function exportQuoteExcel(jobId) {
     var ws_parts = XLSX.utils.aoa_to_sheet(rows);
     ws_parts['!cols'] = [{wch:18},{wch:18},{wch:38},{wch:5},{wch:20},{wch:14},{wch:20}];
     XLSX.utils.book_append_sheet(wb, ws_parts, 'Parts');
-    var fname = 'Quote_' + xpsNum(j.job_number) + '_' + (j.customer||'').replace(/[^a-zA-Z0-9]/g,'_').substring(0,20) + '.xlsx';
+    var fname = 'Quote_' + xpsNum(j.job_number) + '_' + today.replace(/ /g,'-') + '.xlsx';
     XLSX.writeFile(wb, fname);
     showToast('Exported: ' + fname);
   } catch(e) { showToast('Export failed: ' + e.message, 'error'); }
