@@ -870,7 +870,7 @@ async function init() {
 
 async function loadAllParts() {
   try {
-    var data = await db('GET', 'parts?select=*,stock(*)&order=key_no.asc');
+    var data = await db('GET', 'parts?select=*,stock(*)&order=key_no.asc&limit=5000');
     allParts = data.map(function(p) {
       var m = machines.find(function(m) { return m.id === p.machine_id; });
       p.machineName = m ? m.name : 'Unknown'; return p;
