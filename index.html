@@ -2528,13 +2528,17 @@ function renderAssessmentReport(j, tools, jparts) {
   var toolSections = tools.map(function(t) {
     var mName = mLookup(t.machine_id);
     var toolParts = jparts.filter(function(p) { return p.tool_number === t.tool_number || (!p.tool_number && t.tool_number === 1); });
-    var partsRows = toolParts.map(function(p) {
+    var partsRows = toolParts.map(function(p, ri) {
       var partData = p.part_id ? allParts.find(function(x) { return x.id === p.part_id; }) : null;
       var sell = partData && partData.sell_price ? parseFloat(partData.sell_price) : 0;
       var total = sell * (p.quantity || 1);
-      return '<tr><td>' + (p.part_key_no||'') + '</td><td>' + (p.part_description||'') + '</td><td style="text-align:center">' + (p.quantity||1) + '</td><td style="text-align:right">' + (sell > 0 ? '$' + sell.toFixed(2) : '-') + '</td><td style="text-align:right">' + (total > 0 ? '$' + total.toFixed(2) : '-') + '</td></tr>';
+      return '<tr' + (ri%2?'':' style="background:#f8fafc"') + '>' +
+        '<td style="word-break:break-all">' + (p.part_key_no||'') + '</td>' +
+        '<td>' + (p.part_description||'') + '</td>' +
+        '<td style="text-align:center">' + (p.quantity||1) + '</td>' +
+        '<td style="text-align:right;font-family:monospace">' + (sell > 0 ? '$' + sell.toFixed(2) : '&#8212;') + '</td><td style="text-align:right;font-family:monospace' + (total>0?';font-weight:700':'') + '">' + (total > 0 ? '$' + total.toFixed(2) : '&#8212;') + '</td></tr>';
     }).join('');
-    var partsTable = toolParts.length ? '<table class="parts-tbl"><thead><tr><th>Part No.</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>' + partsRows + '</tbody></table>' : '<p style="color:#666;font-style:italic;font-size:11pt">No parts recorded for this tool.</p>';
+    var partsTable = toolParts.length ? '<table class="parts-tbl"><colgroup><col style="width:18%"><col style="width:47%"><col style="width:5%"><col style="width:15%"><col style="width:15%"></colgroup><thead><tr><th>Part No.</th><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead><tbody>' + partsRows + '</tbody></table>' : '<p style="color:#666;font-style:italic;font-size:11pt">No parts recorded for this tool.</p>';
     return '<div class="tool-section">' +
       '<div class="tool-header"><span class="tool-num">TOOL ' + t.tool_number + '</span>' + (mName ? '<span class="tool-model">' + mName + '</span>' : '') + (t.serial_number ? '<span class="tool-sn">S/N: ' + t.serial_number + '</span>' : '') + '</div>' +
       (t.fault_type ? '<div class="field-block"><div class="field-label">Fault Reported</div><div class="field-val">' + t.fault_type + (t.error_code ? ' &nbsp;|&nbsp; Error Code: ' + t.error_code : '') + '</div></div>' : '') +
@@ -2568,9 +2572,9 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.write('.field-block:last-child{border-bottom:none}');
   w.document.write('.field-label{font-size:8.5pt;font-weight:700;color:#1e3799;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}');
   w.document.write('.field-val{font-size:11pt;color:#2a2a3e;line-height:1.5}');
-  w.document.write('.parts-tbl{width:100%;border-collapse:collapse;margin-top:6px;font-size:10pt}');
-  w.document.write('.parts-tbl th{background:#f0f4ff;padding:6px 10px;text-align:left;font-size:9pt;font-weight:700;color:#1e3799;border-bottom:2px solid #c8d5f0}');
-  w.document.write('.parts-tbl td{padding:6px 10px;border-bottom:1px solid #eee}');
+  w.document.write('.parts-tbl{width:100%;border-collapse:collapse;margin-top:6px;font-size:9.5pt;table-layout:fixed}');
+  w.document.write('.parts-tbl th{background:#1a3550;padding:6px 10px;text-align:left;font-size:9pt;font-weight:700;color:#ffffff;border-bottom:2px solid #0d2035}');
+  w.document.write('.parts-tbl td{padding:5px 10px;border-bottom:1px solid #eee;vertical-align:middle}');
   w.document.write('.parts-tbl tr:last-child td{border-bottom:none}');
   w.document.write('.totals-box{margin-bottom:20px;text-align:right}');
   w.document.write('.totals-box table{margin-left:auto;border-collapse:collapse}');
@@ -2606,10 +2610,10 @@ function renderAssessmentReport(j, tools, jparts) {
 
   // Totals
   if (grandTotal > 0 || serviceFeeTotal > 0) {
-    w.document.write('<div class="totals-box"><table>');
-    if (serviceFeeTotal > 0) w.document.write('<tr><td>Service Fee</td><td>$' + serviceFeeTotal.toFixed(2) + '</td></tr>');
-    if (partsTotal > 0) w.document.write('<tr><td>Parts</td><td>$' + partsTotal.toFixed(2) + '</td></tr>');
-    w.document.write('<tr class="total-row"><td>Total</td><td>$' + grandTotal.toFixed(2) + '</td></tr>');
+    w.document.write('<div class="totals-box"><table style="width:auto;margin-left:auto;min-width:280px">');
+    if (serviceFeeTotal > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Service Fee</td><td style="text-align:right;font-family:monospace">$' + serviceFeeTotal.toFixed(2) + '</td></tr>');
+    if (partsTotal > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Parts</td><td style="text-align:right;font-family:monospace">$' + partsTotal.toFixed(2) + '</td></tr>');
+    w.document.write('<tr class="total-row"><td style="text-align:right;padding-right:20px">Total</td><td style="text-align:right;font-family:monospace">$' + grandTotal.toFixed(2) + '</td></tr>');
     w.document.write('</table></div><div class="gst-note">All prices ex GST</div>');
   }
 
