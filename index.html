@@ -303,6 +303,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 }
 #printArea{display:none}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -1742,7 +1743,7 @@ function renderList() {
       '<div class="job-links">' +
         '<button class="job-link-tile" onclick="event.stopPropagation();printCaseLabel(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f4a;border-color:#00c8e0;color:#00c8e0">Print Bin Label</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Assessment Report</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();sendQuoteEmail(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Request Quote</button>' +
+        '<button class="job-link-tile" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Export Quote</button>' +
       '</div>' +
       '</div>';
   }).join('');
@@ -2637,26 +2638,41 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.close();
 }
 
-async function sendQuoteEmail(jobId) {
+async function exportQuoteExcel(jobId) {
   var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
   try {
+    if (typeof XLSX === 'undefined') { showToast('Excel library not loaded - try refreshing', 'error'); return; }
     var jparts = await db('GET', 'job_parts?job_id=eq.' + jobId + '&status=eq.to_order&order=machine_name.asc');
     if (!jparts.length) { showToast('No parts marked To Order', 'error'); return; }
+    var wb = XLSX.utils.book_new();
+    var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
+    var cover = [
+      ['QUOTE REQUEST'],[''],
+      ['Job Reference', xpsNum(j.job_number)],
+      ['Customer', j.customer || ''],
+      ['Date', today],
+      ['Prepared by', 'X-Pak Service'],[''],
+      ['Please supply unit prices (ex GST) and estimated lead times for the parts listed on the Parts sheet.']
+    ];
+    var ws_cover = XLSX.utils.aoa_to_sheet(cover);
+    ws_cover['!cols'] = [{wch:22},{wch:50}];
+    XLSX.utils.book_append_sheet(wb, ws_cover, 'Cover');
+    var rows = [['Machine','Part No.','Description','Qty','Unit Price (ex GST)','Lead Time','Notes']];
     var grouped = {};
-    jparts.forEach(function(p) {
-      var k = p.machine_name || 'Unspecified'; if (!grouped[k]) grouped[k] = []; grouped[k].push(p);
+    jparts.forEach(function(p) { var k = p.machine_name||'Unspecified'; if(!grouped[k]) grouped[k]=[]; grouped[k].push(p); });
+    Object.keys(grouped).sort().forEach(function(machine) {
+      grouped[machine].forEach(function(p) {
+        rows.push([machine, p.part_key_no||'', p.part_description||'', p.quantity||1, '', '', p.notes||'']);
+      });
     });
-    var sections = Object.keys(grouped).map(function(machine) {
-      var lines = grouped[machine].map(function(p) { return '  ' + (p.part_key_no||'-') + '  |  ' + (p.part_description||'-') + '  |  Qty: ' + p.quantity; }).join('\n');
-      return machine + '\n' + Array(machine.length+1).join('-') + '\n' + lines;
-    }).join('\n\n');
-    var subject = 'Quote Request \u2014 ' + xpsNum(j.job_number) + ' | ' + (j.customer||'');
-    var body = 'Hello,\n\nPlease provide pricing and availability for the following parts.\n\nJob Reference: ' + xpsNum(j.job_number) + '\nCustomer: ' + (j.customer||'') + '\n\nPARTS REQUIRED\n==============\n' + sections + '\n\nPlease reply with unit price (ex GST) and estimated lead time for each item.\n\nThank you,\nX-Pak Service\nrob.firth@xpak.com.au';
-    var to = prompt('Supplier email address:'); if (!to) return;
-    window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  } catch(e) { showToast('Failed to generate quote email', 'error'); }
+    var ws_parts = XLSX.utils.aoa_to_sheet(rows);
+    ws_parts['!cols'] = [{wch:18},{wch:18},{wch:38},{wch:5},{wch:20},{wch:14},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws_parts, 'Parts');
+    var fname = 'Quote_' + xpsNum(j.job_number) + '_' + (j.customer||'').replace(/[^a-zA-Z0-9]/g,'_').substring(0,20) + '.xlsx';
+    XLSX.writeFile(wb, fname);
+    showToast('Exported: ' + fname);
+  } catch(e) { showToast('Export failed: ' + e.message, 'error'); }
 }
-
 function showToast(msg, type) {
   type = type || 'success'; var t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show ' + type;
