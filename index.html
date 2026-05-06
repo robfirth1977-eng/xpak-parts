@@ -243,6 +243,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   @page{size:89mm 36mm;margin:2mm 1mm}
 }
 #printArea{display:none}
+.btn-save.purple{background:#8b5cf6}
+.s-card-actions{display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid #2a4060}
+.s-card-btn{flex:1;padding:6px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
+.s-card-btn.edit{background:#1e3048;color:#c4b5fd;border:1px solid #8b5cf680}
+.s-card-btn.edit:hover{background:#2a3f6f}
+.s-card-btn.del{background:transparent;color:#ef4444;border:1px solid #ef444460}
+.s-card-btn.del:hover{background:#ef444420}
 .supplier-section{padding:14px;display:none}
 .supplier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
 .supplier-card{background:#1a2a3d;border:1px solid #2a4060;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:0}
@@ -307,6 +314,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 </div>
 <div class="order-section" id="orderSection" style="display:none">
   <div id="orderList"></div>
+</div>
+
+<!-- Suppliers toolbar -->
+<div class="toolbar" id="supplierToolbar" style="display:none">
+  <div style="flex:1;font-size:14px;font-weight:700;color:#8b5cf6">Supplier Directory</div>
+  <button class="btn-add" style="background:#8b5cf6" onclick="openSupplierModal()">+ Add Supplier</button>
 </div>
 
 <!-- Suppliers section -->
@@ -509,6 +522,31 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   </div>
 </div>
 
+<!-- Supplier modal -->
+<div class="overlay" id="supplierOverlay" onclick="if(event.target===this)closeSupplierModal()">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="supplierModalTitle">Add Supplier</div><button class="modal-close" onclick="closeSupplierModal()">x</button></div>
+    <div class="section-label">Company Details</div>
+    <div class="field"><label>Company Name *</label><input id="sfName" placeholder="e.g. Cyklop"></div>
+    <div class="field-row">
+      <div class="field"><label>Contact Name</label><input id="sfContact" placeholder="e.g. Brenton Emery"></div>
+      <div class="field"><label>Phone</label><input id="sfPhone" placeholder="e.g. 1300 295 568"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Email</label><input id="sfEmail" placeholder="e.g. sales@supplier.com"></div>
+      <div class="field"><label>Website</label><input id="sfWebsite" placeholder="e.g. www.supplier.com"></div>
+    </div>
+    <div class="field"><label>Address</label><input id="sfAddress" placeholder="Street address, city, state"></div>
+    <div class="section-label">Brands Supplied</div>
+    <div class="field"><label>Brands (comma-separated)</label><input id="sfBrands" placeholder="e.g. Cyklop, Strapack"></div>
+    <div class="section-label">Ordering Info</div>
+    <div class="field"><label>Ordering Notes</label><textarea id="sfOrderNotes" rows="2" placeholder="Lead times, payment terms, MOQ..." style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
+    <div class="field"><label>General Notes</label><textarea id="sfNotes" rows="2" placeholder="Any other notes..." style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
+    <button class="btn-save purple" id="btnSaveSupplier" onclick="saveSupplier()">Save Supplier</button>
+    <button class="btn-delete" id="btnDeleteSupplier" onclick="deleteSupplier()" style="display:none">Delete This Supplier</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -603,6 +641,7 @@ function hideAllViews() {
   document.getElementById('jobsBoardSection').style.display = 'none';
   document.getElementById('orderToolbar').style.display = 'none';
   document.getElementById('orderSection').style.display = 'none';
+  document.getElementById('supplierToolbar').style.display = 'none';
   document.getElementById('supplierSection').style.display = 'none';
 }
 
@@ -633,48 +672,112 @@ function switchToParts() {
 
 function switchToSuppliers() {
   currentView = 'suppliers'; hideAllViews(); renderTabs();
+  document.getElementById('supplierToolbar').style.display = 'flex';
   document.getElementById('supplierSection').style.display = 'block';
   document.getElementById('hSub').textContent = 'Supplier Directory';
   document.getElementById('lowBadge').innerHTML = '';
   loadSupplierCards();
 }
 
-var _supplierCache = null;
+var _supplierCache = null, _suppliersList = [], editingSupplierId = null;
+
 async function loadSupplierCards() {
   if (_supplierCache) { renderSupplierCards(_supplierCache); return; }
   try {
     var data = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order');
-    _supplierCache = data;
-    renderSupplierCards(data);
+    _supplierCache = data; renderSupplierCards(data);
   } catch(e) {
-    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load suppliers. Run SQL to create suppliers table first.</div></div>';
+    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load suppliers. Run SQL first.</div></div>';
   }
 }
 
 function renderSupplierCards(suppliers) {
-  if (!suppliers || !suppliers.length) {
-    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#8aa8c0">No suppliers yet.</div></div>';
+  _suppliersList = suppliers || [];
+  if (!_suppliersList.length) {
+    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#8aa8c0">No suppliers yet. Click + Add Supplier.</div></div>';
     return;
   }
-  var icons = { phone:'📞', email:'✉️', website:'🌐', address:'📍', ordering_notes:'📋', notes:'💬' };
-  var html = suppliers.map(function(s) {
-    var brands = (s.supplier_brands || []).map(function(b) {
-      return '<span class="brand-chip">' + b.brand_name + '</span>';
-    }).join('');
+  var html = _suppliersList.map(function(s, i) {
+    var brands = (s.supplier_brands || []).map(function(b){ return '<span class="brand-chip">' + b.brand_name + '</span>'; }).join('');
     var rows = '';
     if (s.contact_name) rows += '<div class="s-row"><span class="ico">👤</span><span class="val">' + s.contact_name + '</span></div>';
     if (s.phone)        rows += '<div class="s-row"><span class="ico">📞</span><span class="val">' + s.phone + '</span></div>';
     if (s.email)        rows += '<div class="s-row"><span class="ico">✉️</span><a href="mailto:' + s.email + '" class="val">' + s.email + '</a></div>';
-    if (s.website)      rows += '<div class="s-row"><span class="ico">🌐</span><a href="https://' + s.website.replace(/^https?:\/\//,'') + '" target="_blank" class="val">' + s.website + '</a></div>';
+    if (s.website)      rows += '<div class="s-row"><span class="ico">🌐</span><a href="https://' + s.website.replace(/^https?:\/\//, '') + '" target="_blank" class="val">' + s.website + '</a></div>';
     if (s.address)      rows += '<div class="s-row"><span class="ico">📍</span><span class="val">' + s.address + '</span></div>';
     if (s.ordering_notes) rows += '<div class="s-row"><span class="ico">📋</span><span class="val">' + s.ordering_notes + '</span></div>';
     var notesHtml = s.notes ? '<div class="s-notes">' + s.notes + '</div>' : '';
-    return '<div class="supplier-card">' +
-      '<div class="supplier-card-top"><div class="supplier-name">' + s.company_name + '</div>' +
-      '<div class="supplier-brands">' + brands + '</div></div>' +
-      rows + notesHtml + '</div>';
+    return '<div class="supplier-card"><div class="supplier-card-top"><div class="supplier-name">' + s.company_name + '</div><div class="supplier-brands">' + brands + '</div></div>' + rows + notesHtml + '<div class="s-card-actions"><button class="s-card-btn edit" onclick="openEditSupplier(' + i + ')">✏️ Edit</button></div></div>';
   }).join('');
   document.getElementById('supplierGrid').innerHTML = html;
+}
+
+function openSupplierModal() {
+  editingSupplierId = null;
+  document.getElementById('supplierModalTitle').textContent = 'Add Supplier';
+  ['sfName','sfContact','sfPhone','sfEmail','sfWebsite','sfAddress','sfBrands','sfOrderNotes','sfNotes'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('btnDeleteSupplier').style.display = 'none';
+  document.getElementById('supplierOverlay').classList.add('show');
+}
+
+function openEditSupplier(idx) {
+  var s = _suppliersList[idx]; if (!s) return;
+  editingSupplierId = s.id;
+  document.getElementById('supplierModalTitle').textContent = 'Edit Supplier';
+  document.getElementById('sfName').value = s.company_name || '';
+  document.getElementById('sfContact').value = s.contact_name || '';
+  document.getElementById('sfPhone').value = s.phone || '';
+  document.getElementById('sfEmail').value = s.email || '';
+  document.getElementById('sfWebsite').value = s.website || '';
+  document.getElementById('sfAddress').value = s.address || '';
+  document.getElementById('sfBrands').value = (s.supplier_brands || []).map(function(b){ return b.brand_name; }).join(', ');
+  document.getElementById('sfOrderNotes').value = s.ordering_notes || '';
+  document.getElementById('sfNotes').value = s.notes || '';
+  document.getElementById('btnDeleteSupplier').style.display = 'block';
+  document.getElementById('supplierOverlay').classList.add('show');
+}
+
+function closeSupplierModal() { document.getElementById('supplierOverlay').classList.remove('show'); }
+
+async function saveSupplier() {
+  var name = document.getElementById('sfName').value.trim();
+  if (!name) { showToast('Company name required', 'error'); return; }
+  document.getElementById('btnSaveSupplier').disabled = true;
+  try {
+    var payload = { company_name: name,
+      contact_name: document.getElementById('sfContact').value.trim() || null,
+      phone: document.getElementById('sfPhone').value.trim() || null,
+      email: document.getElementById('sfEmail').value.trim() || null,
+      website: document.getElementById('sfWebsite').value.trim() || null,
+      address: document.getElementById('sfAddress').value.trim() || null,
+      ordering_notes: document.getElementById('sfOrderNotes').value.trim() || null,
+      notes: document.getElementById('sfNotes').value.trim() || null };
+    var brands = document.getElementById('sfBrands').value.split(',').map(function(b){ return b.trim(); }).filter(Boolean);
+    var sid;
+    if (editingSupplierId) {
+      await db('PATCH', 'suppliers?id=eq.' + editingSupplierId, payload);
+      sid = editingSupplierId;
+      await db('DELETE', 'supplier_brands?supplier_id=eq.' + sid);
+    } else {
+      var res = await db('POST', 'suppliers', payload);
+      sid = res[0].id;
+    }
+    for (var i = 0; i < brands.length; i++) { await db('POST', 'supplier_brands', { supplier_id: sid, brand_name: brands[i] }); }
+    _supplierCache = null; closeSupplierModal(); await loadSupplierCards();
+    showToast(editingSupplierId ? 'Supplier updated' : 'Supplier added');
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+  document.getElementById('btnSaveSupplier').disabled = false;
+}
+
+async function deleteSupplier() {
+  if (!editingSupplierId) return;
+  if (!confirm('Delete this supplier?')) return;
+  try {
+    await db('DELETE', 'supplier_brands?supplier_id=eq.' + editingSupplierId);
+    await db('DELETE', 'suppliers?id=eq.' + editingSupplierId);
+    _supplierCache = null; closeSupplierModal(); await loadSupplierCards();
+    showToast('Supplier deleted');
+  } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
 }
 
 function setJobView(mode) {
