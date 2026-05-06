@@ -1570,12 +1570,13 @@ function renderMachineCardList() {
     html2 += '<div class="machine-brand-label" style="color:' + col + '">' + brand + '</div>';
     groups[brand].forEach(function(m) {
       var partCount = '';
+      var mIdx = machines.indexOf(m);
       html2 += '<div class="machine-card" style="border-left-color:' + col + '">' +
         '<div style="flex:1;min-width:0" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">' +
         '<div class="machine-card-name">' + m.name + '</div>' +
         (m.description ? '<div class="machine-card-meta">' + m.description + '</div>' : '') +
         '</div>' +
-        '<button class="btn-add-machine" style="margin-right:4px" onclick="event.stopPropagation();openEditMachineModal(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">✏️</button>' +
+        '<button class="btn-add-machine" style="margin-right:4px" onclick="event.stopPropagation();openEditMachineModal(' + mIdx + ')">✏️</button>' +
         '<span class="machine-card-arrow" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">&#9654;</span></div>';
     });
     html2 += '</div>';
@@ -2161,7 +2162,8 @@ function openMachineModal() {
 
 var _editingMachineId = null;
 
-function openEditMachineModal(m) {
+function openEditMachineModal(idx) {
+  var m = machines[idx]; if (!m) return;
   machineModalFromJob = false;
   _editingMachineId = m.id;
   document.getElementById('machineModalTitle').textContent = 'Edit Machine';
