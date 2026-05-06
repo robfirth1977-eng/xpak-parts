@@ -2148,6 +2148,8 @@ function populateMachineSupplierDropdown(selectedId) {
   });
 }
 
+var _editingMachineId = null;
+
 function openMachineModal() {
   machineModalFromJob = false; _editingMachineId = null;
   document.getElementById('machineModalTitle').textContent = '+ New Machine';
@@ -2159,8 +2161,6 @@ function openMachineModal() {
   document.getElementById('machineOverlay').classList.add('show');
   setTimeout(function() { document.getElementById('mName').focus(); }, 100);
 }
-
-var _editingMachineId = null;
 
 function openEditMachineModal(idx) {
   var m = machines[idx]; if (!m) return;
