@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>X-Pak Service Parts</title>
+<title>X-Pak ServeTrack</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
 function switchToSuppliers() {
   currentView = 'suppliers'; hideAllViews(); renderTabs();
@@ -321,11 +321,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .btn-delete{width:100%;padding:11px;background:transparent;color:#ef4444;border:1px solid #ef4444;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px}
 .btn-delete:hover{background:#ef4444;color:white}
 /* Parts search in job */
-.parts-search-area{background:#0d1a28;border-radius:10px;padding:12px;margin-bottom:10px}
+.parts-search-area{background:#0d1a28;border:2px solid #00c8e040;border-radius:10px;padding:12px;margin-bottom:10px}
 .parts-search-row{display:flex;gap:6px;margin-bottom:8px}
-.parts-search-row input{flex:1;padding:8px 11px;border-radius:7px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none}
-.parts-search-row input:focus{border-color:#00c8e0}
-.parts-search-row input::placeholder{color:#3a5070}
+.parts-search-row input{flex:1;padding:9px 13px;border-radius:7px;border:2px solid #00c8e0;background:#0a1520;color:#e2e8f0;font-size:13px;font-weight:500;outline:none;box-shadow:0 0 8px #00c8e030}
+.parts-search-row input:focus{border-color:#00e8ff;box-shadow:0 0 14px #00c8e050}
+.parts-search-row input::placeholder{color:#3a6070}
 .parts-search-results{max-height:180px;overflow-y:auto}
 .part-search-item{padding:7px 10px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .part-search-item:hover{background:#1e3048}
@@ -441,7 +441,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 <body>
 
 <div class="header">
-  <div><div class="header-title">X-PAK SERVICE PARTS</div><div class="header-sub" id="hSub">Connecting...</div></div>
+  <div><div class="header-title">X-PAK SERVETRACK</div><div class="header-sub" id="hSub">Connecting...</div></div>
   <div id="lowBadge"></div>
 </div>
 <div class="machine-tabs" id="machineTabs"></div>
@@ -904,7 +904,7 @@ var KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 var H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' };
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
-var jobs = [], editingJob = null, jobFilter = 'ALL', currentView = 'parts', jobViewMode = 'list';
+var jobs = [], editingJob = null, jobFilter = 'ALL', currentView = 'jobs', jobViewMode = 'list';
 var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
 var openBrandGroups = {};
 var allPartsFilter = 'all';
@@ -1030,8 +1030,6 @@ async function init() {
   // Start on Jobs view
   switchToJobs();
   try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=id,customer'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
-    if (machines.length) await selectMachine(machines[0]);
-    else document.getElementById('partsList').innerHTML = '<div class="center"><div class="icon">+</div><div>No machines yet.</div></div>';
   } catch(e) {
     document.getElementById('hSub').textContent = 'Connection error';
     document.getElementById('partsList').innerHTML = '<div class="center"><div style="color:#ef4444">Cannot connect</div></div>';
