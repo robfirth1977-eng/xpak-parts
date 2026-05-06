@@ -17,69 +17,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .tab.active,.tab:hover{background:#00c8e0;border-color:#00c8e0;color:#0f1923}
 .tab.jobs-tab{border-color:#f97316;color:#f97316}
 .tab.jobs-tab:hover,.tab.jobs-tab.active{background:#f97316;border-color:#f97316;color:#0f1923}
-.tab.parts-tab{border-color:#64b5c8;color:#64b5c8}
-.tab.parts-tab:hover,.tab.parts-tab.active{background:#64b5c8;border-color:#64b5c8;color:#0f1923}
-.tab.tools-tab{border-color:#10b981;color:#10b981}
-.tab.tools-tab:hover,.tab.tools-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
 .tab.order-tab{border-color:#10b981;color:#10b981}
 .tab.order-tab:hover,.tab.order-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
-.tab.loan-tab{border-color:#a78bfa;color:#a78bfa}
-.tab.loan-tab:hover,.tab.loan-tab.active{background:#a78bfa;border-color:#a78bfa;color:#0f1923}
-.tab.agr-tab{border-color:#f59e0b;color:#f59e0b}
-.tab.agr-tab:hover,.tab.agr-tab.active{background:#f59e0b;border-color:#f59e0b;color:#0f1923}
-.brand-group-header{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:14px;border:1px solid #2a4060;background:#0a1420;color:#5a8090;cursor:pointer;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-right:4px;user-select:none;transition:background 0.15s}
-.brand-group-header:hover{background:#141f2d}
-.brand-group-header.open{background:#141f2d}
-.brand-group-header .bgh-chevron{font-size:8px;transition:transform 0.2s}
-.brand-group-header.open .bgh-chevron{transform:rotate(90deg)}
-.brand-group-machines{display:inline-flex;flex-wrap:wrap;gap:4px;margin-right:8px}
-.loan-toolbar{padding:12px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.loan-section{padding:0 14px 20px}
-.loan-view-toggle{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
-.loan-view-btn{padding:5px 16px;border-radius:16px;border:1px solid #2a4060;background:transparent;color:#8aa8c0;cursor:pointer;font-size:11px;font-weight:700}
-.loan-view-btn.active{background:#1e3048;border-color:#a78bfa;color:#a78bfa}
-.loan-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #a78bfa;cursor:pointer;transition:background 0.1s}
-.loan-card:hover{background:#1a2a3d}
-.loan-card.overdue{border-left-color:#ef4444}
-.loan-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px}
-.loan-number{font-size:11px;font-weight:700;color:#a78bfa;font-family:"Courier New",monospace}
-.loan-status-badge{font-size:10px;font-weight:700;border-radius:10px;padding:2px 9px;white-space:nowrap;flex-shrink:0}
-.loan-customer{font-size:15px;font-weight:700;color:#e2e8f0}
-.loan-meta{font-size:11px;color:#5a8090;margin-top:4px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.loan-overdue-flag{color:#ef4444;font-weight:700}
-.tool-reg-card{background:#141f2d;border-radius:10px;padding:11px 13px;margin-bottom:7px;border-left:3px solid #a78bfa;display:flex;align-items:center;gap:10px;cursor:pointer}
-.tool-reg-card:hover{background:#1a2a3d}
-.tool-reg-card.unavailable{border-left-color:#ef4444}
-.tool-reg-name{font-size:13px;font-weight:700;color:#e2e8f0;flex:1}
-.tool-reg-sn{font-size:11px;color:#5a8090}
-.tool-reg-status{font-size:11px;font-weight:700;border-radius:8px;padding:3px 10px;flex-shrink:0}
-.filter-btn.alert{border-color:#ef4444;color:#ef4444}
-.filter-btn.alert:hover,.filter-btn.alert.active{background:#ef4444;color:white;border-color:#ef4444}
-.machine-card-list{padding:12px 14px}
-.machine-brand-section{margin-bottom:18px}
-.machine-brand-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;padding:4px 0 8px 2px;border-bottom:1px solid #1e3048;margin-bottom:8px}
-.machine-card{background:#141f2d;border-radius:10px;padding:11px 14px;margin-bottom:7px;border-left:4px solid #2a4060;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background 0.15s}
-.machine-card:hover{background:#1a2a3d}
-.machine-card-name{font-size:14px;font-weight:700;color:#e2e8f0}
-.machine-card-meta{font-size:11px;color:#5a8090;margin-top:3px}
-.machine-card-arrow{font-size:16px;color:#3a5070}
-.parts-breadcrumb{padding:8px 14px;font-size:12px;color:#5a8090;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1e3048;cursor:pointer}
-.parts-breadcrumb:hover{color:#e2e8f0}
-.parts-breadcrumb-name{color:#00c8e0;font-weight:700}
-.tab.tools-tab{border-color:#10b981;color:#10b981}
-.tab.tools-tab:hover,.tab.tools-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
-.agr-card{background:#141f2d;border-radius:10px;padding:13px 14px;margin-bottom:8px;border-left:4px solid #f59e0b;cursor:pointer;transition:background 0.1s}
-.agr-card:hover{background:#1a2a3d}
-.agr-card.inactive{border-left-color:#4a6080;opacity:0.6}
-.agr-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px}
-.agr-customer{font-size:15px;font-weight:700;color:#e2e8f0}
-.agr-meta{font-size:11px;color:#5a8090;margin-top:4px;display:flex;flex-wrap:wrap;gap:10px}
-.agr-fee{font-size:13px;font-weight:700;color:#f59e0b}
-.period-job-row{background:#0f1923;border-radius:7px;padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px;font-size:12px}
-.period-job-num{color:#64b5c8;font-family:"Courier New",monospace;font-weight:700;flex-shrink:0}
-.period-hours-bar{height:6px;border-radius:3px;background:#1e3048;margin:8px 0}
-.period-hours-fill{height:6px;border-radius:3px;background:#f59e0b;transition:width 0.3s}
-.period-hours-fill.over{background:#ef4444}
+.tab.supplier-tab{border-color:#8b5cf6;color:#8b5cf6}
+.tab.supplier-tab:hover,.tab.supplier-tab.active{background:#8b5cf6;border-color:#8b5cf6;color:#0f1923}
 .tab-add{padding:6px 12px;border-radius:20px;border:1px dashed #3a6050;background:transparent;color:#3a9070;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .tab-add:hover{border-color:#10b981;color:#10b981}
 .tab-del{padding:4px 7px;border-radius:20px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;margin-left:-6px}
@@ -290,7 +231,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 @media print{
   body > *:not(#printArea){display:none !important}
   #printArea{display:block !important}
-  .print-label{width:87mm;height:28mm;page-break-after:always;page-break-inside:avoid;display:flex;align-items:stretch;font-family:Arial,sans-serif;background:white;color:black;overflow:hidden}
+  .print-label{width:87mm;height:32mm;page-break-after:always;page-break-inside:avoid;display:flex;align-items:stretch;font-family:Arial,sans-serif;background:white;color:black;overflow:hidden}
   .pl-text{flex:1;padding:1.5mm 1.5mm 1.5mm 3mm;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;border-right:0.3mm solid #ccc}
   .pl-partno-label{font-size:9pt;font-weight:700;color:#666;text-transform:uppercase}
   .pl-partno{font-size:22pt;font-weight:900;font-family:'Courier New',monospace;color:#000;line-height:1.05;word-break:break-all}
@@ -299,11 +240,23 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   .pl-loc{font-size:9pt;color:#333}
   .pl-qr{flex-shrink:0;width:28mm;display:flex;align-items:center;justify-content:center;padding:1mm}
   .pl-qr canvas,.pl-qr img{width:26mm !important;height:26mm !important}
-  @page{size:89mm 36mm;margin:5mm 1mm 0mm}
+  @page{size:89mm 36mm;margin:2mm 1mm}
 }
 #printArea{display:none}
+.supplier-section{padding:14px;display:none}
+.supplier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.supplier-card{background:#1a2a3d;border:1px solid #2a4060;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:0}
+.supplier-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.supplier-name{font-size:15px;font-weight:700;color:#e0f0ff}
+.supplier-brands{display:flex;flex-wrap:wrap;gap:4px}
+.brand-chip{background:#8b5cf620;border:1px solid #8b5cf660;color:#c4b5fd;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.s-row{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;font-size:12px;color:#8aa8c0;line-height:1.4}
+.s-row .ico{flex-shrink:0;width:15px;text-align:center;font-size:13px;margin-top:1px}
+.s-row .val{color:#c0d8f0;word-break:break-word}
+.s-row a.val{color:#00c8e0;text-decoration:none}
+.s-row a.val:hover{text-decoration:underline}
+.s-notes{margin-top:8px;padding-top:8px;border-top:1px solid #2a4060;font-size:11px;color:#6a8a9a;font-style:italic;line-height:1.5}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -339,9 +292,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <button class="filter-btn" onclick="setJobFilter('ACTIVE',this)">Active</button>
     <button class="filter-btn" onclick="setJobFilter('FOLLOW',this)">Follow-Up</button>
     <button class="filter-btn" onclick="setJobFilter('COMPLETED',this)">Completed</button>
-    <button class="filter-btn" onclick="setJobFilter('QUOTE SENT',this)">Quote Sent</button>
-    <button class="filter-btn" onclick="setJobFilter('ON HOLD',this)">On Hold</button>
-    <button class="filter-btn alert" id="btnUnordered" onclick="setJobFilter('UNORDERED',this)">&#9888; PARTS UNORDERED</button>
   </div>
   <div id="jobsList"></div>
 </div>
@@ -359,44 +309,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   <div id="orderList"></div>
 </div>
 
-<!-- Loans toolbar -->
-<div class="loan-toolbar" id="loanToolbar" style="display:none">
-  <div class="loan-view-toggle">
-    <button class="loan-view-btn active" id="btnLoanActive" onclick="setLoanView('active')">Active / Overdue</button>
-    <button class="loan-view-btn" id="btnLoanRegister" onclick="setLoanView('register')">Tool Register</button>
-  </div>
-  <button class="btn-add" style="background:#a78bfa;margin-left:auto" onclick="openNewLoanModal()">+ New Loan</button>
-  <button class="btn-add" style="background:#1e3048;border:1px solid #a78bfa;color:#a78bfa" onclick="openLoanToolModal()">+ Add Loan Tool</button>
-</div>
-<div class="loan-section" id="loanSection" style="display:none"><div id="loanList"></div></div>
-
-<!-- Agreements toolbar -->
-<div class="loan-toolbar" id="agrToolbar" style="display:none">
-  <button class="btn-add" style="background:#f59e0b;margin-left:auto;color:#0f1923;font-weight:700" onclick="openAgrModal()">+ New Agreement</button>
-</div>
-<div class="loan-section" id="agrSection" style="display:none"><div id="agrList"></div></div>
-
-<!-- All Parts flat list section -->
-<div id="allPartsSection" style="display:none">
-  <div style="padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #1e3048">
-    <input id="allPartsSearch" placeholder="Search part number or description..." oninput="filterAllParts()" autocomplete="off" style="flex:1;min-width:200px;padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
-    <div style="display:flex;gap:5px">
-      <button class="filter-chip active" id="apChip_all" onclick="setAllPartsFilter('all',this)">All</button>
-      <button class="filter-chip" id="apChip_in" onclick="setAllPartsFilter('in',this)">In Stock</button>
-      <button class="filter-chip" id="apChip_low" onclick="setAllPartsFilter('low',this)">Low</button>
-      <button class="filter-chip" id="apChip_zero" onclick="setAllPartsFilter('zero',this)">Zero</button>
-    </div>
-  </div>
-  <div id="allPartsList" style="padding:0 14px 20px"></div>
-</div>
-
-<!-- Machine card list (tools landing) -->
-<div id="machineCardSection" style="display:none"></div>
-
-<!-- Parts breadcrumb -->
-<div class="parts-breadcrumb" id="partsBreadcrumb" style="display:none" onclick="backToMachineList()">
-  <span id="breadcrumbBack" style="color:#5a8090;font-size:11px">&#9664; Tools /</span>
-  <span class="parts-breadcrumb-name" id="breadcrumbName"></span>
+<!-- Suppliers section -->
+<div class="supplier-section" id="supplierSection">
+  <div id="supplierGrid" class="supplier-grid"><div class="center"><span class="spinner"></span> Loading...</div></div>
 </div>
 
 <div class="label-panel" id="labelPanel">
@@ -456,11 +371,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field"><label>Reorder When Below</label><input id="fThreshold" type="number" value="1" min="0"></div>
     </div>
     <div class="section-label">Pricing</div>
-    <div class="g2">
-      <div class="field"><label>Cost Price ($)</label><input id="fCost" type="number" step="0.01" min="0" placeholder="0.00" oninput="autoCalcSell()"></div>
-      <div class="field"><label>GP %</label><input id="fGP" type="number" step="1" min="0" max="100" placeholder="40" oninput="autoCalcSell()"></div>
-      <div class="field"><label>Sell Price ($)</label><input id="fSell" type="number" step="0.01" min="0" placeholder="0.00" oninput="autoCalcGP()"></div>
-      <div class="field" style="display:flex;align-items:flex-end;padding-bottom:2px"><span style="font-size:11px;color:#5a8090">Enter cost + GP% to auto-calc sell.</span></div>
+    <div class="field-row">
+      <div class="field"><label>Cost Price ($)</label><input id="fCost" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="field"><label>Sell Price ($)</label><input id="fSell" type="number" step="0.01" min="0" placeholder="0.00"></div>
     </div>
     <div class="section-label">MYOB Accounts</div>
     <div class="field"><label>Income Account</label><input id="fMyobIncome" placeholder="e.g. 4-1000"></div>
@@ -480,10 +393,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     </div>
     <button id="autoGenBtn"
     <button id="autoGenBtn" onclick="autoGenPartNo()" style="display:none;width:100%;padding:10px;background:#1e3048;color:#f59e0b;border:1px solid #f59e0b;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px;margin-bottom:8px">Auto-Generate Part Number</button>
-    <div style="display:flex;gap:8px">
-    <button class="btn-save" id="btnSave" onclick="savePart()" style="flex:1">Save Part</button>
-    <button onclick="closeModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
-    </div>
+    <button class="btn-save" id="btnSave" onclick="savePart()">Save Part</button>
     <button class="btn-delete" id="btnDeletePart" onclick="deletePart()" style="display:none">Delete This Part</button>
   </div>
 </div>
@@ -507,10 +417,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 
     <div class="field"><label>Status</label>
       <select id="jStatus">
-        <option value="NEW JOB">New Job</option>
-        <option value="AWAITING ASSESSMENT">Awaiting Assessment</option>
-        <option value="AWAITING GOODS">Awaiting Goods</option>
-        <option value="QUOTED - AWAITING APPROVAL">Quote Sent — Awaiting Approval</option>
+        <option value="NEW JOB">NEW JOB</option>
+        <option value="AWAITING ASSESSMENT">AWAITING ASSESSMENT</option>
+        <option value="AWAITING GOODS">AWAITING GOODS</option>
+        <option value="QUOTED - AWAITING APPROVAL">QUOTED - AWAITING APPROVAL</option>
         <option value="WAITING ON PARTS">WAITING ON PARTS</option>
         <option value="IN WORKSHOP">IN WORKSHOP</option>
         <option value="WAITING TO BE RETURNED">WAITING TO BE RETURNED</option>
@@ -536,10 +446,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div id="jobToolsList"></div>
 
     <div class="section-label">Parts Required</div>
+    <div class="parts-search-area">
+      <div class="parts-search-row">
+        <input id="partSearchInput" placeholder="Search by part number or description..." oninput="searchPartsForJob()" autocomplete="off">
+      </div>
+      <div class="parts-search-results" id="partSearchResults"></div>
+    </div>
+    <div class="job-parts-list" id="jobPartsList"></div>
+
     <div class="section-label">Costs</div>
     <div class="g2">
-      
-      <div class="field"><label>Parts ($) <span style="font-size:10px;color:#5a8090;font-weight:400">auto</span></label><input id="jParts" type="number" step="0.01" min="0" placeholder="0.00" readonly style="opacity:0.65;cursor:default;background:#0a1420"></div>
+      <div class="field"><label>Labour ($)</label><input id="jLabour" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="field"><label>Parts ($)</label><input id="jParts" type="number" step="0.01" min="0" placeholder="0.00"></div>
     </div>
 
     <div class="section-label">Files and Links</div>
@@ -553,16 +471,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="links-list" id="linksList"></div>
     </div>
 
-    <div class="section-label">Agreement &amp; Time</div>
-    <div class="g2">
-      <div class="field"><label>Linked Agreement</label>
-        <select id="jAgreementId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
-          <option value="">-- None --</option>
-        </select>
-      </div>
-      <div class="field"><label>Hours Spent</label><input id="jHoursSpent" type="number" step="0.25" min="0" placeholder="e.g. 2.5"></div>
-    </div>
-
     <div class="section-label">Follow-Up and Notes</div>
     <div class="g2">
       <div class="field full"><div class="field-check"><input type="checkbox" id="jFollowup"><label for="jFollowup">Follow-up required</label></div></div>
@@ -570,134 +478,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field full"><label>Internal Notes</label><textarea id="jInternalNotes" placeholder="Internal notes only..."></textarea></div>
     </div>
 
-    <div style="display:flex;gap:8px">
-    <button class="btn-save orange" id="btnSaveJob" onclick="saveJob()" style="flex:1">Save Service Case</button>
-    <button onclick="closeJobModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
-    </div>
+    <button class="btn-save orange" id="btnSaveJob" onclick="saveJob()">Save Service Case</button>
     <button class="btn-delete" id="btnDeleteJob" onclick="deleteJob()" style="display:none">Delete This Service Case</button>
-  </div>
-</div>
-
-<!-- Loan Modal -->
-<div class="overlay" id="loanOverlay" onclick="if(event.target===this)closeLoanModal()">
-  <div class="modal" style="border-top-color:#a78bfa">
-    <div class="modal-header"><div class="modal-title" id="loanModalTitle">New Loan</div><button class="modal-close" onclick="closeLoanModal()">x</button></div>
-    <div class="section-label">Tool</div>
-    <div class="field"><label>Loan Tool *</label><select id="lToolId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select tool --</option></select></div>
-    <div class="g2">
-      <div class="field"><label>Condition Out</label><select id="lConditionOut" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
-      <div class="field"><label>Cycle Count Out</label><input id="lCycleCountOut" type="number" min="0" placeholder="e.g. 12500"></div>
-    </div>
-    <div class="field"><label>Reason for Loan</label><input id="lReason" placeholder="e.g. Customer tool in for service"></div>
-    <div class="field"><label>Photo Out (SharePoint link)</label><input id="lPhotoOut" placeholder="Paste link"></div>
-    <div class="section-label">Customer</div>
-    <div class="g2">
-      <div class="field full"><label>Customer / Company *</label><input id="lCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour"></div>
-      <div class="field"><label>Contact Name</label><input id="lContact" placeholder="e.g. John Smith"></div>
-      <div class="field"><label>Phone</label><input id="lPhone" placeholder="e.g. 02 6652 0000"></div>
-      <div class="field"><label>Mobile</label><input id="lMobile" placeholder="e.g. 0412 345 678"></div>
-      <div class="field"><label>Email</label><input id="lEmail" type="email" placeholder="e.g. john@example.com.au"></div>
-    </div>
-    <div class="section-label">Loan Details</div>
-    <div class="g2">
-      <div class="field"><label>Loaned Date</label><input id="lLoanedDate" type="date"></div>
-      <div class="field"><label>Expected Return</label><input id="lExpectedReturn" type="date"></div>
-      <div class="field"><label>Loaned By</label><input id="lLoanedBy" placeholder="e.g. Rob"></div>
-      <div class="field"><label>Linked Job</label><input id="lLinkedJob" placeholder="e.g. XPS-008"></div>
-    </div>
-    <div class="field"><label>Notes</label><textarea id="lNotes" placeholder="Any notes about the loan..." style="min-height:60px"></textarea></div>
-    <div id="lReturnSection" style="display:none">
-      <div class="section-label">Return</div>
-      <div class="g2">
-        <div class="field"><label>Returned Date</label><input id="lReturnedDate" type="date"></div>
-        <div class="field"><label>Condition In</label><select id="lConditionIn" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
-        <div class="field"><label>Cycle Count In</label><input id="lCycleCountIn" type="number" min="0" placeholder="e.g. 13200"></div>
-        <div class="field"><label>Photo In (SharePoint link)</label><input id="lPhotoIn" placeholder="Paste link"></div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px">
-    <button class="btn-save" style="background:#a78bfa;flex:1" id="btnSaveLoan" onclick="saveLoan()">Save Loan</button>
-    <button id="btnCloseLoan" onclick="closeLoanModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
-    </div>
-    <button id="btnMarkReturned" onclick="markLoanReturned()" style="display:none;width:100%;padding:11px;background:transparent;color:#10b981;border:1px solid #10b981;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">&#10003; Mark as Returned</button>
-    <button id="btnPrintLoanTag" onclick="printLoanTag()" style="display:none;width:100%;padding:11px;background:transparent;color:#a78bfa;border:1px solid #a78bfa;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Print Loan Tag</button>
-    <button class="btn-delete" id="btnDeleteLoan" onclick="deleteLoan()" style="display:none">Delete This Loan</button>
-  </div>
-</div>
-
-<!-- Loan Tool Register Modal -->
-<div class="overlay" id="loanToolOverlay" onclick="if(event.target===this)closeLoanToolModal()">
-  <div class="modal" style="border-top-color:#a78bfa">
-    <div class="modal-header"><div class="modal-title" id="loanToolModalTitle">Add Loan Tool</div><button class="modal-close" onclick="closeLoanToolModal()">x</button></div>
-    <div class="section-label">Tool Details</div>
-    <div class="field"><label>Tool Name / Model *</label><input id="ltName" placeholder="e.g. CHT 460, OR-T 250"></div>
-    <div class="g2">
-      <div class="field"><label>X-Pak Name</label><input id="ltXpakName" placeholder="e.g. CHT-460 Battery Tensioner"></div>
-      <div class="field"><label>X-Pak Code</label><input id="ltXpakCode" placeholder="e.g. 03.008-460"></div>
-    </div>
-    <div class="g2">
-      <div class="field"><label>Serial Number</label><input id="ltSerial" placeholder="e.g. 56096"></div>
-      <div class="field"><label>Condition</label><select id="ltCondition" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
-    </div>
-    <div class="field"><label>Location</label>
-      <input id="ltLocation" list="ltLocationList" placeholder="e.g. Tamworth Stock">
-      <datalist id="ltLocationList">
-        <option value="Tamworth Stock">
-        <option value="Rep Stock — Tom">
-        <option value="Customer">
-      </datalist>
-    </div>
-    <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
-    <div style="display:flex;gap:8px">
-    <button class="btn-save" style="background:#a78bfa;flex:1" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
-    <button onclick="closeLoanToolModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
-    </div>
-    <button id="btnPrintIdLabel" onclick="printToolIdLabel()" style="display:none;width:100%;padding:11px;background:transparent;color:#00c8e0;border:1px solid #00c8e0;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Print ID Label</button>
-    <button class="btn-delete" id="btnDeleteLoanTool" onclick="deleteLoanTool()" style="display:none">Remove from Register</button>
-  </div>
-</div>
-
-<!-- Service Agreement Modal -->
-<div class="overlay" id="agrOverlay" onclick="if(event.target===this)closeAgrModal()">
-  <div class="modal" style="border-top-color:#f59e0b">
-    <div class="modal-header"><div class="modal-title" id="agrModalTitle">New Service Agreement</div><button class="modal-close" onclick="closeAgrModal()">x</button></div>
-    <div class="section-label">Customer</div>
-    <div class="g2">
-      <div class="field full"><label>Customer / Company *</label><input id="aCustomer" placeholder="e.g. Thomas Foods International"></div>
-      <div class="field"><label>Contact Name</label><input id="aContact" placeholder="e.g. Site Manager"></div>
-      <div class="field"><label>Phone</label><input id="aPhone" placeholder=""></div>
-      <div class="field"><label>Email</label><input id="aEmail" type="email" placeholder=""></div>
-    </div>
-    <div class="section-label">Agreement Terms</div>
-    <div class="g2">
-      <div class="field"><label>Monthly Fee ($) ex GST</label><input id="aFee" type="number" step="0.01" placeholder="2000.00"></div>
-      <div class="field"><label>Included Hours / Month</label><input id="aHours" type="number" step="0.5" placeholder="8"></div>
-      <div class="field"><label>Hourly Rate for Extras ($)</label><input id="aHourlyRate" type="number" step="0.01" placeholder="e.g. 150.00"></div>
-      <div class="field"><label>Start Date</label><input id="aStartDate" type="date"></div>
-    </div>
-    <div class="field"><label>Machines / Equipment Covered</label><textarea id="aMachines" placeholder="e.g. Strapack SQ-800 (S/N 12345)" style="min-height:55px"></textarea></div>
-    <div class="field"><label>Notes</label><textarea id="aNotes" placeholder="Any agreement notes..." style="min-height:55px"></textarea></div>
-    <div class="field"><label>Status</label>
-      <select id="aStatus" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
-        <option value="ACTIVE">Active</option>
-        <option value="INACTIVE">Inactive</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:8px">
-    <button class="btn-save" style="background:#f59e0b;color:#0f1923;font-weight:700;flex:1" id="btnSaveAgr" onclick="saveAgr()">Save Agreement</button>
-    <button onclick="closeAgrModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
-    </div>
-    <button class="btn-delete" id="btnDeleteAgr" onclick="deleteAgr()" style="display:none">Delete Agreement</button>
-  </div>
-</div>
-
-<!-- Agreement Period Modal -->
-<div class="overlay" id="agrPeriodOverlay" onclick="if(event.target===this)closeAgrPeriod()">
-  <div class="modal" style="border-top-color:#f59e0b;max-width:640px">
-    <div class="modal-header"><div class="modal-title" id="agrPeriodTitle">Agreement Detail</div><button class="modal-close" onclick="closeAgrPeriod()">x</button></div>
-    <div id="agrPeriodBody"></div>
-    <button onclick="generateMonthlyReport()" style="width:100%;padding:11px;background:transparent;color:#f59e0b;border:1px solid #f59e0b;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px">&#128196; Generate Monthly Report</button>
-    <button class="btn-delete" style="display:block" onclick="closeAgrPeriod()">Close</button>
   </div>
 </div>
 
@@ -737,66 +519,6 @@ var H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'applicat
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
 var jobs = [], editingJob = null, jobFilter = 'ALL', currentView = 'parts', jobViewMode = 'list';
-var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
-var openBrandGroups = {};
-var allPartsFilter = 'all';
-var allPartsSearchTerm = '';
-
-function renderAllPartsList() {
-  filterAllParts();
-}
-
-function setAllPartsFilter(f, btn) {
-  allPartsFilter = f;
-  document.querySelectorAll('#allPartsSection .filter-chip').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  filterAllParts();
-}
-
-function filterAllParts() {
-  allPartsSearchTerm = (document.getElementById('allPartsSearch').value||'').toLowerCase().trim();
-  var filtered = allParts.filter(function(p) {
-    var s = p.stock && p.stock[0];
-    var qty = s ? s.quantity : null;
-    if (allPartsFilter === 'in'   && !(qty > 0)) return false;
-    if (allPartsFilter === 'low'  && !(qty !== null && qty > 0 && qty <= (s.reorder_threshold||1))) return false;
-    if (allPartsFilter === 'zero' && !(qty === 0)) return false;
-    if (allPartsSearchTerm) {
-      return p.key_no.toLowerCase().includes(allPartsSearchTerm) ||
-             p.description.toLowerCase().includes(allPartsSearchTerm) ||
-             (p.machineName||'').toLowerCase().includes(allPartsSearchTerm) ||
-             (p.diagram_ref && p.diagram_ref.toLowerCase().includes(allPartsSearchTerm));
-    }
-    return true;
-  });
-  var el = document.getElementById('allPartsList');
-  if (!filtered.length) { el.innerHTML = '<div class="center" style="padding:30px;color:#3a5070">No parts match</div>'; return; }
-  // Group by machine
-  var byMachine = {}, machineOrder = [];
-  filtered.forEach(function(p) {
-    var mn = p.machineName || 'Unknown';
-    if (!byMachine[mn]) { byMachine[mn] = []; machineOrder.push(mn); }
-    byMachine[mn].push(p);
-  });
-  var html2 = '';
-  machineOrder.forEach(function(mn) {
-    html2 += '<div style="margin-top:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#3a5070;padding:4px 0 6px;border-bottom:1px solid #1a2a3d">' + mn + '</div>';
-    byMachine[mn].forEach(function(p) {
-      var s = p.stock && p.stock[0];
-      var qty = s ? s.quantity : null;
-      var st = qty === null ? 'unset' : qty === 0 ? 'empty' : qty <= (s.reorder_threshold||1) ? 'low' : 'ok';
-      var stCol = {ok:'#10b981',low:'#f59e0b',empty:'#ef4444',unset:'#3a5070'}[st];
-      html2 += '<div class="part-row" onclick="openEditPartModal(\'' + p.id + '\')" style="cursor:pointer">' +
-        '<div class="pr-keyno">' + p.key_no + '</div>' +
-        '<div class="pr-desc">' + p.description + (p.spec ? '<span class="pr-spec"> ' + p.spec + '</span>' : '') + '</div>' +
-        '<div class="pr-right"><span class="stock-chip ' + st + '">' + (qty===null?'-':qty) + '</span></div>' +
-      '</div>';
-    });
-    html2 += '</div>';
-  });
-  el.innerHTML = html2;
-}
-var agreements = [], editingAgr = null, viewingAgr = null, viewingPeriod = null;
 var jobLinks = [], jobPartsLocal = [], jobToolsLocal = [], machineModalFromJob = false;
 var partsFilter = 'all';
 
@@ -811,7 +533,7 @@ var OPEN_ST  = ['NEW JOB','AWAITING ASSESSMENT','AWAITING GOODS','QUOTED - AWAIT
 var ACT_ST   = ['WAITING ON PARTS','IN WORKSHOP','WAITING TO BE RETURNED'];
 var FOL_ST   = ['AFTER SERVICE FOLLOW-UP'];
 
-var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981', 'NEW JOB':'#f59e0b', 'IN PROGRESS':'#64b5c8', 'WAITING ON PARTS':'#f97316', 'AWAITING ASSESSMENT':'#a78bfa', 'AWAITING GOODS':'#f97316', 'QUOTED - AWAITING APPROVAL':'#a78bfa', COMPLETED:'#10b981', 'ON HOLD':'#5a8090' };
+var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981' };
 var STATUS_LABELS  = { to_order:'To Order', ordered:'Ordered', arrived:'Arrived', use_stock:'Use Stock' };
 
 async function db(method, path, body) {
@@ -846,22 +568,10 @@ function renderSuppliersList() {
   }).join('');
 }
  
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Escape') return;
-  var overlays = ['overlay','jobOverlay','loanOverlay','loanToolOverlay','agrOverlay','agrPeriodOverlay','machineOverlay','directOrderOverlay'];
-  for (var i=0; i<overlays.length; i++) {
-    var el = document.getElementById(overlays[i]);
-    if (el && el.classList.contains('show')) { el.classList.remove('show'); return; }
-  }
-});
-
 async function init() {
   try {
-    machines = await db('GET', 'machines?select=*&order=brand_order.asc,name.asc');
+    machines = await db('GET', 'machines?select=*&order=name.asc');
     renderTabs(); await loadAllParts();
-  // Start on Jobs view
-  switchToJobs();
-  try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=id,customer'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
     if (machines.length) await selectMachine(machines[0]);
     else document.getElementById('partsList').innerHTML = '<div class="center"><div class="icon">+</div><div>No machines yet.</div></div>';
   } catch(e) {
@@ -872,13 +582,8 @@ async function init() {
 
 async function loadAllParts() {
   try {
-    var all = [], offset = 0, batch;
-    do {
-      batch = await db('GET', 'parts?select=*,stock(*)&order=key_no.asc&limit=1000&offset=' + offset);
-      all = all.concat(batch);
-      offset += 1000;
-    } while (batch.length === 1000);
-    allParts = all.map(function(p) {
+    var data = await db('GET', 'parts?select=*,stock(*)&order=key_no.asc');
+    allParts = data.map(function(p) {
       var m = machines.find(function(m) { return m.id === p.machine_id; });
       p.machineName = m ? m.name : 'Unknown'; return p;
     });
@@ -898,16 +603,7 @@ function hideAllViews() {
   document.getElementById('jobsBoardSection').style.display = 'none';
   document.getElementById('orderToolbar').style.display = 'none';
   document.getElementById('orderSection').style.display = 'none';
-  var lt = document.getElementById('loanToolbar'); if(lt) lt.style.display = 'none';
-  var ls = document.getElementById('loanSection'); if(ls) ls.style.display = 'none';
-  var at = document.getElementById('agrToolbar'); if(at) at.style.display = 'none';
-  var as2 = document.getElementById('agrSection'); if(as2) as2.style.display = 'none';
-  var mcs = document.getElementById('machineCardSection'); if(mcs) mcs.style.display = 'none';
-  var aps = document.getElementById('allPartsSection'); if(aps) aps.style.display = 'none';
-  var pb = document.getElementById('partsBreadcrumb'); if(pb) pb.style.display = 'none';
-  document.getElementById('mainToolbar').style.display = 'none';
-  document.getElementById('statsBar').style.display = 'none';
-  document.getElementById('partsList').style.display = 'none';
+  document.getElementById('supplierSection').style.display = 'none';
 }
 
 function switchToJobs() {
@@ -927,428 +623,58 @@ function switchToOrder() {
   loadOrderList();
 }
 
-// switchToParts is defined later in the nav section
+function switchToParts() {
+  currentView = 'parts'; hideAllViews(); renderTabs();
+  document.getElementById('mainToolbar').style.display = 'flex';
+  document.getElementById('statsBar').style.display = 'flex';
+  document.getElementById('partsList').style.display = 'block';
+  if (selectedMachine) { renderDocsBar(); renderParts(); }
+}
 
-function switchToLoans() {
-  currentView='loan'; hideAllViews(); renderTabs();
-  document.getElementById('loanToolbar').style.display='flex';
-  document.getElementById('loanSection').style.display='block';
-  document.getElementById('hSub').textContent='Loans';
-  document.getElementById('lowBadge').innerHTML='';
-  setLoanView('active');
-  if (!loans.length) loadLoans(); else renderLoanView();
+function switchToSuppliers() {
+  currentView = 'suppliers'; hideAllViews(); renderTabs();
+  document.getElementById('supplierSection').style.display = 'block';
+  document.getElementById('hSub').textContent = 'Supplier Directory';
+  document.getElementById('lowBadge').innerHTML = '';
+  loadSupplierCards();
 }
-function switchToAgreements() {
-  currentView='agr'; hideAllViews(); renderTabs();
-  document.getElementById('agrToolbar').style.display='flex';
-  document.getElementById('agrSection').style.display='block';
-  document.getElementById('hSub').textContent='Service Agreements';
-  document.getElementById('lowBadge').innerHTML='';
-  loadAgreements();
-}
-function setLoanView(v){
-  loanView=v;
-  document.getElementById('btnLoanActive').classList.toggle('active',v==='active');
-  document.getElementById('btnLoanRegister').classList.toggle('active',v==='register');
-  renderLoanView();
-}
-function xplNum(n){return 'XPL-'+String(n).padStart(3,'0');}
-function fmtMonth(d){ var dt=new Date(d+'T12:00:00'); return dt.toLocaleString('default',{month:'long',year:'numeric'}); }
 
-async function loadLoans(){
-  document.getElementById('loanList').innerHTML='<div class="center"><span class="spinner"></span> Loading...</div>';
-  try{loanTools=await db('GET','loan_tools?select=*&order=name.asc'); loans=await db('GET','loans?select=*&order=loan_number.desc'); renderLoanView();}
-  catch(e){document.getElementById('loanList').innerHTML='<div class="center"><div style="color:#ef4444">Could not load loans.</div></div>';}
-}
-function renderLoanView(){if(loanView==='register')renderToolRegister();else renderActiveLoans();}
-function renderActiveLoans(){
-  var today=new Date(); today.setHours(0,0,0,0);
-  var active=loans.filter(function(l){return l.status!=='RETURNED';});
-  var overdue=active.filter(function(l){return l.expected_return&&new Date(l.expected_return)<today;});
-  document.getElementById('hSub').textContent='Loan Tools — '+active.length+' active';
-  document.getElementById('lowBadge').innerHTML=overdue.length?'<div class="badge-low">'+overdue.length+' OVERDUE</div>':'';
-  if(!active.length){document.getElementById('loanList').innerHTML='<div class="center"><div class="icon">✓</div><div style="color:#10b981">No active loans</div></div>';return;}
-  document.getElementById('loanList').innerHTML=active.map(function(l){
-    var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;});
-    var toolName=tool?tool.name+(tool.serial_number?' S/N:'+tool.serial_number:''):'Unknown Tool';
-    var isOverdue=l.expected_return&&new Date(l.expected_return)<today;
-    var daysOut=l.loaned_date?Math.floor((today-new Date(l.loaned_date))/86400000):0;
-    var col=isOverdue?'#ef4444':'#a78bfa';
-    return '<div class="loan-card'+(isOverdue?' overdue':'')+'" onclick="openEditLoanModal(\'' + l.id + '\')">'+
-      '<div class="loan-card-top"><div><div class="loan-number">'+xplNum(l.loan_number)+'</div><div class="loan-customer">'+(l.customer||'No customer')+'</div></div>'+
-      '<span class="loan-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+(isOverdue?'OVERDUE':'ACTIVE')+'</span></div>'+
-      '<div class="loan-meta"><span>'+toolName+'</span>'+(l.contact_name?'<span>'+l.contact_name+(l.mobile?' '+l.mobile:'')+'</span>':'')+
-      '<span>Out: '+fmtDate(l.loaned_date)+(daysOut>0?' ('+daysOut+'d)':'')+'</span>'+
-      (l.expected_return?'<span'+(isOverdue?' class="loan-overdue-flag"':'')+'>Due '+fmtDate(l.expected_return)+'</span>':'')+
-      (l.loaned_by?'<span>By: '+l.loaned_by+'</span>':'')+
-      (l.reason_for_loan?'<span style="color:#a78bfa">'+l.reason_for_loan+'</span>':'')+
-      '</div></div>';
-  }).join('');
-}
-function renderToolRegister(){
-  if(!loanTools.length){document.getElementById('loanList').innerHTML='<div class="center"><div class="icon">+</div><div>No loan tools yet.</div></div>';return;}
-  document.getElementById('loanList').innerHTML=loanTools.map(function(t){
-    var al=loans.find(function(l){return l.loan_tool_id===t.id&&l.status!=='RETURNED';});
-    var col=!al?'#10b981':'#ef4444'; var sl=!al?'Available':'On Loan — '+(al.customer||'');
-    return '<div class="tool-reg-card'+(al?' unavailable':'')+'" onclick="openLoanToolModal(\'' + t.id + '\')">'+
-      '<div style="flex:1"><div class="tool-reg-name">'+t.name+'</div>'+
-      (t.xpak_name?'<div style="font-size:12px;font-weight:700;color:#00c8e0;margin-bottom:2px">'+t.xpak_name+(t.xpak_code?' <span style="font-size:10px;color:#3a5070;font-weight:400">['+t.xpak_code+']</span>':'')+'</div>':'')+
-      (t.serial_number?'<div class="tool-reg-sn">S/N: '+t.serial_number+(t.condition?' · '+t.condition:'')+'</div>':'')+
-      (t.location?'<div style="font-size:11px;color:#f59e0b;margin-top:2px">● '+t.location+'</div>':'')+(t.notes?'<div style="font-size:11px;color:#5a8090;margin-top:2px">'+t.notes+'</div>':'')+
-      '</div><span class="tool-reg-status" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+sl+'</span></div>';
-  }).join('');
-}
-function clearLoanForm(){
-  ['lCustomer','lContact','lPhone','lMobile','lEmail','lReason','lPhotoOut','lPhotoIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id){document.getElementById(id).value='';});
-  ['lConditionOut','lConditionIn'].forEach(function(id){document.getElementById(id).value='';});
-  ['lCycleCountOut','lCycleCountIn'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('lLoanedDate').value=new Date().toISOString().split('T')[0];
-  document.getElementById('lExpectedReturn').value=''; document.getElementById('lReturnedDate').value='';
-}
-function openNewLoanModal(){
-  editingLoan=null; document.getElementById('loanModalTitle').textContent='New Loan'; clearLoanForm();
-  document.getElementById('lReturnSection').style.display='none';
-  document.getElementById('btnMarkReturned').style.display='none';
-  document.getElementById('btnPrintLoanTag').style.display='none';
-  document.getElementById('btnDeleteLoan').style.display='none';
-  document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
-  var sel=document.getElementById('lToolId');
-  sel.innerHTML='<option value="">-- Select tool --</option>'+loanTools.map(function(t){
-    var al=loans.find(function(l){return l.loan_tool_id===t.id&&l.status!=='RETURNED';});
-    return al?'':'<option value="'+t.id+'">'+t.name+(t.serial_number?' ('+t.serial_number+')':'')+'</option>';
-  }).join('');
-  document.getElementById('loanOverlay').classList.add('show');
-  setTimeout(function(){document.getElementById('lCustomer').focus();},100);
-}
-function openEditLoanModal(loanId){
-  var l=loans.find(function(x){return x.id===loanId;}); if(!l) return;
-  editingLoan=l; document.getElementById('loanModalTitle').textContent=xplNum(l.loan_number)+' — '+(l.customer||'');
-  var sel=document.getElementById('lToolId');
-  sel.innerHTML='<option value="">-- Select tool --</option>'+loanTools.map(function(t){return '<option value="'+t.id+'"'+(t.id===l.loan_tool_id?' selected':'')+'>'+t.name+(t.serial_number?' ('+t.serial_number+')':'')+'</option>';}).join('');
-  ['lCustomer','lContact','lPhone','lMobile','lEmail','lReason','lPhotoOut','lPhotoIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id){
-    var key={lCustomer:'customer',lContact:'contact_name',lPhone:'phone',lMobile:'mobile',lEmail:'email',lReason:'reason_for_loan',lPhotoOut:'photo_out',lPhotoIn:'photo_in',lLoanedBy:'loaned_by',lLinkedJob:'linked_job',lNotes:'notes'}[id];
-    document.getElementById(id).value=l[key]||'';
-  });
-  ['lConditionOut','lConditionIn'].forEach(function(id){var k={lConditionOut:'condition_out',lConditionIn:'condition_in'}[id]; document.getElementById(id).value=l[k]||'';});
-  document.getElementById('lCycleCountOut').value=l.cycle_count_out||''; document.getElementById('lCycleCountIn').value=l.cycle_count_in||'';
-  document.getElementById('lLoanedDate').value=l.loaned_date||''; document.getElementById('lExpectedReturn').value=l.expected_return||''; document.getElementById('lReturnedDate').value=l.returned_date||'';
-  var isR=l.status==='RETURNED';
-  document.getElementById('lReturnSection').style.display=isR?'block':'none';
-  document.getElementById('btnMarkReturned').style.display=isR?'none':'block';
-  document.getElementById('btnPrintLoanTag').style.display='block';
-  document.getElementById('btnDeleteLoan').style.display='block';
-  document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
-  document.getElementById('loanOverlay').classList.add('show');
-}
-function closeLoanModal(){document.getElementById('loanOverlay').classList.remove('show');}
-async function saveLoan(){
-  var toolId=document.getElementById('lToolId').value, customer=document.getElementById('lCustomer').value.trim();
-  if(!toolId){showToast('Select a tool','error');return;} if(!customer){showToast('Customer required','error');return;}
-  var btn=document.getElementById('btnSaveLoan'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={loan_tool_id:toolId,customer:customer,contact_name:document.getElementById('lContact').value||null,phone:document.getElementById('lPhone').value||null,mobile:document.getElementById('lMobile').value||null,email:document.getElementById('lEmail').value||null,condition_out:document.getElementById('lConditionOut').value||null,condition_in:document.getElementById('lConditionIn').value||null,cycle_count_out:parseInt(document.getElementById('lCycleCountOut').value)||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_out:document.getElementById('lPhotoOut').value||null,photo_in:document.getElementById('lPhotoIn').value||null,reason_for_loan:document.getElementById('lReason').value||null,loaned_date:document.getElementById('lLoanedDate').value||null,expected_return:document.getElementById('lExpectedReturn').value||null,returned_date:document.getElementById('lReturnedDate').value||null,loaned_by:document.getElementById('lLoanedBy').value||null,linked_job:document.getElementById('lLinkedJob').value||null,notes:document.getElementById('lNotes').value||null,status:'ACTIVE',updated_at:new Date().toISOString()};
-  try{
-    if(editingLoan) await db('PATCH','loans?id=eq.'+editingLoan.id,payload);
-    else{await db('POST','loans',payload); await db('PATCH','loan_tools?id=eq.'+toolId,{is_available:false,updated_at:new Date().toISOString()});}
-    showToast(editingLoan?'Loan updated':'Loan created');
-    await loadLoans();
-    if (!editingLoan) closeLoanModal(); // Only close on new loan, stay open when editing
-  }catch(e){showToast('Save failed: '+e.message,'error');}
-  finally{btn.disabled=false; btn.textContent='Save Loan';}
-}
-async function markLoanReturned(){
-  if(!editingLoan) return;
-  document.getElementById('lReturnSection').style.display='block';
-  document.getElementById('lReturnedDate').value=new Date().toISOString().split('T')[0];
-  document.getElementById('btnMarkReturned').style.display='none';
-  var btn=document.getElementById('btnSaveLoan'); btn.textContent='Save & Mark Returned'; btn.style.background='#10b981';
-  btn.onclick=async function(){
-    var toolId=editingLoan.loan_tool_id; btn.disabled=true;
-    try{
-      await db('PATCH','loans?id=eq.'+editingLoan.id,{status:'RETURNED',returned_date:document.getElementById('lReturnedDate').value||new Date().toISOString().split('T')[0],condition_in:document.getElementById('lConditionIn').value||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_in:document.getElementById('lPhotoIn').value||null,updated_at:new Date().toISOString()});
-      await db('PATCH','loan_tools?id=eq.'+toolId,{is_available:true,updated_at:new Date().toISOString()});
-      showToast('Returned'); closeLoanModal(); await loadLoans();
-    }catch(e){showToast('Failed: '+e.message,'error');}
-    finally{btn.disabled=false;}
-  };
-}
-function printLoanTag(){
-  var l=editingLoan; if(!l) return;
-  var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;}), toolName=tool?tool.name:'Unknown Tool', toolSN=tool&&tool.serial_number?tool.serial_number:'';
-  var w=window.open('','_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+xplNum(l.loan_number)+'</title><style>@page{size:89mm 50mm;margin:2mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;width:85mm}.tag{border:0.5mm solid #000;border-radius:2mm;padding:3mm 4mm}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:0.4mm solid #000;padding-bottom:2mm;margin-bottom:2.5mm}.xpl{font-size:18pt;font-weight:900;font-family:"Courier New",monospace}.brand{font-size:8pt;font-weight:700;color:#555;text-align:right;text-transform:uppercase}.tool-name{font-size:13pt;font-weight:900;margin-bottom:1mm}.sn{font-size:9pt;color:#333;margin-bottom:2.5mm}.row{display:flex;justify-content:space-between;margin-bottom:1.5mm}.lbl{font-size:7.5pt;font-weight:700;color:#666;text-transform:uppercase}.val{font-size:8.5pt;font-weight:700;text-align:right}</style></head><body>');
-  w.document.write('<div class="tag"><div class="header"><div class="xpl">'+xplNum(l.loan_number)+'</div><div class="brand">X-Pak<br>Loan Tool</div></div>');
-  w.document.write('<div class="tool-name">'+toolName+'</div>');
-  if(toolSN) w.document.write('<div class="sn">S/N: '+toolSN+(l.condition_out?' &middot; '+l.condition_out:'')+'</div>');
-  w.document.write('<div class="row"><span class="lbl">Customer</span><span class="val">'+(l.customer||'')+'</span></div>');
-  if(l.contact_name) w.document.write('<div class="row"><span class="lbl">Contact</span><span class="val">'+l.contact_name+(l.mobile?' '+l.mobile:'')+'</span></div>');
-  w.document.write('<div class="row"><span class="lbl">Date Out</span><span class="val">'+fmtDate(l.loaned_date)+'</span></div>');
-  if(l.expected_return) w.document.write('<div class="row"><span class="lbl">Return By</span><span class="val">'+fmtDate(l.expected_return)+'</span></div>');
-  if(l.loaned_by) w.document.write('<div class="row"><span class="lbl">Loaned By</span><span class="val">'+l.loaned_by+'</span></div>');
-  w.document.write('</div></body></html>'); w.document.close(); setTimeout(function(){w.print();},300);
-}
-async function deleteLoan(){
-  if(!editingLoan||!confirm('Delete this loan record?')) return;
-  try{
-    await db('DELETE','loans?id=eq.'+editingLoan.id);
-    var oa=loans.filter(function(l){return l.loan_tool_id===editingLoan.loan_tool_id&&l.id!==editingLoan.id&&l.status!=='RETURNED';});
-    if(!oa.length) await db('PATCH','loan_tools?id=eq.'+editingLoan.loan_tool_id,{is_available:true,updated_at:new Date().toISOString()});
-    showToast('Deleted'); closeLoanModal(); await loadLoans();
-  }catch(e){showToast('Delete failed','error');}
-}
-function openLoanToolModal(toolId){
-  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltXpakName').value=t.xpak_name||''; document.getElementById('ltXpakCode').value=t.xpak_code||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('btnDeleteLoanTool').style.display='block'; document.getElementById('btnPrintIdLabel').style.display='block';}
-  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation','ltXpakName','ltXpakCode'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
-  document.getElementById('loanToolOverlay').classList.add('show');
-  setTimeout(function(){document.getElementById('ltName').focus();},100);
-}
-function closeLoanToolModal(){document.getElementById('loanToolOverlay').classList.remove('show');}
-
-function printToolIdLabel() {
-  var t = editingLoanTool; if (!t) return;
-  var w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ID Label ' + t.name + '</title>');
-  w.document.write('<style>');
-  w.document.write('@page { size: 101mm 54mm; margin: 3mm 3.5mm; }');
-  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
-  w.document.write('body { font-family: Arial, sans-serif; width: 94mm; height: 48mm; overflow: hidden; }');
-  w.document.write('.label { width: 94mm; height: 48mm; border: 0.4mm solid #000; border-radius: 1.5mm; display: flex; flex-direction: column; justify-content: space-between; padding: 3mm 4mm; overflow: hidden; }');
-  w.document.write('.top { display: flex; justify-content: space-between; align-items: flex-start; }');
-  w.document.write('.xpl { font-size: 11pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; letter-spacing: 1px; }');
-  w.document.write('.brand { text-align: right; }');
-  w.document.write('.brand-top { font-size: 7pt; font-weight: 900; color: #000; letter-spacing: 2px; text-transform: uppercase; }');
-  w.document.write('.brand-sub { font-size: 6pt; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 1px; }');
-  w.document.write('.mid { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 2mm 0; }');
-  w.document.write('.tool-name { font-size: 22pt; font-weight: 900; color: #000; line-height: 1; letter-spacing: -0.5px; }');
-  w.document.write('.tool-type { font-size: 8pt; color: #444; margin-top: 1mm; }');
-  w.document.write('.bot { display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.3mm solid #ccc; padding-top: 2mm; }');
-  w.document.write('.sn-label { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }');
-  w.document.write('.sn-val { font-size: 9pt; font-weight: 700; color: #000; font-family: "Courier New", monospace; margin-top: 0.5mm; }');
-  w.document.write('.loc { text-align: right; }');
-  w.document.write('.loc-label { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }');
-  w.document.write('.loc-val { font-size: 8pt; font-weight: 700; color: #000; margin-top: 0.5mm; }');
-  w.document.write('</style></head><body>');
-  w.document.write('<div class="label">');
-  w.document.write('<div class="top">');
-  w.document.write('<div class="xpl">LOAN TOOL</div>');
-  w.document.write('<div class="brand"><div class="brand-top">X-PAK</div><div class="brand-sub">SERVICE</div></div>');
-  w.document.write('</div>');
-  w.document.write('<div class="mid">');
-  w.document.write('<div class="tool-name">' + t.name + '</div>');
-  if (t.condition) w.document.write('<div class="tool-type">Condition: ' + t.condition + '</div>');
-  w.document.write('</div>');
-  w.document.write('<div class="bot">');
-  if (t.serial_number) {
-    w.document.write('<div><div class="sn-label">Serial No.</div><div class="sn-val">' + t.serial_number + '</div></div>');
-  } else {
-    w.document.write('<div></div>');
+var _supplierCache = null;
+async function loadSupplierCards() {
+  if (_supplierCache) { renderSupplierCards(_supplierCache); return; }
+  try {
+    var data = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order');
+    _supplierCache = data;
+    renderSupplierCards(data);
+  } catch(e) {
+    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load suppliers. Run SQL to create suppliers table first.</div></div>';
   }
-  if (t.location) {
-    w.document.write('<div class="loc"><div class="loc-label">Location</div><div class="loc-val">' + t.location + '</div></div>');
+}
+
+function renderSupplierCards(suppliers) {
+  if (!suppliers || !suppliers.length) {
+    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#8aa8c0">No suppliers yet.</div></div>';
+    return;
   }
-  w.document.write('</div>');
-  w.document.write('</div>');
-  w.document.write('</body></html>');
-  w.document.close();
-  setTimeout(function() { w.print(); }, 300);
-}
-async function saveLoanTool(){
-  var name=document.getElementById('ltName').value.trim(); if(!name){showToast('Tool name required','error');return;}
-  var btn=document.getElementById('btnSaveLoanTool'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
-  try{if(editingLoanTool){await db('PATCH','loan_tools?id=eq.'+editingLoanTool.id,payload);showToast('Tool updated');await loadLoans();var r2=loanTools.find(function(x){return x.id===editingLoanTool.id;});if(r2)editingLoanTool=r2;}else{await db('POST','loan_tools',payload);showToast('Tool added');closeLoanToolModal();await loadLoans();}}
-  catch(e){showToast('Save failed: '+e.message,'error');}finally{btn.disabled=false;btn.textContent='Save Tool';}
-}
-async function deleteLoanTool(){
-  if(!editingLoanTool) return;
-  var al=loans.find(function(l){return l.loan_tool_id===editingLoanTool.id&&l.status!=='RETURNED';});
-  if(al){showToast('Tool is currently on loan','error');return;}
-  if(!confirm('Remove "'+editingLoanTool.name+'" from register?')) return;
-  try{await db('DELETE','loan_tools?id=eq.'+editingLoanTool.id);showToast('Removed');closeLoanToolModal();await loadLoans();}
-  catch(e){showToast('Delete failed','error');}
-}
-
-// ═══════════════════ SERVICE AGREEMENTS ═══════════════════
-
-async function loadAgreements(){
-  document.getElementById('agrList').innerHTML='<div class="center"><span class="spinner"></span> Loading...</div>';
-  try{
-    agreements=await db('GET','service_agreements?select=*&order=customer.asc');
-    // Populate job form dropdown
-    var sel=document.getElementById('jAgreementId');
-    if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.filter(function(a){return a.status==='ACTIVE';}).map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}
-    renderAgreements();
-  }catch(e){document.getElementById('agrList').innerHTML='<div class="center"><div style="color:#ef4444">Could not load agreements. Run SQL to create table.</div></div>';}
-}
-
-function renderAgreements(){
-  if(!agreements.length){document.getElementById('agrList').innerHTML='<div class="center"><div class="icon">+</div><div>No agreements yet. Click + New Agreement.</div></div>';return;}
-  document.getElementById('agrList').innerHTML=agreements.map(function(a){
-    var active=a.status==='ACTIVE';
-    return '<div class="agr-card'+(active?'':' inactive')+'" onclick="openAgrDetail(\'' + a.id + '\')">'+
-      '<div class="agr-card-top">'+
-        '<div><div class="agr-customer">'+a.customer+'</div>'+(a.contact_name?'<div style="font-size:12px;color:#8aa8c0;margin-top:2px">'+a.contact_name+(a.phone?' · '+a.phone:'')+'</div>':'')+
-        (a.machines_covered?'<div style="font-size:11px;color:#5a8090;margin-top:3px">'+a.machines_covered+'</div>':'')+
-        '</div>'+
-        '<div style="text-align:right">'+
-          '<div class="agr-fee">$'+parseFloat(a.monthly_fee||0).toFixed(0)+'/mo</div>'+
-          '<div style="font-size:11px;color:#5a8090;margin-top:2px">'+(a.included_hours||8)+' hrs included</div>'+
-          '<div style="font-size:10px;font-weight:700;color:'+(active?'#10b981':'#4a6080')+';margin-top:3px">'+(active?'ACTIVE':'INACTIVE')+'</div>'+
-        '</div>'+
-      '</div>'+
-      (a.notes?'<div style="font-size:11px;color:#5a8090;margin-top:5px;font-style:italic">'+a.notes+'</div>':'')+
-    '</div>';
-  }).join('');
-}
-
-function openAgrModal(agrId){
-  if(agrId){
-    var a=agreements.find(function(x){return x.id===agrId;}); if(!a) return;
-    editingAgr=a; document.getElementById('agrModalTitle').textContent='Edit Agreement';
-    document.getElementById('aCustomer').value=a.customer||''; document.getElementById('aContact').value=a.contact_name||''; document.getElementById('aPhone').value=a.phone||''; document.getElementById('aEmail').value=a.email||'';
-    document.getElementById('aFee').value=a.monthly_fee||''; document.getElementById('aHours').value=a.included_hours||''; document.getElementById('aHourlyRate').value=a.hourly_rate||''; document.getElementById('aStartDate').value=a.start_date||'';
-    document.getElementById('aMachines').value=a.machines_covered||''; document.getElementById('aNotes').value=a.notes||''; document.getElementById('aStatus').value=a.status||'ACTIVE';
-    document.getElementById('btnDeleteAgr').style.display='block';
-  } else {
-    editingAgr=null; document.getElementById('agrModalTitle').textContent='New Service Agreement';
-    ['aCustomer','aContact','aPhone','aEmail','aFee','aHours','aHourlyRate','aStartDate','aMachines','aNotes'].forEach(function(id){document.getElementById(id).value='';});
-    document.getElementById('aStatus').value='ACTIVE'; document.getElementById('btnDeleteAgr').style.display='none';
-  }
-  document.getElementById('agrOverlay').classList.add('show');
-  setTimeout(function(){document.getElementById('aCustomer').focus();},100);
-}
-function closeAgrModal(){document.getElementById('agrOverlay').classList.remove('show');}
-
-async function saveAgr(){
-  var customer=document.getElementById('aCustomer').value.trim(); if(!customer){showToast('Customer required','error');return;}
-  var btn=document.getElementById('btnSaveAgr'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={customer:customer,contact_name:document.getElementById('aContact').value||null,phone:document.getElementById('aPhone').value||null,email:document.getElementById('aEmail').value||null,monthly_fee:parseFloat(document.getElementById('aFee').value)||null,included_hours:parseFloat(document.getElementById('aHours').value)||8,hourly_rate:parseFloat(document.getElementById('aHourlyRate').value)||null,start_date:document.getElementById('aStartDate').value||null,machines_covered:document.getElementById('aMachines').value||null,notes:document.getElementById('aNotes').value||null,status:document.getElementById('aStatus').value,updated_at:new Date().toISOString()};
-  try{
-    if(editingAgr) await db('PATCH','service_agreements?id=eq.'+editingAgr.id,payload);
-    else await db('POST','service_agreements',payload);
-    showToast(editingAgr?'Agreement updated':'Agreement created');
-    await loadAgreements();
-    if (!editingAgr) closeAgrModal(); // Only close on new, not on edit
-  }catch(e){showToast('Save failed: '+e.message,'error');}
-  finally{btn.disabled=false;btn.textContent='Save Agreement';}
-}
-async function deleteAgr(){
-  if(!editingAgr||!confirm('Delete this agreement?')) return;
-  try{await db('DELETE','service_agreements?id=eq.'+editingAgr.id);showToast('Deleted');closeAgrModal();await loadAgreements();}
-  catch(e){showToast('Delete failed','error');}
-}
-
-async function openAgrDetail(agrId){
-  var a=agreements.find(function(x){return x.id===agrId;}); if(!a) return;
-  viewingAgr=a;
-  document.getElementById('agrPeriodTitle').textContent=a.customer+' — Agreement Detail';
-  document.getElementById('agrPeriodBody').innerHTML='<div class="center"><span class="spinner"></span></div>';
-  document.getElementById('agrPeriodOverlay').classList.add('show');
-  // Get jobs linked to this agreement
-  var periodJobs=[];
-  try{periodJobs=await db('GET','jobs?agreement_id=eq.'+a.id+'&select=*&order=created_at.desc');}catch(e){}
-  // Get current month
-  var now=new Date(); var monthStart=new Date(now.getFullYear(),now.getMonth(),1);
-  var monthEnd=new Date(now.getFullYear(),now.getMonth()+1,0);
-  var monthLabel=now.toLocaleString('default',{month:'long',year:'numeric'});
-  var thisMonthJobs=periodJobs.filter(function(j){var d=new Date(j.created_at);return d>=monthStart&&d<=monthEnd;});
-  var totalHours=thisMonthJobs.reduce(function(s,j){return s+(parseFloat(j.hours_spent)||0);},0);
-  var included=parseFloat(a.included_hours)||8;
-  var extraHours=Math.max(0,totalHours-included);
-  var extraCost=extraHours*(parseFloat(a.hourly_rate)||0);
-  var pct=Math.min(100,Math.round((totalHours/included)*100));
-  viewingPeriod={agr:a,jobs:thisMonthJobs,allJobs:periodJobs,totalHours:totalHours,included:included,extraHours:extraHours,extraCost:extraCost,monthLabel:monthLabel};
-
-  var html2='<div style="margin-bottom:12px">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
-      '<div style="font-size:12px;font-weight:700;color:#f59e0b">'+monthLabel+'</div>'+
-      '<button onclick="openAgrModal(\'' + a.id + '\')" style="background:none;border:1px solid #2a4060;color:#8aa8c0;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer">Edit Agreement</button>'+
-    '</div>'+
-    '<div style="display:flex;gap:16px;font-size:12px;color:#8aa8c0;margin-bottom:10px">'+
-      '<span>Monthly fee: <strong style="color:#f59e0b">$'+parseFloat(a.monthly_fee||0).toFixed(2)+'</strong></span>'+
-      '<span>Included: <strong style="color:#e2e8f0">'+included+' hrs</strong></span>'+
-      (a.hourly_rate?'<span>Extra rate: <strong style="color:#e2e8f0">$'+parseFloat(a.hourly_rate).toFixed(2)+'/hr</strong></span>':'')+
-    '</div>'+
-    '<div style="font-size:11px;color:#5a8090;margin-bottom:4px">Hours used this month</div>'+
-    '<div class="period-hours-bar"><div class="period-hours-fill'+(pct>=100?' over':'')+'" style="width:'+pct+'%"></div></div>'+
-    '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px">'+
-      '<span style="color:'+(totalHours>included?'#ef4444':'#10b981')+'"><strong>'+totalHours.toFixed(1)+'</strong> hrs used</span>'+
-      '<span style="color:#5a8090">'+included+' included</span>'+
-      (extraHours>0?'<span style="color:#ef4444">+'+extraHours.toFixed(1)+' extra = $'+extraCost.toFixed(2)+'</span>':'')+
-    '</div>'+
-    '<div style="font-size:11px;font-weight:700;color:#5a8090;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Jobs This Month ('+thisMonthJobs.length+')</div>';
-
-  if(thisMonthJobs.length){
-    html2+=thisMonthJobs.map(function(j){
-      return '<div class="period-job-row">'+
-        '<span class="period-job-num">'+xpsNum(j.job_number)+'</span>'+
-        '<span style="flex:1;color:#e2e8f0">'+j.customer+'</span>'+
-        '<span style="color:#5a8090;font-size:11px">'+fmtDate(j.created_at)+'</span>'+
-        '<span style="color:#f59e0b;font-weight:700;flex-shrink:0">'+(j.hours_spent?j.hours_spent+'h':'--')+'</span>'+
-      '</div>';
+  var icons = { phone:'📞', email:'✉️', website:'🌐', address:'📍', ordering_notes:'📋', notes:'💬' };
+  var html = suppliers.map(function(s) {
+    var brands = (s.supplier_brands || []).map(function(b) {
+      return '<span class="brand-chip">' + b.brand_name + '</span>';
     }).join('');
-  } else {
-    html2+='<div style="font-size:12px;color:#3a5070;padding:8px 0">No jobs logged this month.</div>';
-  }
-
-  if(a.machines_covered){html2+='<div style="margin-top:10px;font-size:11px;color:#5a8090"><strong>Covered:</strong> '+a.machines_covered+'</div>';}
-  html2+='</div>';
-  document.getElementById('agrPeriodBody').innerHTML=html2;
-}
-
-function closeAgrPeriod(){document.getElementById('agrPeriodOverlay').classList.remove('show');}
-
-function generateMonthlyReport(){
-  var vp=viewingPeriod; if(!vp) return;
-  var a=vp.agr; var w=window.open('','_blank');
-  var today=new Date(); var dateStr=today.toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Service Report '+vp.monthLabel+'</title><style>');
-  w.document.write('body{font-family:Arial,sans-serif;margin:0;padding:20mm 18mm;color:#1a2a3a;font-size:10pt}');
-  w.document.write('h1{font-size:18pt;color:#1a3550;margin:0 0 2mm}');
-  w.document.write('.logo-line{font-size:9pt;color:#5a8090;margin-bottom:8mm}');
-  w.document.write('.section{background:#f5f8fa;border-radius:4px;padding:5mm 6mm;margin-bottom:6mm}');
-  w.document.write('.section-title{font-size:8pt;font-weight:700;color:#5a8090;text-transform:uppercase;letter-spacing:1px;margin-bottom:3mm}');
-  w.document.write('.row{display:flex;justify-content:space-between;margin-bottom:2mm;font-size:10pt}');
-  w.document.write('.label{color:#5a8090} .value{font-weight:700}');
-  w.document.write('table{width:100%;border-collapse:collapse;margin-top:3mm}');
-  w.document.write('th{background:#1a3550;color:white;padding:2mm 3mm;font-size:9pt;text-align:left}');
-  w.document.write('td{padding:2mm 3mm;border-bottom:0.3mm solid #dde6ee;font-size:9pt}');
-  w.document.write('tr:nth-child(even) td{background:#f5f8fa}');
-  w.document.write('.totals{margin-top:6mm;text-align:right}');
-  w.document.write('.total-row{font-size:12pt;font-weight:700;color:#1a3550;border-top:0.5mm solid #1a3550;padding-top:3mm;margin-top:2mm}');
-  w.document.write('.footer{margin-top:12mm;font-size:8pt;color:#8aa8c0;text-align:center;border-top:0.3mm solid #dde6ee;padding-top:4mm}');
-  w.document.write('@media print{body{padding:10mm}}');
-  w.document.write('</style></head><body>');
-  w.document.write('<h1>Service Report</h1>');
-  w.document.write('<div class="logo-line">X-Pak Global &mdash; Service Department &mdash; '+dateStr+'</div>');
-  w.document.write('<div class="section"><div class="section-title">Agreement Details</div>');
-  w.document.write('<div class="row"><span class="label">Customer</span><span class="value">'+a.customer+'</span></div>');
-  if(a.contact_name) w.document.write('<div class="row"><span class="label">Contact</span><span class="value">'+a.contact_name+'</span></div>');
-  w.document.write('<div class="row"><span class="label">Reporting Period</span><span class="value">'+vp.monthLabel+'</span></div>');
-  w.document.write('<div class="row"><span class="label">Equipment Covered</span><span class="value">'+(a.machines_covered||'As per agreement')+'</span></div>');
-  w.document.write('</div>');
-  w.document.write('<div class="section"><div class="section-title">Hours Summary</div>');
-  w.document.write('<div class="row"><span class="label">Included Hours</span><span class="value">'+vp.included+' hrs</span></div>');
-  w.document.write('<div class="row"><span class="label">Hours Used</span><span class="value">'+vp.totalHours.toFixed(1)+' hrs</span></div>');
-  if(vp.extraHours>0){w.document.write('<div class="row"><span class="label">Additional Hours</span><span class="value">'+vp.extraHours.toFixed(1)+' hrs @ $'+parseFloat(a.hourly_rate||0).toFixed(2)+'/hr = $'+vp.extraCost.toFixed(2)+'</span></div>');}
-  w.document.write('</div>');
-  if(vp.jobs.length){
-    w.document.write('<div class="section-title" style="margin-top:6mm">Service Jobs This Month</div>');
-    w.document.write('<table><tr><th>Job No.</th><th>Date</th><th>Status</th><th>Hours</th><th>Notes</th></tr>');
-    vp.jobs.forEach(function(j){
-      w.document.write('<tr><td>'+xpsNum(j.job_number)+'</td><td>'+fmtDate(j.created_at)+'</td><td>'+j.status+'</td><td>'+(j.hours_spent||'--')+'</td><td>'+(j.internal_notes||'')+'</td></tr>');
-    });
-    w.document.write('</table>');
-  } else {
-    w.document.write('<div style="font-size:10pt;color:#5a8090;margin:4mm 0">No service jobs recorded this month.</div>');
-  }
-  w.document.write('<div class="totals">');
-  w.document.write('<div class="row"><span class="label">Monthly Service Fee</span><span class="value">$'+parseFloat(a.monthly_fee||0).toFixed(2)+'</span></div>');
-  if(vp.extraCost>0) w.document.write('<div class="row"><span class="label">Additional Hours</span><span class="value">$'+vp.extraCost.toFixed(2)+'</span></div>');
-  var grandTotal=parseFloat(a.monthly_fee||0)+vp.extraCost;
-  w.document.write('<div class="total-row">Total (ex GST): $'+grandTotal.toFixed(2)+'</div>');
-  w.document.write('</div>');
-  w.document.write('<div class="footer">X-Pak Global &mdash; Service Department &mdash; This report is for the period '+vp.monthLabel+'.<br>All amounts ex GST.</div>');
-  w.document.write('</body></html>'); w.document.close(); setTimeout(function(){w.print();},400);
+    var rows = '';
+    if (s.contact_name) rows += '<div class="s-row"><span class="ico">👤</span><span class="val">' + s.contact_name + '</span></div>';
+    if (s.phone)        rows += '<div class="s-row"><span class="ico">📞</span><span class="val">' + s.phone + '</span></div>';
+    if (s.email)        rows += '<div class="s-row"><span class="ico">✉️</span><a href="mailto:' + s.email + '" class="val">' + s.email + '</a></div>';
+    if (s.website)      rows += '<div class="s-row"><span class="ico">🌐</span><a href="https://' + s.website.replace(/^https?:\/\//,'') + '" target="_blank" class="val">' + s.website + '</a></div>';
+    if (s.address)      rows += '<div class="s-row"><span class="ico">📍</span><span class="val">' + s.address + '</span></div>';
+    if (s.ordering_notes) rows += '<div class="s-row"><span class="ico">📋</span><span class="val">' + s.ordering_notes + '</span></div>';
+    var notesHtml = s.notes ? '<div class="s-notes">' + s.notes + '</div>' : '';
+    return '<div class="supplier-card">' +
+      '<div class="supplier-card-top"><div class="supplier-name">' + s.company_name + '</div>' +
+      '<div class="supplier-brands">' + brands + '</div></div>' +
+      rows + notesHtml + '</div>';
+  }).join('');
+  document.getElementById('supplierGrid').innerHTML = html;
 }
 
 function setJobView(mode) {
@@ -1362,82 +688,23 @@ function setJobView(mode) {
 
 function renderTabs() {
   var v = currentView;
-  var html2 = '';
-  html2 += '<button class="tab jobs-tab'  + (v==='jobs' ?' active':'') + '" onclick="' + (v==='jobs' ?'':'switchToJobs()')    + '">Jobs</button>';
-  html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
-  html2 += '<button class="tab parts-tab' + (v==='parts'?' active':'') + '" onclick="' + (v==='parts'?'':'switchToParts()')  + '">Parts</button>';
-  html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
-  html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
-  document.getElementById('machineTabs').innerHTML = html2;
+  var html = '<button class="tab' + (v==='parts'?' active':'') + '" onclick="' + (v==='parts'?'':'switchToParts()') + '">Parts</button>';
+  html += '<button class="tab jobs-tab' + (v==='jobs'?' active':'') + '" onclick="' + (v==='jobs'?'':'switchToJobs()') + '">Jobs</button>';
+  html += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()') + '">Order List</button>';
+  html += '<button class="tab supplier-tab' + (v==='suppliers'?' active':'') + '" onclick="' + (v==='suppliers'?'':'switchToSuppliers()') + '">Suppliers</button>';
+  if (v === 'parts') {
+    html += machines.map(function(m) {
+      var active = selectedMachine && selectedMachine.id === m.id, isC = m.is_consumables;
+      var aStyle = (isC && active) ? ' style="background:#f59e0b;border-color:#f59e0b;color:#0f1923"' : '';
+      var iStyle = (isC && !active) ? ' style="border-color:#f59e0b;color:#f59e0b"' : '';
+      return '<button class="tab' + (active ? ' active' : '') + '"' + (active ? aStyle : iStyle) +
+        ' onclick="selectMachine(' + JSON.stringify(m).replace(/"/g, '&quot;') + ')">' +
+        (isC ? '* ' : '') + m.name + '</button>' +
+        (active ? '<button class="tab-del" onclick="openDeleteMachineModal()">x</button>' : '');
+    }).join('') + '<button class="tab-add" onclick="openMachineModal()">+ Machine</button>';
+  }
+  document.getElementById('machineTabs').innerHTML = html;
 }
-
-function switchToParts() {
-  currentView = 'parts'; hideAllViews(); renderTabs();
-  document.getElementById('hSub').textContent = 'All Parts';
-  document.getElementById('lowBadge').innerHTML = '';
-  renderAllPartsList();
-  document.getElementById('allPartsSection').style.display = 'block';
-}
-
-function renderMachineCardList() {
-  var brandColors = {
-    'Cyklop':'#64b5c8','Kronos':'#f59e0b','Titan':'#10b981',
-    'Strapack':'#f97316','Orgapack OR-T':'#a78bfa',
-    'X-Pak':'#00c8e0','Consumables':'#5a8090','Other':'#3a5070'
-  };
-  var groups = {}, groupOrder = [];
-  machines.forEach(function(m) {
-    var brand = m.brand || 'Other';
-    if (!groups[brand]) { groups[brand] = []; groupOrder.push(brand); }
-    groups[brand].push(m);
-  });
-  var html2 = '<div class="machine-card-list">';
-  groupOrder.forEach(function(brand) {
-    var col = brandColors[brand] || '#3a5070';
-    html2 += '<div class="machine-brand-section">';
-    html2 += '<div class="machine-brand-label" style="color:' + col + '">' + brand + '</div>';
-    groups[brand].forEach(function(m) {
-      var partCount = '';
-      html2 += '<div class="machine-card" style="border-left-color:' + col + '" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">' +
-        '<div><div class="machine-card-name">' + m.name + '</div>' +
-        (m.description ? '<div class="machine-card-meta">' + m.description + '</div>' : '') +
-        '</div><span class="machine-card-arrow">&#9654;</span></div>';
-    });
-    html2 += '</div>';
-  });
-  html2 += '<div style="padding:8px 2px"><button class="tab-add" onclick="openMachineModal()">+ Add Machine</button></div>';
-  html2 += '</div>';
-  document.getElementById('machineCardSection').innerHTML = html2;
-}
-
-async function drillIntoMachine(m) {
-  document.getElementById('machineCardSection').style.display = 'none';
-  document.getElementById('mainToolbar').style.display = 'flex';
-  document.getElementById('statsBar').style.display = 'flex';
-  document.getElementById('partsList').style.display = 'block';
-  document.getElementById('partsBreadcrumb').style.display = 'flex';
-  document.getElementById('breadcrumbName').textContent = m.name;
-  document.getElementById('breadcrumbBack').textContent = currentView === 'tools' ? '◀ Tools /' : '◀ Parts /';
-  await selectMachine(m);
-}
-
-function backToMachineList() {
-  document.getElementById('partsBreadcrumb').style.display = 'none';
-  document.getElementById('mainToolbar').style.display = 'none';
-  document.getElementById('statsBar').style.display = 'none';
-  document.getElementById('partsList').style.display = 'none';
-  document.getElementById('machineCardSection').style.display = 'block';
-  document.getElementById('hSub').textContent = currentView === 'tools' ? 'Tools' : 'All Parts';
-}
-
-function switchToTools() {
-  currentView = 'tools'; hideAllViews(); renderTabs();
-  document.getElementById('hSub').textContent = 'Tools';
-  document.getElementById('lowBadge').innerHTML = '';
-  renderMachineCardList();
-  document.getElementById('machineCardSection').style.display = 'block';
-}
-
 
 async function selectMachine(m) {
   currentView = 'parts'; hideAllViews();
@@ -1457,7 +724,7 @@ async function selectMachine(m) {
 async function loadOrderList() {
   document.getElementById('orderList').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
   try {
-    var rows = await db('GET', 'job_parts?status=in.(to_order,ordered)&select=*&order=created_at.asc');
+    var rows = await db('GET', 'job_parts?status=in.(to_order,ordered)&select=*,jobs(id,job_number,customer,status)&order=created_at.asc');
     renderOrderList(rows);
   } catch(e) {
     document.getElementById('orderList').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load order list. Run SQL to create job_parts table first.</div></div>';
@@ -1483,7 +750,7 @@ function renderOrderList(rows) {
     grpRows.forEach(function(r) {
       var sc = STATUS_COLOURS[r.status] || '#4a6080';
       var sl = STATUS_LABELS[r.status] || r.status;
-      var jobRef = r.job_id ? r.job_id.substring(0,8) : 'Stock Order';
+      var jobRef = r.jobs ? xpsNum(r.jobs.job_number) + ' ' + (r.jobs.customer || '') : '';
       html += '<div class="order-row ' + r.status + '">' +
         '<div style="flex:1;min-width:0">' +
           '<div style="display:flex;align-items:center;gap:8px">' +
@@ -1492,7 +759,7 @@ function renderOrderList(rows) {
             '<span class="order-qty">x' + r.quantity + '</span>' +
             '<span class="order-status-badge" style="background:' + sc + '20;color:' + sc + ';border:1px solid ' + sc + '40">' + sl + '</span>' +
           '</div>' +
-          '<div class="order-job">' + (r.job_id ? 'Job: ' + r.job_id.substring(0,8) : 'Stock Order') + (r.notes && r.notes !== 'Stock order' ? ' | ' + r.notes : '') + '</div>' +
+          '<div class="order-job">' + (r.jobs ? 'Case: ' + xpsNum(r.jobs.job_number) + ' ' + (r.jobs.customer || '') : 'Stock Order') + (r.notes && r.notes !== 'Stock order' ? ' | ' + r.notes : '') + '</div>' +
         '</div>' +
         '<div class="order-actions">' +
           (r.status === 'to_order' ? '<button class="btn-sm amber" onclick="markOrdered(\'' + r.id + '\')">Mark Ordered</button>' : '') +
@@ -1562,99 +829,86 @@ function printOrderList() {
 
 // ── PARTS SEARCH IN JOB ───────────────────────────────────────────
 
-function searchPartsForJob(toolTempId) {
-  var inp = document.getElementById('psi_' + toolTempId);
-  var res = document.getElementById('psr_' + toolTempId);
-  if (!inp || !res) return;
-  var q = inp.value.toLowerCase().trim();
+function searchPartsForJob() {
+  var q = document.getElementById('partSearchInput').value.toLowerCase().trim();
+  var res = document.getElementById('partSearchResults');
   if (!q) { res.innerHTML = ''; return; }
-  // Get machine for this tool
-  var tool = jobToolsLocal.find(function(t){return t._tempId===toolTempId;});
-  var toolMachineId = tool ? (tool.machine_id || null) : null;
-  var toolMachineName = toolMachineId ? (allParts.find(function(p){return p.machine_id===toolMachineId;}) || {machineName:''}).machineName : null;
-  var allMatches = allParts.filter(function(pt) {
-    return pt.key_no.toLowerCase().includes(q) || pt.description.toLowerCase().includes(q);
+  var matches = allParts.filter(function(p) {
+    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+  }).slice(0, 8);
+  if (!matches.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found</div>'; return; }
+  res.innerHTML = matches.map(function(p) {
+    var s = p.stock && p.stock[0];
+    var qty = s ? s.quantity : null;
+    var st = qty === null ? 'unset' : qty === 0 ? 'empty' : qty <= (s.reorder_threshold || 1) ? 'low' : 'ok';
+    var stockLabel = qty === null ? 'No stock data' : 'Stock: ' + qty;
+    return '<div class="part-search-item" onclick="addPartToJob(\'' + p.id + '\')">' +
+      '<div class="psi-left">' +
+        '<div class="psi-keyno">' + p.key_no + '</div>' +
+        '<div class="psi-desc">' + p.description + '</div>' +
+        '<div class="psi-machine">' + (p.machineName || '') + (p.spec ? ' | ' + p.spec : '') + '</div>' +
+      '</div>' +
+      '<div class="psi-stock ' + st + '">' + stockLabel + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function addPartToJob(partId) {
+  var p = allParts.find(function(x) { return x.id === partId; }); if (!p) return;
+  var s = p.stock && p.stock[0];
+  var qty = s ? s.quantity : 0;
+  var status = qty > 0 ? 'use_stock' : 'to_order';
+  var existing = jobPartsLocal.find(function(x) { return x.part_id === partId; });
+  if (existing) { showToast('Already added', 'error'); return; }
+  jobPartsLocal.push({
+    _tempId: 'tmp_' + Date.now(),
+    part_id: partId,
+    part_key_no: p.key_no,
+    part_description: p.description,
+    machine_name: p.machineName || '',
+    quantity: 1,
+    status: status,
+    notes: ''
   });
-  // Split: this machine first, then others
-  var thisMachine = toolMachineId ? allMatches.filter(function(pt){return pt.machine_id===toolMachineId;}) : [];
-  var others = allMatches.filter(function(pt){return !toolMachineId || pt.machine_id!==toolMachineId;}).slice(0,6);
-  function makeRow(pt) {
-    var s = pt.stock && pt.stock[0]; var qty = s ? s.quantity : null;
-    var st = qty===null?'unset':qty===0?'empty':qty<=(s.reorder_threshold||1)?'low':'ok';
-    return '<div class="part-search-item" onclick="addPartToJob(\'' + pt.id + '\',\'' + toolTempId + '\')">' +
-      '<div class="psi-left"><div class="psi-keyno">' + pt.key_no + '</div><div class="psi-desc">' + pt.description + '</div>' +
-      (toolMachineId && pt.machine_id!==toolMachineId ? '<div class="psi-machine" style="color:#5a8090">' + (pt.machineName||'') + '</div>' : '') +
-      '</div><div class="psi-stock ' + st + '">' + (qty===null?'No stock':'Stock: '+qty) + '</div></div>';
-  }
-  if (!thisMachine.length && !others.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found</div>'; return; }
-  var html2 = '';
-  if (thisMachine.length) {
-    html2 += thisMachine.map(makeRow).join('');
-  }
-  if (others.length) {
-    if (thisMachine.length) html2 += '<div style="font-size:9px;color:#3a5070;text-transform:uppercase;letter-spacing:1px;padding:4px 8px;background:#0a1420">Other machines</div>';
-    html2 += others.map(makeRow).join('');
-  }
-  res.innerHTML = html2;
-}
-
-function addPartToJob(partId, toolTempId) {
-  var pt = allParts.find(function(x) { return x.id === partId; }); if (!pt) return;
-  var s = pt.stock && pt.stock[0]; var qty = s ? s.quantity : 0;
-  var existing = jobPartsLocal.find(function(x) { return x.part_id === partId && x._toolTempId === toolTempId; });
-  if (existing) { showToast('Already added to this tool', 'error'); return; }
-  var toolNum = 1;
-  if (toolTempId) { var tt = jobToolsLocal.find(function(x){return x._tempId===toolTempId;}); if(tt) toolNum=tt.tool_number; }
-  jobPartsLocal.push({ _tempId:'tmp_'+Date.now(), _toolTempId:toolTempId||null, part_id:partId, part_key_no:pt.key_no, part_description:pt.description, machine_name:pt.machineName||'', quantity:1, status:qty>0?'use_stock':'to_order', tool_number:toolNum, notes:'' });
-  var inp = document.getElementById('psi_'+toolTempId); if(inp) inp.value='';
-  var res = document.getElementById('psr_'+toolTempId); if(res) res.innerHTML='';
-  renderToolPartsList(toolTempId);
-  recalcPartsTotal();
-}
-
-function recalcPartsTotal() {
-  var el = document.getElementById('jParts'); if (!el) return;
-  var total = jobPartsLocal.reduce(function(sum, jp) {
-    var pt = jp.part_id ? allParts.find(function(x){ return x.id === jp.part_id; }) : null;
-    var sell = pt && pt.sell_price ? parseFloat(pt.sell_price) : 0;
-    return sum + (sell * (jp.quantity || 1));
-  }, 0);
-  el.value = total > 0 ? total.toFixed(2) : '';
+  document.getElementById('partSearchInput').value = '';
+  document.getElementById('partSearchResults').innerHTML = '';
+  renderJobPartsList();
 }
 
 function removeJobPart(tempId) {
-  var jp = jobPartsLocal.find(function(x){return x._tempId===tempId;}); var tid=jp?jp._toolTempId:null;
-  jobPartsLocal = jobPartsLocal.filter(function(x){return x._tempId!==tempId;}); renderToolPartsList(tid); recalcPartsTotal();
+  jobPartsLocal = jobPartsLocal.filter(function(x) { return x._tempId !== tempId; });
+  renderJobPartsList();
 }
+
 function setJobPartStatus(tempId, status) {
-  var jp = jobPartsLocal.find(function(x){return x._tempId===tempId;});
-  if(jp){jp.status=status; renderToolPartsList(jp._toolTempId);}
+  var p = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  if (p) p.status = status;
+  renderJobPartsList();
 }
+
 function setJobPartQty(tempId, val) {
-  var jp = jobPartsLocal.find(function(x){return x._tempId===tempId;});
-  if(jp) { jp.quantity = Math.max(1, parseInt(val)||1); recalcPartsTotal(); }
+  var p = jobPartsLocal.find(function(x) { return x._tempId === tempId; });
+  if (p) p.quantity = Math.max(1, parseInt(val) || 1);
 }
-function renderToolPartsList(toolTempId) {
-  var el = document.getElementById('tpl_'+toolTempId); if(!el) return;
-  var parts = jobPartsLocal.filter(function(x){return x._toolTempId===toolTempId;});
-  if(!parts.length){el.innerHTML='<div style="font-size:11px;color:#3a5070;padding:6px 0">No parts added yet</div>';return;}
-  el.innerHTML = parts.map(function(jp) {
-    var sc = STATUS_COLOURS[jp.status]||'#4a6080';
-    return '<div class="job-part-row '+jp.status+'">' +
-      '<span class="jpr-keyno">'+jp.part_key_no+'</span>' +
-      '<span class="jpr-desc">'+jp.part_description+'</span>' +
-      '<input type="number" min="1" value="'+jp.quantity+'" onchange="setJobPartQty(\''+jp._tempId+'\',this.value)" style="width:48px;padding:4px 6px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;text-align:center">' +
-      '<select onchange="setJobPartStatus(\''+jp._tempId+'\',this.value)" style="padding:4px 7px;border-radius:5px;border:1px solid '+sc+';background:#0f1923;color:'+sc+';font-size:11px;font-weight:700">' +
-        '<option value="use_stock"'+(jp.status==='use_stock'?' selected':'')+'>Use Stock</option>' +
-        '<option value="to_order"'+(jp.status==='to_order'?' selected':'')+'>To Order</option>' +
-        '<option value="ordered"'+(jp.status==="ordered"?' selected':'')+'>Ordered</option>' +
-        '<option value="arrived"'+(jp.status==="arrived"?' selected':'')+'>Arrived</option>' +
+
+function renderJobPartsList() {
+  var el = document.getElementById('jobPartsList');
+  if (!jobPartsLocal.length) { el.innerHTML = ''; return; }
+  el.innerHTML = jobPartsLocal.map(function(jp) {
+    var sc = STATUS_COLOURS[jp.status] || '#4a6080';
+    var sl = STATUS_LABELS[jp.status] || jp.status;
+    return '<div class="job-part-row ' + jp.status + '">' +
+      '<span class="jpr-keyno">' + jp.part_key_no + '</span>' +
+      '<span class="jpr-desc">' + jp.part_description + '</span>' +
+      '<input type="number" min="1" value="' + jp.quantity + '" onchange="setJobPartQty(\'' + jp._tempId + '\',this.value)" style="width:48px;padding:4px 6px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;text-align:center">' +
+      '<select onchange="setJobPartStatus(\'' + jp._tempId + '\',this.value)" style="padding:4px 7px;border-radius:5px;border:1px solid ' + sc + ';background:#0f1923;color:' + sc + ';font-size:11px;font-weight:700">' +
+        '<option value="use_stock"' + (jp.status==='use_stock'?' selected':'') + '>Use Stock</option>' +
+        '<option value="to_order"' + (jp.status==='to_order'?' selected':'') + '>To Order</option>' +
       '</select>' +
-      '<button class="jpr-remove" onclick="removeJobPart(\''+jp._tempId+'\')">x</button>' +
-    '</div>';
+      '<button class="jpr-remove" onclick="removeJobPart(\'' + jp._tempId + '\')">x</button>' +
+      '</div>';
   }).join('');
 }
-function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsList(t._tempId);}); recalcPartsTotal();}
 
 // ── JOBS ──────────────────────────────────────────────────────────
 
@@ -1667,19 +921,8 @@ async function loadJobs() {
 
 function setJobFilter(f, btn) {
   jobFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');
-  if (f==='UNORDERED') loadUnorderedJobs(); else renderJobs();
-}
-async function loadUnorderedJobs() {
-  try {
-    var up = await db('GET','job_parts?status=eq.to_order&select=job_id');
-    var ids = [...new Set(up.map(function(p){return p.job_id;}).filter(Boolean))];
-    var orig = jobs; jobs = jobs.filter(function(j){return ids.includes(j.id)&&j.status!=='COMPLETED';});
-    renderJobs();
-    var btn=document.getElementById('btnUnordered'); if(btn) btn.textContent='⚠ PARTS UNORDERED ('+jobs.length+')';
-    jobs = orig;
-  } catch(e){renderJobs();}
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active'); renderJobs();
 }
 
 function fmtDate(dt) {
@@ -1744,7 +987,7 @@ function renderList() {
       '<div class="job-links">' +
         '<button class="job-link-tile" onclick="event.stopPropagation();printCaseLabel(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f4a;border-color:#00c8e0;color:#00c8e0">Print Bin Label</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Assessment Report</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Export Quote</button>' +
+        '<button class="job-link-tile" onclick="event.stopPropagation();sendQuoteEmail(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Request Quote</button>' +
       '</div>' +
       '</div>';
   }).join('');
@@ -1799,13 +1042,14 @@ function clearJobForm() {
     document.getElementById(id).value = '';
   });
   document.getElementById('jStatus').value = 'NEW JOB';
+  document.getElementById('jLabour').value = '';
   document.getElementById('jParts').value = '';
   document.getElementById('jFollowup').checked = false;
-  document.getElementById('jAgreementId').value = '';
-  document.getElementById('jHoursSpent').value = '';
+  document.getElementById('partSearchInput').value = '';
+  document.getElementById('partSearchResults').innerHTML = '';
   jobLinks = []; renderLinksList();
-  jobPartsLocal = [];
-  jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '' }];
+  jobPartsLocal = []; renderJobPartsList();
+  jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' }];
   renderToolsList();
 }
 
@@ -1829,40 +1073,38 @@ async function openEditJobModal(jobId) {
   document.getElementById('jMobile').value = j.mobile || '';
   document.getElementById('jEmail').value = j.email || '';
   document.getElementById('jShipping').value = j.shipping_address || '';
-  // labour_cost now per-tool as service_fee
-  // jParts is auto-calculated from job_parts - do not pre-fill
+  document.getElementById('jLabour').value = j.labour_cost || '';
+  document.getElementById('jParts').value = j.parts_cost || '';
   document.getElementById('jFollowup').checked = !!j.followup_required;
   document.getElementById('jFollowupNotes').value = j.followup_notes || '';
   document.getElementById('jInternalNotes').value = j.internal_notes || '';
-  document.getElementById('jAgreementId').value = j.agreement_id || '';
-  document.getElementById('jHoursSpent').value = j.hours_spent || '';
   try { jobLinks = j.links ? JSON.parse(j.links) : []; } catch(e) { jobLinks = []; }
   renderLinksList();
   document.getElementById('lLinkName').value = '';
   document.getElementById('lLinkUrl').value = '';
-  // parts search now per tool card
+  document.getElementById('partSearchInput').value = '';
+  document.getElementById('partSearchResults').innerHTML = '';
   // Load job tools - fall back to legacy job fields if none exist
   try {
     var existingTools = await db('GET', 'job_tools?job_id=eq.' + j.id + '&select=*&order=tool_number.asc');
     if (existingTools.length) {
       jobToolsLocal = existingTools.map(function(t) {
-        return Object.assign({ _tempId: 'tool_' + t.id, _existingId: t.id, work_completed: t.work_completed||'', service_fee: t.service_fee||'' }, t);
+        return Object.assign({ _tempId: 'tool_' + t.id, _existingId: t.id }, t);
       });
     } else {
       // Migrate legacy single-tool job fields into Tool 1
-      jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '', work_completed: '', service_fee: j.labour_cost || '' }];
+      jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '' }];
     }
-  } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '' }]; }
+  } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' }]; }
   renderToolsList();
   // Load existing job parts
   try {
     var existing = await db('GET', 'job_parts?job_id=eq.' + j.id + '&select=*&order=created_at.asc');
     jobPartsLocal = existing.map(function(ep) {
-      var matchTool = jobToolsLocal.find(function(t) { return t.tool_number === ep.tool_number; });
-      return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id, _toolTempId: matchTool ? matchTool._tempId : (jobToolsLocal[0]?jobToolsLocal[0]._tempId:null) }, ep);
+      return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id }, ep);
     });
   } catch(e) { jobPartsLocal = []; }
-  jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
+  renderJobPartsList();
   document.getElementById('btnDeleteJob').style.display = 'block';
   document.getElementById('jobOverlay').classList.add('show');
 }
@@ -1890,13 +1132,11 @@ async function saveJob() {
     customer_issue: null,
     workshop_notes: null,
     error_code: null,
-    // labour_cost removed - service fee now per tool
+    labour_cost: parseFloat(document.getElementById('jLabour').value) || null,
     parts_cost: parseFloat(document.getElementById('jParts').value) || null,
     followup_required: document.getElementById('jFollowup').checked,
     followup_notes: document.getElementById('jFollowupNotes').value || null,
     internal_notes: document.getElementById('jInternalNotes').value || null,
-    agreement_id: document.getElementById('jAgreementId').value || null,
-    hours_spent: parseFloat(document.getElementById('jHoursSpent').value) || null,
     links: JSON.stringify(jobLinks),
     updated_at: new Date().toISOString()
   };
@@ -1915,7 +1155,7 @@ async function saveJob() {
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
+      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, updated_at: new Date().toISOString() });
     }
     // Save job parts
     for (var i = 0; i < jobPartsLocal.length; i++) {
@@ -1928,7 +1168,6 @@ async function saveJob() {
         machine_name: jp.machine_name,
         quantity: jp.quantity,
         status: jp.status,
-        tool_number: jp.tool_number || 1,
         notes: jp.notes || null,
         updated_at: new Date().toISOString()
       };
@@ -1944,8 +1183,7 @@ async function saveJob() {
     }
     await loadAllParts();
     showToast(editingJob ? 'Service case updated' : 'Service case created');
-    await loadJobs();
-    if (!editingJob) closeJobModal();
+    closeJobModal(); await loadJobs();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Service Case'; }
 }
@@ -2066,7 +1304,7 @@ function renderParts() {
       if (partsFilter === 'low'     && !(s && s.quantity <= (s.reorder_threshold || 1) && s.quantity >= 0)) return false;
       if (partsFilter === 'empty'   && !(s && s.quantity === 0 || !s)) return false;
     }
-    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.diagram_ref && p.diagram_ref.toLowerCase().includes(q)) ||
+    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) ||
       ((p.stock && p.stock[0] && p.stock[0].location) || '').toLowerCase().includes(q) ||
       (p.machineName || '').toLowerCase().includes(q) || (p.alt_part_no || '').toLowerCase().includes(q);
   });
@@ -2135,7 +1373,6 @@ async function updateQty(partId, delta) {
 function openAddModal() {
   editingPart = null; document.getElementById('modalTitle').textContent = '+ New Part';
   ['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fSell','fMyobIncome','fMyobAsset','fMyobCogs'].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('fGP').value = '40';
   document.getElementById('fCategory').value = ''; document.getElementById('fMaterial').value = ''; document.getElementById('fUom').value = '';
   document.getElementById('fQty').value = '0'; document.getElementById('fThreshold').value = '1';
   document.getElementById('btnDeletePart').style.display = 'none'; document.getElementById('autoGenBtn').style.display = 'block';
@@ -2144,20 +1381,6 @@ function openAddModal() {
   setTimeout(function() { document.getElementById('fKeyno').focus(); }, 100);
 }
 
-
-function toggleBrandGroup(brand) {
-  openBrandGroups[brand] = openBrandGroups[brand] === false ? true : false;
-  renderTabs();
-}
-
-function autoCalcSell() {
-  var cost=parseFloat(document.getElementById('fCost').value), gp=parseFloat(document.getElementById('fGP').value);
-  if(!isNaN(cost)&&!isNaN(gp)&&gp<100) document.getElementById('fSell').value=(cost/(1-gp/100)).toFixed(2);
-}
-function autoCalcGP() {
-  var cost=parseFloat(document.getElementById('fCost').value), sell=parseFloat(document.getElementById('fSell').value);
-  if(!isNaN(cost)&&!isNaN(sell)&&sell>0) document.getElementById('fGP').value=Math.round((1-cost/sell)*100);
-}
 function autoGenPartNo() {
   var cat = document.getElementById('fCategory').value, mat = document.getElementById('fMaterial').value;
   var spec = document.getElementById('fSpec').value.trim().toUpperCase();
@@ -2178,19 +1401,7 @@ function openEditModal(partId) {
   document.getElementById('fMaterial').value = p.material || ''; document.getElementById('fUom').value = p.uom || '';
   document.getElementById('autoGenBtn').style.display = 'block';
   document.getElementById('fSection').value = p.assembly_section || ''; document.getElementById('fDiagramRefs').value = p.diagram_refs || '';
-  document.getElementById('fCost').value = p.cost_price || '';
-  document.getElementById('fSell').value = p.sell_price || '';
-  if (p.cost_price && p.sell_price && parseFloat(p.sell_price) > 0) {
-    // Existing prices — calculate actual GP%
-    document.getElementById('fGP').value = Math.round((1 - parseFloat(p.cost_price) / parseFloat(p.sell_price)) * 100);
-  } else if (p.cost_price && parseFloat(p.cost_price) > 0) {
-    // Cost exists but no sell price — default to 40% and auto-calc sell
-    document.getElementById('fGP').value = '40';
-    autoCalcSell();
-  } else {
-    // No prices at all — default GP to 40%, leave sell blank
-    document.getElementById('fGP').value = '40';
-  }
+  document.getElementById('fCost').value = p.cost_price || ''; document.getElementById('fSell').value = p.sell_price || '';
   document.getElementById('fMyobIncome').value = p.myob_account_income || ''; document.getElementById('fMyobAsset').value = p.myob_account_asset || '';
   document.getElementById('fMyobCogs').value = p.myob_account_cogs || ''; document.getElementById('fNotes').value = p.notes || '';
   try { partSuppliers = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e) { partSuppliers = []; }
@@ -2227,14 +1438,12 @@ async function savePart() {
       if (s && s.id) await db('PATCH', 'stock?id=eq.' + s.id, stock);
       else await db('POST', 'stock', Object.assign({ part_id: editingPart.id }, stock));
       showToast('Part updated');
-    if (selectedMachine) { renderDocsBar(); renderParts(); }
     } else {
       var res = await db('POST', 'parts', Object.assign({ machine_id: selectedMachine.id }, pd));
       await db('POST', 'stock', Object.assign({ part_id: res[0].id }, stock));
       showToast('Part added');
-    closeModal();
-    } 
-    await loadAllParts(); if (selectedMachine) { renderDocsBar(); renderParts(); } await loadAllParts();
+    }
+    closeModal(); await selectMachine(selectedMachine); await loadAllParts();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Part'; }
 }
@@ -2318,7 +1527,7 @@ function searchPartsForDirectOrder() {
   var res = document.getElementById('doPartResults');
   if (!q) { res.innerHTML = ''; return; }
   var matches = allParts.filter(function(p) {
-    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.diagram_ref && p.diagram_ref.toLowerCase().includes(q));
+    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
   }).slice(0, 8);
   if (!matches.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found - use free text below</div>'; return; }
   res.innerHTML = matches.map(function(p) {
@@ -2416,29 +1625,25 @@ function printCaseLabel(jobId) {
     }).join('<br>');
 
     var w = window.open('', '_blank');
-    w.document.write('<html><head><title>Label ' + xpsNum(j.job_number) + '</title>');
+    w.document.write('<html><head><title>Bin Label ' + xpsNum(j.job_number) + '</title>');
     w.document.write('<style>');
-    w.document.write('@page { size: 89mm 36mm; margin: 2.5mm 5mm 2.5mm 3.5mm; }');
+    w.document.write('@page { size: 89mm 36mm; margin: 1.5mm 2mm; }');
     w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
-    w.document.write('body { font-family: Arial, sans-serif; width: 82mm; height: 31mm; overflow: hidden; }');
-    w.document.write('.label { display: flex; width: 82mm; height: 31mm; align-items: stretch; border: 0.4mm solid #000; border-radius: 1mm; overflow: hidden; }');
-    w.document.write('.left { flex: 1; padding: 2mm 2.5mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border-right: 0.4mm solid #ccc; }');
-    w.document.write('.cust { font-size: 13pt; font-weight: 900; color: #000; line-height: 1.1; }');
-    w.document.write('.xpsref { font-size: 7.5pt; font-weight: 700; font-family: "Courier New", monospace; color: #444; margin-top: 0.8mm; }');
-    w.document.write('.tools { font-size: 6.5pt; color: #555; margin-top: 0.5mm; line-height: 1.3; }');
-    w.document.write('.right { width: 18mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; background: #f0f0f0; flex-shrink: 0; }');
-    w.document.write('.xpak { font-size: 7pt; font-weight: 900; color: #333; letter-spacing: 0.5px; text-transform: uppercase; text-align: center; line-height: 1.5; }');
+    w.document.write('body { font-family: Arial, sans-serif; width: 85mm; height: 33mm; display: flex; align-items: stretch; overflow: hidden; }');
+    w.document.write('.label { display: flex; width: 100%; align-items: stretch; border: 0.5mm solid #000; border-radius: 1mm; overflow: hidden; }');
+    w.document.write('.left { flex: 1; padding: 2mm 2.5mm; display: flex; flex-direction: column; justify-content: space-between; border-right: 0.5mm solid #ccc; }');
+    w.document.write('.tag { font-size: 7pt; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.3px; }');
+    w.document.write('.xps { font-size: 22pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; line-height: 1; }');
+    w.document.write('.customer { font-size: 10pt; font-weight: 700; color: #111; margin-top: 1mm; }');
+    w.document.write('.tools { font-size: 7.5pt; color: #333; margin-top: 1mm; line-height: 1.4; }');
+    w.document.write('.right { width: 22mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; background: #f0f0f0; }');
+    w.document.write('.xpak { font-size: 8pt; font-weight: 900; color: #333; letter-spacing: 1px; text-transform: uppercase; text-align: center; }');
     w.document.write('</style></head><body>');
-    w.document.write('<div class="label">');
-    w.document.write('<div class="left">');
-    w.document.write('<div class="cust">' + (j.customer || '') + '</div>');
-    w.document.write('<div>');
-    w.document.write('<div class="xpsref">' + xpsNum(j.job_number) + ' &nbsp;&middot;&nbsp; Service Case</div>');
-    w.document.write('<div class="tools">' + toolLines + '</div>');
-    w.document.write('</div>');
-    w.document.write('</div>');
-    w.document.write('<div class="right"><div class="xpak">X-PAK<br>SERVICE</div></div>');
-    w.document.write('</div>');
+    w.document.write('<div class="label"><div class="left">');
+    w.document.write('<div><div class="tag">Service Case</div><div class="xps">' + xpsNum(j.job_number) + '</div></div>');
+    w.document.write('<div><div class="customer">' + (j.customer || '') + '</div>');
+    w.document.write('<div class="tools">' + toolLines + '</div></div>');
+    w.document.write('</div><div class="right"><div class="xpak">X-PAK<br>SERVICE</div></div></div>');
     w.document.write('</body></html>');
     w.document.close();
     setTimeout(function() { w.print(); }, 300);
@@ -2451,7 +1656,7 @@ var FAULT_OPTIONS = ['Not cutting','Tension / force issue','Jammed / mechanical 
 
 function addTool() {
   var num = jobToolsLocal.length + 1;
-  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '' });
+  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '' });
   renderToolsList();
 }
 
@@ -2495,18 +1700,6 @@ function renderToolsList() {
         '<div class="field full"><label>Customer Reported Issue</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'customer_issue\',this.value)" placeholder="What the customer reported..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.customer_issue||'') + '</textarea></div>' +
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
-        '<div class="field full"><label>Work Completed</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'work_completed\',this.value)" placeholder="Describe all work carried out..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.work_completed||'') + '</textarea></div>' +
-        '<div class="field"><label>Service Fee ($)</label><input type="number" step="0.01" min="0" value="' + (t.service_fee||'') + '" placeholder="350.00" oninput="setToolField(\'' + t._tempId + '\',\'service_fee\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #f97316;background:#0f1923;color:#f97316;font-size:13px;outline:none;font-weight:700"></div>' +
-      '</div>' +
-      '<div style="margin-top:10px;border-top:1px solid #1e3048;padding-top:10px">' +
-        '<div style="font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Parts Required — Tool ' + t.tool_number + '</div>' +
-        '<div class="parts-search-area" style="margin-bottom:6px">' +
-          '<div class="parts-search-row">' +
-            '<input id="psi_' + t._tempId + '" placeholder="Search part number or description..." oninput="searchPartsForJob(\'' + t._tempId + '\')" autocomplete="off">' +
-          '</div>' +
-          '<div class="parts-search-results" id="psr_' + t._tempId + '"></div>' +
-        '</div>' +
-        '<div class="job-parts-list" id="tpl_' + t._tempId + '"></div>' +
       '</div>' +
       '</div>';
   }).join('');
@@ -2518,7 +1711,7 @@ function generateAssessmentReport(jobId) {
   var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
   // Load tools from Supabase then render
   db('GET', 'job_tools?job_id=eq.' + jobId + '&select=*&order=tool_number.asc').then(function(tools) {
-    db('GET', 'job_parts?job_id=eq.' + jobId + '&status=in.(use_stock,to_order,ordered,arrived)&select=*').then(function(jparts) {
+    db('GET', 'job_parts?job_id=eq.' + jobId + '&status=in.(use_stock,to_order,ordered,arrived)&select=*,parts(sell_price)').then(function(jparts) {
       renderAssessmentReport(j, tools, jparts);
     }).catch(function() { renderAssessmentReport(j, tools, []); });
   }).catch(function() {
@@ -2534,34 +1727,27 @@ function renderAssessmentReport(j, tools, jparts) {
 
   var toolSections = tools.map(function(t) {
     var mName = mLookup(t.machine_id);
-    var toolParts = jparts.filter(function(p) { return p.tool_number === t.tool_number || (!p.tool_number && t.tool_number === 1); });
-    var partsRows = toolParts.map(function(p, ri) {
-      var partData = p.part_id ? allParts.find(function(x) { return x.id === p.part_id; }) : null;
-      var sell = partData && partData.sell_price ? parseFloat(partData.sell_price) : 0;
+    var toolParts = jparts.filter(function(p) { return !p.tool_number || p.tool_number === t.tool_number; });
+    var partsRows = toolParts.map(function(p) {
+      var sell = (p.parts && p.parts.sell_price) ? parseFloat(p.parts.sell_price) : 0;
       var total = sell * (p.quantity || 1);
-      return '<tr' + (ri%2?'':' style="background:#f8fafc"') + '>' +
-        '<td style="word-break:break-all">' + (p.part_key_no||'') + '</td>' +
-        '<td>' + (p.part_description||'') + '</td>' +
-        '<td style="text-align:center">' + (p.quantity||1) + '</td>' +
-        '<td style="text-align:right;font-family:monospace">' + (sell > 0 ? '$' + sell.toFixed(2) : '&#8212;') + '</td><td style="text-align:right;font-family:monospace' + (total>0?';font-weight:700':'') + '">' + (total > 0 ? '$' + total.toFixed(2) : '&#8212;') + '</td></tr>';
+      return '<tr><td>' + (p.part_key_no||'') + '</td><td>' + (p.part_description||'') + '</td><td style="text-align:center">' + (p.quantity||1) + '</td><td style="text-align:right">' + (sell > 0 ? '$' + sell.toFixed(2) : '-') + '</td><td style="text-align:right">' + (total > 0 ? '$' + total.toFixed(2) : '-') + '</td></tr>';
     }).join('');
-    var partsTable = toolParts.length ? '<table class="parts-tbl"><colgroup><col style="width:18%"><col style="width:47%"><col style="width:5%"><col style="width:15%"><col style="width:15%"></colgroup><thead><tr><th>Part No.</th><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead><tbody>' + partsRows + '</tbody></table>' : '<p style="color:#666;font-style:italic;font-size:11pt">No parts recorded for this tool.</p>';
+    var partsTable = toolParts.length ? '<table class="parts-tbl"><thead><tr><th>Part No.</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>' + partsRows + '</tbody></table>' : '<p style="color:#666;font-style:italic;font-size:11pt">No parts recorded for this tool.</p>';
     return '<div class="tool-section">' +
       '<div class="tool-header"><span class="tool-num">TOOL ' + t.tool_number + '</span>' + (mName ? '<span class="tool-model">' + mName + '</span>' : '') + (t.serial_number ? '<span class="tool-sn">S/N: ' + t.serial_number + '</span>' : '') + '</div>' +
       (t.fault_type ? '<div class="field-block"><div class="field-label">Fault Reported</div><div class="field-val">' + t.fault_type + (t.error_code ? ' &nbsp;|&nbsp; Error Code: ' + t.error_code : '') + '</div></div>' : '') +
       (t.customer_issue ? '<div class="field-block"><div class="field-label">Customer Description</div><div class="field-val">' + t.customer_issue.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.diagnosis ? '<div class="field-block"><div class="field-label">Assessment / Findings</div><div class="field-val">' + t.diagnosis.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.recommendation ? '<div class="field-block"><div class="field-label">Recommendation</div><div class="field-val">' + t.recommendation.replace(/\n/g,'<br>') + '</div></div>' : '') +
-      (t.work_completed ? '<div class="field-block"><div class="field-label">Work Completed</div><div class="field-val">' + t.work_completed.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.workshop_notes ? '<div class="field-block"><div class="field-label">Workshop Notes</div><div class="field-val">' + t.workshop_notes.replace(/\n/g,'<br>') + '</div></div>' : '') +
       '<div class="field-block"><div class="field-label">Parts Required</div>' + partsTable + '</div>' +
-      (t.service_fee ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Service Fee</div><div class="field-val" style="color:#f97316;font-weight:700">$' + parseFloat(t.service_fee).toFixed(2) + '</div></div>' : '') +
       '</div>';
   }).join('');
 
-  var partsTotal = jparts.reduce(function(sum, p) { var pd2 = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null; return sum + ((pd2&&pd2.sell_price ? parseFloat(pd2.sell_price) : 0) * (p.quantity||1)); }, 0);
-  var serviceFeeTotal = tools.reduce(function(sum, t) { return sum + (parseFloat(t.service_fee)||0); }, 0);
-  var grandTotal = partsTotal + serviceFeeTotal;
+  var partsTotal = jparts.reduce(function(sum, p) { return sum + ((p.sell_price ? parseFloat(p.sell_price) : 0) * (p.quantity||1)); }, 0);
+  var labour = parseFloat(j.labour_cost) || 0;
+  var grandTotal = partsTotal + labour;
 
   var w = window.open('', '_blank');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Assessment Report ' + xpsNum(j.job_number) + '</title><style>');
@@ -2579,9 +1765,9 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.write('.field-block:last-child{border-bottom:none}');
   w.document.write('.field-label{font-size:8.5pt;font-weight:700;color:#1e3799;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}');
   w.document.write('.field-val{font-size:11pt;color:#2a2a3e;line-height:1.5}');
-  w.document.write('.parts-tbl{width:100%;border-collapse:collapse;margin-top:6px;font-size:9.5pt;table-layout:fixed}');
-  w.document.write('.parts-tbl th{background:#1a3550;padding:6px 10px;text-align:left;font-size:9pt;font-weight:700;color:#ffffff;border-bottom:2px solid #0d2035}');
-  w.document.write('.parts-tbl td{padding:5px 10px;border-bottom:1px solid #eee;vertical-align:middle}');
+  w.document.write('.parts-tbl{width:100%;border-collapse:collapse;margin-top:6px;font-size:10pt}');
+  w.document.write('.parts-tbl th{background:#f0f4ff;padding:6px 10px;text-align:left;font-size:9pt;font-weight:700;color:#1e3799;border-bottom:2px solid #c8d5f0}');
+  w.document.write('.parts-tbl td{padding:6px 10px;border-bottom:1px solid #eee}');
   w.document.write('.parts-tbl tr:last-child td{border-bottom:none}');
   w.document.write('.totals-box{margin-bottom:20px;text-align:right}');
   w.document.write('.totals-box table{margin-left:auto;border-collapse:collapse}');
@@ -2616,11 +1802,11 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.write(toolSections);
 
   // Totals
-  if (grandTotal > 0 || serviceFeeTotal > 0) {
-    w.document.write('<div class="totals-box"><table style="width:auto;margin-left:auto;min-width:280px">');
-    if (serviceFeeTotal > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Service Fee</td><td style="text-align:right;font-family:monospace">$' + serviceFeeTotal.toFixed(2) + '</td></tr>');
-    if (partsTotal > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Parts</td><td style="text-align:right;font-family:monospace">$' + partsTotal.toFixed(2) + '</td></tr>');
-    w.document.write('<tr class="total-row"><td style="text-align:right;padding-right:20px">Total</td><td style="text-align:right;font-family:monospace">$' + grandTotal.toFixed(2) + '</td></tr>');
+  if (grandTotal > 0 || labour > 0) {
+    w.document.write('<div class="totals-box"><table>');
+    if (labour > 0) w.document.write('<tr><td>Labour</td><td>$' + labour.toFixed(2) + '</td></tr>');
+    if (partsTotal > 0) w.document.write('<tr><td>Parts</td><td>$' + partsTotal.toFixed(2) + '</td></tr>');
+    w.document.write('<tr class="total-row"><td>Total</td><td>$' + grandTotal.toFixed(2) + '</td></tr>');
     w.document.write('</table></div><div class="gst-note">All prices ex GST</div>');
   }
 
@@ -2639,40 +1825,26 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.close();
 }
 
-async function exportQuoteExcel(jobId) {
+async function sendQuoteEmail(jobId) {
   var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
   try {
-    if (typeof XLSX === 'undefined') { showToast('Excel library not loaded - try refreshing', 'error'); return; }
     var jparts = await db('GET', 'job_parts?job_id=eq.' + jobId + '&status=eq.to_order&order=machine_name.asc');
     if (!jparts.length) { showToast('No parts marked To Order', 'error'); return; }
-    var wb = XLSX.utils.book_new();
-    var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
-    var cover = [
-      ['QUOTE REQUEST'],[''],
-      ['Reference', xpsNum(j.job_number)],
-      ['Date', today],
-      ['From', 'X-Pak Service'],[''],
-      ['Please supply unit prices (ex GST) and estimated lead times for the parts listed on the Parts sheet.']
-    ];
-    var ws_cover = XLSX.utils.aoa_to_sheet(cover);
-    ws_cover['!cols'] = [{wch:22},{wch:50}];
-    XLSX.utils.book_append_sheet(wb, ws_cover, 'Cover');
-    var rows = [['Machine','Part No.','Description','Qty','Unit Price (ex GST)','Lead Time','Notes']];
     var grouped = {};
-    jparts.forEach(function(p) { var k = p.machine_name||'Unspecified'; if(!grouped[k]) grouped[k]=[]; grouped[k].push(p); });
-    Object.keys(grouped).sort().forEach(function(machine) {
-      grouped[machine].forEach(function(p) {
-        rows.push([machine, p.part_key_no||'', p.part_description||'', p.quantity||1, '', '', p.notes||'']);
-      });
+    jparts.forEach(function(p) {
+      var k = p.machine_name || 'Unspecified'; if (!grouped[k]) grouped[k] = []; grouped[k].push(p);
     });
-    var ws_parts = XLSX.utils.aoa_to_sheet(rows);
-    ws_parts['!cols'] = [{wch:18},{wch:18},{wch:38},{wch:5},{wch:20},{wch:14},{wch:20}];
-    XLSX.utils.book_append_sheet(wb, ws_parts, 'Parts');
-    var fname = 'Quote_' + xpsNum(j.job_number) + '_' + today.replace(/ /g,'-') + '.xlsx';
-    XLSX.writeFile(wb, fname);
-    showToast('Exported: ' + fname);
-  } catch(e) { showToast('Export failed: ' + e.message, 'error'); }
+    var sections = Object.keys(grouped).map(function(machine) {
+      var lines = grouped[machine].map(function(p) { return '  ' + (p.part_key_no||'-') + '  |  ' + (p.part_description||'-') + '  |  Qty: ' + p.quantity; }).join('\n');
+      return machine + '\n' + Array(machine.length+1).join('-') + '\n' + lines;
+    }).join('\n\n');
+    var subject = 'Quote Request \u2014 ' + xpsNum(j.job_number) + ' | ' + (j.customer||'');
+    var body = 'Hello,\n\nPlease provide pricing and availability for the following parts.\n\nJob Reference: ' + xpsNum(j.job_number) + '\nCustomer: ' + (j.customer||'') + '\n\nPARTS REQUIRED\n==============\n' + sections + '\n\nPlease reply with unit price (ex GST) and estimated lead time for each item.\n\nThank you,\nX-Pak Service\nrob.firth@xpak.com.au';
+    var to = prompt('Supplier email address:'); if (!to) return;
+    window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  } catch(e) { showToast('Failed to generate quote email', 'error'); }
 }
+
 function showToast(msg, type) {
   type = type || 'success'; var t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show ' + type;
