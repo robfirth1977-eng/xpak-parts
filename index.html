@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>X-Pak ServeTrack</title>
+<title>MainFlow</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
 function switchToSuppliers() {
   currentView = 'suppliers'; hideAllViews(); renderTabs();
@@ -441,7 +441,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 <body>
 
 <div class="header">
-  <div><div class="header-title">X-PAK SERVETRACK</div><div class="header-sub" id="hSub">Connecting...</div></div>
+  <div><div class="header-title">MAINFLOW</div><div class="header-sub" id="hSub">Connecting...</div></div>
   <div id="lowBadge"></div>
 </div>
 <div class="machine-tabs" id="machineTabs"></div>
@@ -1560,21 +1560,23 @@ function renderMachineCardList() {
     if (!groups[brand]) { groups[brand] = []; groupOrder.push(brand); }
     groups[brand].push(m);
   });
-  var html2 = '<div class="machine-card-list">';
+  var html2 = '<div class="machine-card-list"><div style="padding:4px 2px 10px"><button class="tab-add" onclick="openMachineModal()">+ Add Machine</button></div>';
   groupOrder.forEach(function(brand) {
     var col = brandColors[brand] || '#3a5070';
     html2 += '<div class="machine-brand-section">';
     html2 += '<div class="machine-brand-label" style="color:' + col + '">' + brand + '</div>';
     groups[brand].forEach(function(m) {
       var partCount = '';
-      html2 += '<div class="machine-card" style="border-left-color:' + col + '" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">' +
-        '<div><div class="machine-card-name">' + m.name + '</div>' +
+      html2 += '<div class="machine-card" style="border-left-color:' + col + '">' +
+        '<div style="flex:1;min-width:0" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">' +
+        '<div class="machine-card-name">' + m.name + '</div>' +
         (m.description ? '<div class="machine-card-meta">' + m.description + '</div>' : '') +
-        '</div><span class="machine-card-arrow">&#9654;</span></div>';
+        '</div>' +
+        '<button class="btn-add-machine" style="margin-right:4px" onclick="event.stopPropagation();openEditMachineModal(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">✏️</button>' +
+        '<span class="machine-card-arrow" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">&#9654;</span></div>';
     });
     html2 += '</div>';
   });
-  html2 += '<div style="padding:8px 2px"><button class="tab-add" onclick="openMachineModal()">+ Add Machine</button></div>';
   html2 += '</div>';
   document.getElementById('machineCardSection').innerHTML = html2;
 }
@@ -2132,12 +2134,27 @@ async function deleteJob() {
 // ── MACHINES ──────────────────────────────────────────────────────
 
 function openMachineModal() {
-  machineModalFromJob = false;
+  machineModalFromJob = false; _editingMachineId = null;
   document.getElementById('machineModalTitle').textContent = '+ New Machine';
   document.getElementById('mName').value = ''; document.getElementById('mDesc').value = '';
   document.getElementById('btnSaveMachine').style.display = 'block';
   document.getElementById('btnSaveMachine').textContent = 'Create Machine';
   document.getElementById('btnDeleteMachine').style.display = 'none';
+  document.getElementById('machineOverlay').classList.add('show');
+  setTimeout(function() { document.getElementById('mName').focus(); }, 100);
+}
+
+var _editingMachineId = null;
+
+function openEditMachineModal(m) {
+  machineModalFromJob = false;
+  _editingMachineId = m.id;
+  document.getElementById('machineModalTitle').textContent = 'Edit Machine';
+  document.getElementById('mName').value = m.name || '';
+  document.getElementById('mDesc').value = m.description || '';
+  document.getElementById('btnSaveMachine').style.display = 'block';
+  document.getElementById('btnSaveMachine').textContent = 'Save Changes';
+  document.getElementById('btnDeleteMachine').style.display = 'block';
   document.getElementById('machineOverlay').classList.add('show');
   setTimeout(function() { document.getElementById('mName').focus(); }, 100);
 }
@@ -2172,21 +2189,30 @@ function closeMachineModal() { document.getElementById('machineOverlay').classLi
 async function saveMachine() {
   var name = document.getElementById('mName').value.trim();
   if (!name) { showToast('Machine name is required', 'error'); return; }
-  var btn = document.getElementById('btnSaveMachine'); btn.disabled = true; btn.textContent = 'Creating...';
+  var btn = document.getElementById('btnSaveMachine'); btn.disabled = true;
   try {
-    var res = await db('POST', 'machines', { name: name, description: document.getElementById('mDesc').value.trim() || null });
-    var newM = res[0]; machines.push(newM); machines.sort(function(a,b) { return a.name.localeCompare(b.name); });
-    closeMachineModal(); showToast(name + ' added');
-    if (machineModalFromJob) {
-      if (_machineForToolId) {
-        var t = jobToolsLocal.find(function(x) { return x._tempId === _machineForToolId; });
-        if (t) { t.machine_id = newM.id; renderToolsList(); }
-      } else {
-        populateMachineDropdown(newM.id);
-      }
-    } else { await selectMachine(newM); }
+    if (_editingMachineId) {
+      btn.textContent = 'Saving...';
+      var payload = { name: name, description: document.getElementById('mDesc').value.trim() || null };
+      await db('PATCH', 'machines?id=eq.' + _editingMachineId, payload);
+      var idx = machines.findIndex(function(m) { return m.id === _editingMachineId; });
+      if (idx > -1) { machines[idx].name = name; machines[idx].description = payload.description; }
+      _editingMachineId = null;
+      closeMachineModal(); renderMachineCardList(); showToast(name + ' updated');
+    } else {
+      btn.textContent = 'Creating...';
+      var res = await db('POST', 'machines', { name: name, description: document.getElementById('mDesc').value.trim() || null });
+      var newM = res[0]; machines.push(newM); machines.sort(function(a,b) { return a.name.localeCompare(b.name); });
+      closeMachineModal(); showToast(name + ' added');
+      if (machineModalFromJob) {
+        if (_machineForToolId) {
+          var t = jobToolsLocal.find(function(x) { return x._tempId === _machineForToolId; });
+          if (t) { t.machine_id = newM.id; renderToolsList(); }
+        } else { populateMachineDropdown(newM.id); }
+      } else { await selectMachine(newM); }
+    }
   } catch(e) { showToast('Failed: ' + e.message, 'error'); }
-  finally { btn.disabled = false; btn.textContent = 'Create Machine'; }
+  finally { btn.disabled = false; btn.textContent = _editingMachineId ? 'Save Changes' : 'Create Machine'; }
 }
 
 async function deleteMachine() {
