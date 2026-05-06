@@ -4,118 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MainFlow</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
-function switchToSuppliers() {
-  currentView = 'suppliers'; hideAllViews(); renderTabs();
-  document.getElementById('supplierToolbar').style.display = 'flex';
-  document.getElementById('supplierSection').style.display = 'block';
-  document.getElementById('hSub').textContent = 'Supplier Directory';
-  document.getElementById('lowBadge').innerHTML = '';
-  loadSupplierCards();
-}
-
-var _supplierCache = null, _suppliersList = [], editingSupplierId = null;
-
-async function loadSupplierCards() {
-  if (_supplierCache) { renderSupplierCards(_supplierCache); return; }
-  try {
-    var data = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order');
-    _supplierCache = data; renderSupplierCards(data);
-  } catch(e) {
-    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load suppliers. Run SQL first.</div></div>';
-  }
-}
-
-function renderSupplierCards(suppliers) {
-  _suppliersList = suppliers || [];
-  if (!_suppliersList.length) {
-    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#8aa8c0">No suppliers yet. Click + Add Supplier.</div></div>';
-    return;
-  }
-  var html2 = _suppliersList.map(function(s, i) {
-    var brands = (s.supplier_brands || []).map(function(b){ return '<span class="brand-chip">' + b.brand_name + '</span>'; }).join('');
-    var rows = '';
-    if (s.contact_name) rows += '<div class="s-row"><span class="ico">👤</span><span class="val">' + s.contact_name + '</span></div>';
-    if (s.phone)        rows += '<div class="s-row"><span class="ico">📞</span><span class="val">' + s.phone + '</span></div>';
-    if (s.email)        rows += '<div class="s-row"><span class="ico">✉️</span><a href="mailto:' + s.email + '" class="val">' + s.email + '</a></div>';
-    if (s.website)      rows += '<div class="s-row"><span class="ico">🌐</span><a href="https://' + s.website.replace(/^https?:\/\//, '') + '" target="_blank" class="val">' + s.website + '</a></div>';
-    if (s.address)      rows += '<div class="s-row"><span class="ico">📍</span><span class="val">' + s.address + '</span></div>';
-    if (s.ordering_notes) rows += '<div class="s-row"><span class="ico">📋</span><span class="val">' + s.ordering_notes + '</span></div>';
-    var notesHtml = s.notes ? '<div class="s-notes">' + s.notes + '</div>' : '';
-    return '<div class="supplier-card"><div class="supplier-card-top"><div class="supplier-name">' + s.company_name + '</div><div class="supplier-brands">' + brands + '</div></div>' + rows + notesHtml + '<div class="s-card-actions"><button class="s-card-btn edit" onclick="openEditSupplier(' + i + ')">✏️ Edit</button></div></div>';
-  }).join('');
-  document.getElementById('supplierGrid').innerHTML = html2;
-}
-
-function openSupplierModal() {
-  editingSupplierId = null;
-  document.getElementById('supplierModalTitle').textContent = 'Add Supplier';
-  ['sfName','sfContact','sfPhone','sfEmail','sfWebsite','sfAddress','sfBrands','sfOrderNotes','sfNotes'].forEach(function(id){ document.getElementById(id).value = ''; });
-  document.getElementById('btnDeleteSupplier').style.display = 'none';
-  document.getElementById('supplierOverlay').classList.add('show');
-}
-
-function openEditSupplier(idx) {
-  var s = _suppliersList[idx]; if (!s) return;
-  editingSupplierId = s.id;
-  document.getElementById('supplierModalTitle').textContent = 'Edit Supplier';
-  document.getElementById('sfName').value = s.company_name || '';
-  document.getElementById('sfContact').value = s.contact_name || '';
-  document.getElementById('sfPhone').value = s.phone || '';
-  document.getElementById('sfEmail').value = s.email || '';
-  document.getElementById('sfWebsite').value = s.website || '';
-  document.getElementById('sfAddress').value = s.address || '';
-  document.getElementById('sfBrands').value = (s.supplier_brands || []).map(function(b){ return b.brand_name; }).join(', ');
-  document.getElementById('sfOrderNotes').value = s.ordering_notes || '';
-  document.getElementById('sfNotes').value = s.notes || '';
-  document.getElementById('btnDeleteSupplier').style.display = 'block';
-  document.getElementById('supplierOverlay').classList.add('show');
-}
-
-function closeSupplierModal() { document.getElementById('supplierOverlay').classList.remove('show'); }
-
-async function saveSupplier() {
-  var name = document.getElementById('sfName').value.trim();
-  if (!name) { showToast('Company name required', 'error'); return; }
-  document.getElementById('btnSaveSupplier').disabled = true;
-  try {
-    var payload = { company_name: name,
-      contact_name: document.getElementById('sfContact').value.trim() || null,
-      phone: document.getElementById('sfPhone').value.trim() || null,
-      email: document.getElementById('sfEmail').value.trim() || null,
-      website: document.getElementById('sfWebsite').value.trim() || null,
-      address: document.getElementById('sfAddress').value.trim() || null,
-      ordering_notes: document.getElementById('sfOrderNotes').value.trim() || null,
-      notes: document.getElementById('sfNotes').value.trim() || null };
-    var brands = document.getElementById('sfBrands').value.split(',').map(function(b){ return b.trim(); }).filter(Boolean);
-    var sid;
-    if (editingSupplierId) {
-      await db('PATCH', 'suppliers?id=eq.' + editingSupplierId, payload);
-      sid = editingSupplierId;
-      await db('DELETE', 'supplier_brands?supplier_id=eq.' + sid);
-    } else {
-      var res = await db('POST', 'suppliers', payload);
-      sid = res[0].id;
-    }
-    for (var i = 0; i < brands.length; i++) { await db('POST', 'supplier_brands', { supplier_id: sid, brand_name: brands[i] }); }
-    _supplierCache = null; closeSupplierModal(); await loadSupplierCards();
-    showToast(editingSupplierId ? 'Supplier updated' : 'Supplier added');
-  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
-  document.getElementById('btnSaveSupplier').disabled = false;
-}
-
-async function deleteSupplier() {
-  if (!editingSupplierId) return;
-  if (!confirm('Delete this supplier?')) return;
-  try {
-    await db('DELETE', 'supplier_brands?supplier_id=eq.' + editingSupplierId);
-    await db('DELETE', 'suppliers?id=eq.' + editingSupplierId);
-    _supplierCache = null; closeSupplierModal(); await loadSupplierCards();
-    showToast('Supplier deleted');
-  } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
-}
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f1923;color:#e2e8f0}
@@ -2899,6 +2788,116 @@ function showToast(msg, type) {
 }
 
 init();
+function switchToSuppliers() {
+  currentView = 'suppliers'; hideAllViews(); renderTabs();
+  document.getElementById('supplierToolbar').style.display = 'flex';
+  document.getElementById('supplierSection').style.display = 'block';
+  document.getElementById('hSub').textContent = 'Supplier Directory';
+  document.getElementById('lowBadge').innerHTML = '';
+  loadSupplierCards();
+}
+
+var _supplierCache = null, _suppliersList = [], editingSupplierId = null;
+
+async function loadSupplierCards() {
+  if (_supplierCache) { renderSupplierCards(_supplierCache); return; }
+  try {
+    var data = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order');
+    _supplierCache = data; renderSupplierCards(data);
+  } catch(e) {
+    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load suppliers. Run SQL first.</div></div>';
+  }
+}
+
+function renderSupplierCards(suppliers) {
+  _suppliersList = suppliers || [];
+  if (!_suppliersList.length) {
+    document.getElementById('supplierGrid').innerHTML = '<div class="center"><div style="color:#8aa8c0">No suppliers yet. Click + Add Supplier.</div></div>';
+    return;
+  }
+  var html2 = _suppliersList.map(function(s, i) {
+    var brands = (s.supplier_brands || []).map(function(b){ return '<span class="brand-chip">' + b.brand_name + '</span>'; }).join('');
+    var rows = '';
+    if (s.contact_name) rows += '<div class="s-row"><span class="ico">👤</span><span class="val">' + s.contact_name + '</span></div>';
+    if (s.phone)        rows += '<div class="s-row"><span class="ico">📞</span><span class="val">' + s.phone + '</span></div>';
+    if (s.email)        rows += '<div class="s-row"><span class="ico">✉️</span><a href="mailto:' + s.email + '" class="val">' + s.email + '</a></div>';
+    if (s.website)      rows += '<div class="s-row"><span class="ico">🌐</span><a href="https://' + s.website.replace(/^https?:\/\//, '') + '" target="_blank" class="val">' + s.website + '</a></div>';
+    if (s.address)      rows += '<div class="s-row"><span class="ico">📍</span><span class="val">' + s.address + '</span></div>';
+    if (s.ordering_notes) rows += '<div class="s-row"><span class="ico">📋</span><span class="val">' + s.ordering_notes + '</span></div>';
+    var notesHtml = s.notes ? '<div class="s-notes">' + s.notes + '</div>' : '';
+    return '<div class="supplier-card"><div class="supplier-card-top"><div class="supplier-name">' + s.company_name + '</div><div class="supplier-brands">' + brands + '</div></div>' + rows + notesHtml + '<div class="s-card-actions"><button class="s-card-btn edit" onclick="openEditSupplier(' + i + ')">✏️ Edit</button></div></div>';
+  }).join('');
+  document.getElementById('supplierGrid').innerHTML = html2;
+}
+
+function openSupplierModal() {
+  editingSupplierId = null;
+  document.getElementById('supplierModalTitle').textContent = 'Add Supplier';
+  ['sfName','sfContact','sfPhone','sfEmail','sfWebsite','sfAddress','sfBrands','sfOrderNotes','sfNotes'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('btnDeleteSupplier').style.display = 'none';
+  document.getElementById('supplierOverlay').classList.add('show');
+}
+
+function openEditSupplier(idx) {
+  var s = _suppliersList[idx]; if (!s) return;
+  editingSupplierId = s.id;
+  document.getElementById('supplierModalTitle').textContent = 'Edit Supplier';
+  document.getElementById('sfName').value = s.company_name || '';
+  document.getElementById('sfContact').value = s.contact_name || '';
+  document.getElementById('sfPhone').value = s.phone || '';
+  document.getElementById('sfEmail').value = s.email || '';
+  document.getElementById('sfWebsite').value = s.website || '';
+  document.getElementById('sfAddress').value = s.address || '';
+  document.getElementById('sfBrands').value = (s.supplier_brands || []).map(function(b){ return b.brand_name; }).join(', ');
+  document.getElementById('sfOrderNotes').value = s.ordering_notes || '';
+  document.getElementById('sfNotes').value = s.notes || '';
+  document.getElementById('btnDeleteSupplier').style.display = 'block';
+  document.getElementById('supplierOverlay').classList.add('show');
+}
+
+function closeSupplierModal() { document.getElementById('supplierOverlay').classList.remove('show'); }
+
+async function saveSupplier() {
+  var name = document.getElementById('sfName').value.trim();
+  if (!name) { showToast('Company name required', 'error'); return; }
+  document.getElementById('btnSaveSupplier').disabled = true;
+  try {
+    var payload = { company_name: name,
+      contact_name: document.getElementById('sfContact').value.trim() || null,
+      phone: document.getElementById('sfPhone').value.trim() || null,
+      email: document.getElementById('sfEmail').value.trim() || null,
+      website: document.getElementById('sfWebsite').value.trim() || null,
+      address: document.getElementById('sfAddress').value.trim() || null,
+      ordering_notes: document.getElementById('sfOrderNotes').value.trim() || null,
+      notes: document.getElementById('sfNotes').value.trim() || null };
+    var brands = document.getElementById('sfBrands').value.split(',').map(function(b){ return b.trim(); }).filter(Boolean);
+    var sid;
+    if (editingSupplierId) {
+      await db('PATCH', 'suppliers?id=eq.' + editingSupplierId, payload);
+      sid = editingSupplierId;
+      await db('DELETE', 'supplier_brands?supplier_id=eq.' + sid);
+    } else {
+      var res = await db('POST', 'suppliers', payload);
+      sid = res[0].id;
+    }
+    for (var i = 0; i < brands.length; i++) { await db('POST', 'supplier_brands', { supplier_id: sid, brand_name: brands[i] }); }
+    _supplierCache = null; closeSupplierModal(); await loadSupplierCards();
+    showToast(editingSupplierId ? 'Supplier updated' : 'Supplier added');
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+  document.getElementById('btnSaveSupplier').disabled = false;
+}
+
+async function deleteSupplier() {
+  if (!editingSupplierId) return;
+  if (!confirm('Delete this supplier?')) return;
+  try {
+    await db('DELETE', 'supplier_brands?supplier_id=eq.' + editingSupplierId);
+    await db('DELETE', 'suppliers?id=eq.' + editingSupplierId);
+    _supplierCache = null; closeSupplierModal(); await loadSupplierCards();
+    showToast('Supplier deleted');
+  } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
+}
+
 </script>
 </body>
 </html>
