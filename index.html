@@ -672,6 +672,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field"><label>Serial Number</label><input id="ltSerial" placeholder="e.g. 56096"></div>
       <div class="field"><label>Condition</label><select id="ltCondition" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
     </div>
+    <div class="field"><label>Current Cycle Count (Odometer)</label><input id="ltCycleCount" type="number" min="0" placeholder="e.g. 45230"></div>
     <div class="field"><label>Location</label>
       <input id="ltLocation" list="ltLocationList" placeholder="e.g. Tamworth Stock">
       <datalist id="ltLocationList">
@@ -1053,6 +1054,7 @@ function renderToolRegister(){
       '<div style="flex:1"><div class="tool-reg-name">'+t.name+'</div>'+
       (t.xpak_name?'<div style="font-size:12px;font-weight:700;color:#00c8e0;margin-bottom:2px">'+t.xpak_name+(t.xpak_code?' <span style="font-size:10px;color:#3a5070;font-weight:400">['+t.xpak_code+']</span>':'')+'</div>':'')+
       (t.serial_number?'<div class="tool-reg-sn">S/N: '+t.serial_number+(t.condition?' · '+t.condition:'')+'</div>':'')+
+      (t.current_cycle_count!=null?'<div class="tool-reg-sn" style="color:#a78bfa">⟳ '+t.current_cycle_count.toLocaleString()+' cycles</div>':'')+
       (t.location?'<div style="font-size:11px;color:#f59e0b;margin-top:2px">● '+t.location+'</div>':'')+(t.notes?'<div style="font-size:11px;color:#5a8090;margin-top:2px">'+t.notes+'</div>':'')+
       '</div><span class="tool-reg-status" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+sl+'</span></div>';
   }).join('');
@@ -1124,7 +1126,7 @@ async function markLoanReturned(){
     var toolId=editingLoan.loan_tool_id; btn.disabled=true;
     try{
       await db('PATCH','loans?id=eq.'+editingLoan.id,{status:'RETURNED',returned_date:document.getElementById('lReturnedDate').value||new Date().toISOString().split('T')[0],condition_in:document.getElementById('lConditionIn').value||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_in:document.getElementById('lPhotoIn').value||null,updated_at:new Date().toISOString()});
-      await db('PATCH','loan_tools?id=eq.'+toolId,{is_available:true,updated_at:new Date().toISOString()});
+      var retPatch={is_available:true,updated_at:new Date().toISOString()}; var cin=parseInt(document.getElementById('lCycleCountIn').value); if(!isNaN(cin)) retPatch.current_cycle_count=cin; await db('PATCH','loan_tools?id=eq.'+toolId,retPatch); var tidx=loanTools.findIndex(function(x){return x.id===toolId;}); if(tidx>-1&&!isNaN(cin)) loanTools[tidx].current_cycle_count=cin;
       showToast('Returned'); closeLoanModal(); await loadLoans();
     }catch(e){showToast('Failed: '+e.message,'error');}
     finally{btn.disabled=false;}
@@ -1155,8 +1157,8 @@ async function deleteLoan(){
   }catch(e){showToast('Delete failed','error');}
 }
 function openLoanToolModal(toolId){
-  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltXpakName').value=t.xpak_name||''; document.getElementById('ltXpakCode').value=t.xpak_code||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('btnDeleteLoanTool').style.display='block'; document.getElementById('btnPrintIdLabel').style.display='block';}
-  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation','ltXpakName','ltXpakCode'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
+  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltCycleCount').value=t.current_cycle_count!=null?t.current_cycle_count:''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltXpakName').value=t.xpak_name||''; document.getElementById('ltXpakCode').value=t.xpak_code||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('btnDeleteLoanTool').style.display='block'; document.getElementById('btnPrintIdLabel').style.display='block';}
+  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation','ltXpakName','ltXpakCode','ltCycleCount'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
   document.getElementById('loanToolOverlay').classList.add('show');
   setTimeout(function(){document.getElementById('ltName').focus();},100);
 }
@@ -1213,7 +1215,7 @@ function printToolIdLabel() {
 async function saveLoanTool(){
   var name=document.getElementById('ltName').value.trim(); if(!name){showToast('Tool name required','error');return;}
   var btn=document.getElementById('btnSaveLoanTool'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
+  var cycleVal=document.getElementById('ltCycleCount').value; var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,current_cycle_count:cycleVal!==''?parseInt(cycleVal):null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
   try{if(editingLoanTool){await db('PATCH','loan_tools?id=eq.'+editingLoanTool.id,payload);showToast('Tool updated');await loadLoans();var r2=loanTools.find(function(x){return x.id===editingLoanTool.id;});if(r2)editingLoanTool=r2;}else{await db('POST','loan_tools',payload);showToast('Tool added');closeLoanToolModal();await loadLoans();}}
   catch(e){showToast('Save failed: '+e.message,'error');}finally{btn.disabled=false;btn.textContent='Save Tool';}
 }
