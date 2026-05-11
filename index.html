@@ -3248,7 +3248,8 @@ function printSvReport() {
   w.document.write('.section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#fb923c;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid #fb923c40}');
   w.document.write('.cost-table{width:100%;border-collapse:collapse;margin-top:8px}.cost-table td{padding:7px 10px;border-bottom:1px solid #f0f0f0}.cost-table .label{color:#333}.cost-table .amount{text-align:right;font-weight:600}.total-row td{font-weight:800;font-size:15px;color:#fb923c;border-top:2px solid #fb923c;border-bottom:none}');
   w.document.write('@media print{body{padding:10px}button{display:none}}</style></head><body>');
-  w.document.write('<div class="header"><div><div class="company">X-PAK GLOBAL</div><div class="sub">Service Division</div></div><div class="title-block"><div class="report-title">FIELD SERVICE REPORT</div><div class="ref">' + (invRef?'Invoice Ref: '+invRef+'<br>':'') + 'Date: '+dateStr+'</div></div></div>');
+  var svRef2 = editingSvId ? (siteVisits.find(function(x){return x.id===editingSvId;})||{}).visit_number : null;
+  w.document.write('<div class="header"><div><div class="company">X-PAK GLOBAL</div><div class="sub">Service Division</div></div><div class="title-block"><div class="report-title">FIELD SERVICE REPORT</div><div class="ref">' + (svRef2?xsvNum(svRef2)+'<br>':'') + (invRef?'Invoice Ref: '+invRef+'<br>':'') + 'Date: '+dateStr+'</div></div></div>');
   w.document.write('<div class="meta-grid">');
   w.document.write('<div class="meta-item"><div class="meta-label">Customer</div><div class="meta-val">'+customer+'</div></div>');
   w.document.write('<div class="meta-item"><div class="meta-label">Technician</div><div class="meta-val">'+tech+'</div></div>');
