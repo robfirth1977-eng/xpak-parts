@@ -1807,6 +1807,7 @@ function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsL
 // ── JOBS ──────────────────────────────────────────────────────────
 
 function xpsNum(n) { return 'XPS-' + String(n).padStart(3, '0'); }
+function xsvNum(n) { return 'XSV-' + String(n).padStart(3, '0'); }
 
 async function loadJobs() {
   try { jobs = await db('GET', 'jobs?select=*&order=created_at.desc'); renderJobs(); }
@@ -3031,7 +3032,7 @@ function renderSiteVisits() {
         (v.notes?'<div class="sv-meta" style="font-style:italic;margin-top:3px">' + v.notes + '</div>':'') +
         '</div>' +
         '<div style="text-align:right">' +
-          '<div class="sv-date">' + new Date(v.visit_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + '</div>' +
+          '<div class="sv-date">' + (v.visit_number ? xsvNum(v.visit_number) + ' · ' : '') + new Date(v.visit_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + '</div>' +
           '<div class="sv-total">$' + total.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
           '<div class="sv-status ' + (v.status||'draft').toLowerCase() + '">' + (v.status||'Draft').toUpperCase() + '</div>' +
         '</div>' +
@@ -3067,7 +3068,7 @@ function openEditSv(id) {
     return { _id: i, db_id: m.id, machine_type: m.machine_type||'', serial_number: m.serial_number||'', work_performed: m.work_performed||'',
       parts: (m.site_visit_parts||[]).map(function(p,j){ return { _id: j, db_id: p.id, description: p.part_description||'', part_no: p.part_no||'', quantity: p.quantity||1, unit_cost: p.unit_cost||'', line_total: p.line_total||0 }; }) };
   });
-  document.getElementById('svModalTitle').textContent = 'Edit Site Visit';
+  document.getElementById('svModalTitle').textContent = 'Edit Site Visit' + (v.visit_number ? ' · ' + xsvNum(v.visit_number) : '');
   document.getElementById('svCustomer').value = v.customer||'';
   document.getElementById('svDate').value = v.visit_date||'';
   document.getElementById('svTech').value = v.technician||'Rob Firth';
@@ -3238,6 +3239,7 @@ function printSvReport() {
       partsHtml+'</div>';
   }).join('');
   var w=window.open('','_blank');
+  if(!w){showToast('Allow pop-ups for this site to print reports','error');return;}
   w.document.write('<!DOCTYPE html><html><head><title>Site Visit Report - '+customer+'</title>');
   w.document.write('<style>body{font-family:"Segoe UI",sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:30px;font-size:13px}');
   w.document.write('.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #fb923c}');
