@@ -1001,7 +1001,7 @@ async function init() {
     renderTabs(); await loadAllParts();
   // Start on Jobs view
   switchToJobs();
-  try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=id,customer'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
+  try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
   } catch(e) {
     document.getElementById('hSub').textContent = 'Connection error';
     document.getElementById('partsList').innerHTML = '<div class="center"><div style="color:#ef4444">Cannot connect</div></div>';
