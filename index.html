@@ -2998,7 +2998,12 @@ function switchToSiteVisits() {
 async function loadSiteVisits() {
   document.getElementById('svList').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
   try {
-    siteVisits = await db('GET', 'site_visits?select=*,site_visit_machines(*,site_visit_parts(*))&order=visit_date.desc');
+    var visits = await db('GET', 'site_visits?select=*&order=visit_date.desc');
+    var machines = await db('GET', 'site_visit_machines?select=*');
+    var parts = await db('GET', 'site_visit_parts?select=*');
+    machines.forEach(function(m) { m.site_visit_parts = parts.filter(function(p){ return p.site_visit_id === m.site_visit_id; }); });
+    visits.forEach(function(v) { v.site_visit_machines = machines.filter(function(m){ return m.site_visit_id === v.id; }); });
+    siteVisits = visits;
     renderSiteVisits();
   } catch(e) {
     document.getElementById('svList').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load site visits.</div></div>';
