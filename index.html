@@ -4,292 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MainFlow</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
-// ── SITE VISITS ──────────────────────────────────────────────────────────────
-var siteVisits = [], editingSvId = null, svMachines = [];
-
-function switchToSiteVisits() {
-  currentView = 'sitevisits'; hideAllViews(); renderTabs();
-  document.getElementById('svToolbar').style.display = 'flex';
-  document.getElementById('svSection').style.display = 'block';
-  document.getElementById('hSub').textContent = 'Site Visits';
-  document.getElementById('lowBadge').innerHTML = '';
-  loadSiteVisits();
-}
-
-async function loadSiteVisits() {
-  document.getElementById('svList').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
-  try {
-    siteVisits = await db('GET', 'site_visits?select=*,site_visit_machines(*,site_visit_parts(*))&order=visit_date.desc');
-    renderSiteVisits();
-  } catch(e) {
-    document.getElementById('svList').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load site visits.</div></div>';
-  }
-}
-
-function renderSiteVisits() {
-  if (!siteVisits.length) {
-    document.getElementById('svList').innerHTML = '<div class="center"><div class="icon">🔧</div><div>No site visits yet. Click + New Visit.</div></div>';
-    return;
-  }
-  document.getElementById('svList').innerHTML = siteVisits.map(function(v) {
-    var hrs = parseFloat(v.hours||0), rate = parseFloat(v.hourly_rate||220);
-    var labour = hrs * rate;
-    var parts = (v.site_visit_machines||[]).reduce(function(sum,m){ return sum + (m.site_visit_parts||[]).reduce(function(s,p){ return s + parseFloat(p.line_total||0); },0); },0);
-    var extras = parseFloat(v.travel_cost||0) + parseFloat(v.accommodation_cost||0);
-    var total = labour + parts + extras;
-    var agrName = '';
-    if (v.agreement_id) { var a = agreements.find(function(x){return x.id===v.agreement_id;}); if(a) agrName = a.customer; }
-    var machines = (v.site_visit_machines||[]).map(function(m){ return m.machine_type + (m.serial_number?' ('+m.serial_number+')':''); }).join(', ');
-    return '<div class="sv-card" onclick="openEditSv('' + v.id + '')">' +
-      '<div class="sv-card-top">' +
-        '<div><div class="sv-customer">' + (v.customer||agrName||'Unknown') + '</div>' +
-        '<div class="sv-meta">' + (v.technician||'') + (machines?' · '+machines:'') + '</div>' +
-        (v.notes?'<div class="sv-meta" style="font-style:italic;margin-top:3px">' + v.notes + '</div>':'') +
-        '</div>' +
-        '<div style="text-align:right">' +
-          '<div class="sv-date">' + new Date(v.visit_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + '</div>' +
-          '<div class="sv-total">$' + total.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-          '<div class="sv-status ' + (v.status||'draft').toLowerCase() + '">' + (v.status||'Draft').toUpperCase() + '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-function openSvModal() {
-  editingSvId = null; svMachines = [];
-  document.getElementById('svModalTitle').textContent = 'New Site Visit';
-  document.getElementById('svCustomer').value = '';
-  document.getElementById('svDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('svTech').value = 'Rob Firth';
-  document.getElementById('svHours').value = '';
-  document.getElementById('svRate').value = '220';
-  document.getElementById('svTravel').value = '';
-  document.getElementById('svAccom').value = '';
-  document.getElementById('svNotes').value = '';
-  document.getElementById('svStatus').value = 'Draft';
-  document.getElementById('svInvoiceRef').value = '';
-  document.getElementById('btnDeleteSv').style.display = 'none';
-  populateSvAgrDropdown(null);
-  renderSvMachines();
-  updateSvTotals();
-  document.getElementById('svOverlay').classList.add('show');
-}
-
-function openEditSv(id) {
-  var v = siteVisits.find(function(x){return x.id===id;}); if(!v) return;
-  editingSvId = id;
-  svMachines = (v.site_visit_machines||[]).map(function(m,i) {
-    return { _id: i, db_id: m.id, machine_type: m.machine_type||'', serial_number: m.serial_number||'', work_performed: m.work_performed||'',
-      parts: (m.site_visit_parts||[]).map(function(p,j){ return { _id: j, db_id: p.id, description: p.part_description||'', part_no: p.part_no||'', quantity: p.quantity||1, unit_cost: p.unit_cost||'', line_total: p.line_total||0 }; }) };
-  });
-  document.getElementById('svModalTitle').textContent = 'Edit Site Visit';
-  document.getElementById('svCustomer').value = v.customer||'';
-  document.getElementById('svDate').value = v.visit_date||'';
-  document.getElementById('svTech').value = v.technician||'Rob Firth';
-  document.getElementById('svHours').value = v.hours||'';
-  document.getElementById('svRate').value = v.hourly_rate||220;
-  document.getElementById('svTravel').value = v.travel_cost||'';
-  document.getElementById('svAccom').value = v.accommodation_cost||'';
-  document.getElementById('svNotes').value = v.notes||'';
-  document.getElementById('svStatus').value = v.status||'Draft';
-  document.getElementById('svInvoiceRef').value = v.invoice_ref||'';
-  document.getElementById('btnDeleteSv').style.display = 'block';
-  populateSvAgrDropdown(v.agreement_id||null);
-  renderSvMachines();
-  updateSvTotals();
-  document.getElementById('svOverlay').classList.add('show');
-}
-
-function closeSvModal() { document.getElementById('svOverlay').classList.remove('show'); }
-
-function populateSvAgrDropdown(selectedId) {
-  var sel = document.getElementById('svAgrId');
-  sel.innerHTML = '<option value="">-- None --</option>';
-  (agreements||[]).filter(function(a){return a.status==='ACTIVE';}).forEach(function(a) {
-    var opt = document.createElement('option');
-    opt.value = a.id; opt.textContent = a.customer;
-    if (a.id === selectedId) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  sel.onchange = function() {
-    var a = agreements.find(function(x){return x.id===sel.value;});
-    if (a && !document.getElementById('svCustomer').value) document.getElementById('svCustomer').value = a.customer;
-  };
-}
-
-var _svMachineIdx = 0, _svPartIdx = 0;
-function addSvMachine() {
-  svMachines.push({ _id: _svMachineIdx++, db_id: null, machine_type:'', serial_number:'', work_performed:'', parts:[] });
-  renderSvMachines();
-}
-function removeSvMachine(idx) { svMachines = svMachines.filter(function(m){return m._id!==idx;}); renderSvMachines(); updateSvTotals(); }
-function addSvPart(mIdx) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m.parts.push({_id:_svPartIdx++,db_id:null,description:'',part_no:'',quantity:1,unit_cost:'',line_total:0}); renderSvMachines(); }
-function removeSvPart(mIdx,pIdx) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m.parts=m.parts.filter(function(p){return p._id!==pIdx;}); renderSvMachines(); updateSvTotals(); }
-
-function renderSvMachines() {
-  var html = svMachines.map(function(m) {
-    var parts = m.parts.map(function(p) {
-      return '<div class="sv-part-row">' +
-        '<input style="flex:2" placeholder="Description" value="' + p.description + '" oninput="svSetPart(' + m._id + ',' + p._id + ','description',this.value)">' +
-        '<input style="flex:1" placeholder="Part No." value="' + p.part_no + '" oninput="svSetPart(' + m._id + ',' + p._id + ','part_no',this.value)">' +
-        '<input style="width:44px" placeholder="Qty" type="number" min="1" value="' + p.quantity + '" oninput="svSetPart(' + m._id + ',' + p._id + ','quantity',this.value)">' +
-        '<input style="width:72px" placeholder="$ Unit" type="number" min="0" value="' + p.unit_cost + '" oninput="svSetPart(' + m._id + ',' + p._id + ','unit_cost',this.value)">' +
-        '<span style="font-size:12px;color:#10b981;width:54px;text-align:right">$' + parseFloat(p.line_total||0).toFixed(2) + '</span>' +
-        '<button class="sv-remove-btn" onclick="removeSvPart(' + m._id + ',' + p._id + ')">×</button>' +
-      '</div>';
-    }).join('');
-    return '<div class="sv-machine-row">' +
-      '<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">' +
-        '<input style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none" placeholder="Machine type" value="' + m.machine_type + '" oninput="svSetMachine(' + m._id + ','machine_type',this.value)">' +
-        '<input style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none" placeholder="Serial No." value="' + m.serial_number + '" oninput="svSetMachine(' + m._id + ','serial_number',this.value)">' +
-        '<button class="sv-remove-btn" onclick="removeSvMachine(' + m._id + ')">×</button>' +
-      '</div>' +
-      '<textarea placeholder="Work performed..." style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;resize:vertical;outline:none;margin-bottom:8px" rows="2" oninput="svSetMachine(' + m._id + ','work_performed',this.value)">' + m.work_performed + '</textarea>' +
-      (parts ? '<div style="font-size:10px;color:#5a8090;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px">Parts Used</div>' + parts : '') +
-      '<button class="sv-add-btn" onclick="addSvPart(' + m._id + ')">+ Add Part</button>' +
-    '</div>';
-  }).join('');
-  document.getElementById('svMachinesContainer').innerHTML = html;
-}
-
-function svSetMachine(mIdx, field, val) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m[field]=val; }
-function svSetPart(mIdx, pIdx, field, val) {
-  var m=svMachines.find(function(x){return x._id===mIdx;}); if(!m) return;
-  var p=m.parts.find(function(x){return x._id===pIdx;}); if(!p) return;
-  p[field]=val;
-  if(field==='quantity'||field==='unit_cost') { p.line_total=parseFloat(p.quantity||1)*parseFloat(p.unit_cost||0); }
-  updateSvTotals();
-  var el = document.querySelector('[data-sv-part-total="'+mIdx+'-'+pIdx+'"]');
-  if(el) el.textContent = '$'+parseFloat(p.line_total||0).toFixed(2);
-}
-
-function updateSvTotals() {
-  var hrs=parseFloat(document.getElementById('svHours').value||0);
-  var rate=parseFloat(document.getElementById('svRate').value||220);
-  var labour=hrs*rate;
-  var parts=svMachines.reduce(function(sum,m){return sum+m.parts.reduce(function(s,p){return s+parseFloat(p.line_total||0);},0);},0);
-  var extras=parseFloat(document.getElementById('svTravel').value||0)+parseFloat(document.getElementById('svAccom').value||0);
-  document.getElementById('svLabourTotal').textContent='$'+labour.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
-  document.getElementById('svPartsTotal').textContent='$'+parts.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
-  document.getElementById('svExtrasTotal').textContent='$'+extras.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
-  document.getElementById('svGrandTotal').textContent='$'+(labour+parts+extras).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-
-document.addEventListener('input', function(e) {
-  if (['svHours','svRate','svTravel','svAccom'].indexOf(e.target.id) > -1) updateSvTotals();
-});
-
-async function saveSiteVisit() {
-  var customer = document.getElementById('svCustomer').value.trim();
-  var date = document.getElementById('svDate').value;
-  if (!customer||!date) { showToast('Customer and date required','error'); return; }
-  document.getElementById('btnSaveSv').disabled = true;
-  try {
-    var payload = { customer: customer, visit_date: date,
-      technician: document.getElementById('svTech').value.trim()||'Rob Firth',
-      agreement_id: document.getElementById('svAgrId').value||null,
-      hours: parseFloat(document.getElementById('svHours').value)||null,
-      hourly_rate: parseFloat(document.getElementById('svRate').value)||220,
-      travel_cost: parseFloat(document.getElementById('svTravel').value)||null,
-      accommodation_cost: parseFloat(document.getElementById('svAccom').value)||null,
-      notes: document.getElementById('svNotes').value.trim()||null,
-      status: document.getElementById('svStatus').value,
-      invoice_ref: document.getElementById('svInvoiceRef').value.trim()||null };
-    var vid;
-    if (editingSvId) {
-      await db('PATCH','site_visits?id=eq.'+editingSvId,payload); vid=editingSvId;
-      await db('DELETE','site_visit_machines?site_visit_id=eq.'+vid);
-    } else {
-      var res=await db('POST','site_visits',payload); vid=res[0].id;
-    }
-    for (var i=0;i<svMachines.length;i++) {
-      var m=svMachines[i];
-      var mres=await db('POST','site_visit_machines',{site_visit_id:vid,machine_type:m.machine_type||null,serial_number:m.serial_number||null,work_performed:m.work_performed||null});
-      var mid=mres[0].id;
-      for (var j=0;j<m.parts.length;j++) {
-        var p=m.parts[j];
-        if(p.description) await db('POST','site_visit_parts',{site_visit_id:vid,machine_ref:m.machine_type||null,part_description:p.description,part_no:p.part_no||null,quantity:parseInt(p.quantity)||1,unit_cost:parseFloat(p.unit_cost)||null,line_total:parseFloat(p.line_total)||null});
-      }
-    }
-    closeSvModal(); await loadSiteVisits();
-    showToast(editingSvId?'Visit updated':'Visit saved');
-  } catch(e) { showToast('Save failed: '+e.message,'error'); }
-  document.getElementById('btnSaveSv').disabled = false;
-}
-
-async function deleteSiteVisit() {
-  if(!editingSvId||!confirm('Delete this site visit?')) return;
-  try {
-    await db('DELETE','site_visit_machines?site_visit_id=eq.'+editingSvId);
-    await db('DELETE','site_visits?id=eq.'+editingSvId);
-    closeSvModal(); await loadSiteVisits(); showToast('Visit deleted');
-  } catch(e) { showToast('Delete failed: '+e.message,'error'); }
-}
-
-function printSvReport() {
-  var customer=document.getElementById('svCustomer').value||'Unknown';
-  var date=document.getElementById('svDate').value;
-  var tech=document.getElementById('svTech').value||'Rob Firth';
-  var hrs=parseFloat(document.getElementById('svHours').value||0);
-  var rate=parseFloat(document.getElementById('svRate').value||220);
-  var labour=hrs*rate;
-  var travel=parseFloat(document.getElementById('svTravel').value||0);
-  var accom=parseFloat(document.getElementById('svAccom').value||0);
-  var notes=document.getElementById('svNotes').value;
-  var invRef=document.getElementById('svInvoiceRef').value;
-  var fmt=function(n){return '$'+parseFloat(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});};
-  var dateStr=date?new Date(date).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}):'';
-  var partsTotal=svMachines.reduce(function(s,m){return s+m.parts.reduce(function(ps,p){return ps+parseFloat(p.line_total||0);},0);},0);
-  var grand=labour+partsTotal+travel+accom;
-  var machinesHtml=svMachines.map(function(m){
-    var partsHtml='';
-    if(m.parts.length){
-      partsHtml='<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:11px"><tr style="background:#f0f4f8"><th style="text-align:left;padding:4px 6px">Description</th><th style="padding:4px 6px">Part No.</th><th style="padding:4px 6px;text-align:center">Qty</th><th style="padding:4px 6px;text-align:right">Unit</th><th style="padding:4px 6px;text-align:right">Total</th></tr>'+
-      m.parts.map(function(p){return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:4px 6px">'+p.description+'</td><td style="padding:4px 6px;color:#555">'+p.part_no+'</td><td style="padding:4px 6px;text-align:center">'+p.quantity+'</td><td style="padding:4px 6px;text-align:right">'+fmt(p.unit_cost)+'</td><td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(p.line_total)+'</td></tr>';}).join('')+'</table>';
-    }
-    return '<div style="margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:6px;border-left:3px solid #fb923c">'+
-      '<div style="font-weight:700;font-size:13px">'+m.machine_type+(m.serial_number?' <span style="font-weight:400;color:#555">S/N: '+m.serial_number+'</span>':'')+'</div>'+
-      (m.work_performed?'<div style="font-size:12px;color:#333;margin-top:4px">'+m.work_performed+'</div>':'')+
-      partsHtml+'</div>';
-  }).join('');
-  var w=window.open('','_blank');
-  w.document.write('<!DOCTYPE html><html><head><title>Site Visit Report - '+customer+'</title>');
-  w.document.write('<style>body{font-family:"Segoe UI",sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:30px;font-size:13px}');
-  w.document.write('.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #fb923c}');
-  w.document.write('.company{font-size:20px;font-weight:900;color:#0f1923}.sub{font-size:11px;color:#555;margin-top:2px}');
-  w.document.write('.title-block{text-align:right}.report-title{font-size:18px;font-weight:700;color:#fb923c}.ref{font-size:12px;color:#555;margin-top:2px}');
-  w.document.write('.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}');
-  w.document.write('.meta-item{background:#f8fafc;padding:8px 12px;border-radius:6px}.meta-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.3px}.meta-val{font-size:13px;font-weight:600;margin-top:2px}');
-  w.document.write('.section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#fb923c;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid #fb923c40}');
-  w.document.write('.cost-table{width:100%;border-collapse:collapse;margin-top:8px}.cost-table td{padding:7px 10px;border-bottom:1px solid #f0f0f0}.cost-table .label{color:#333}.cost-table .amount{text-align:right;font-weight:600}.total-row td{font-weight:800;font-size:15px;color:#fb923c;border-top:2px solid #fb923c;border-bottom:none}');
-  w.document.write('@media print{body{padding:10px}button{display:none}}</style></head><body>');
-  w.document.write('<div class="header"><div><div class="company">X-PAK GLOBAL</div><div class="sub">Service Division</div></div><div class="title-block"><div class="report-title">FIELD SERVICE REPORT</div><div class="ref">' + (invRef?'Invoice Ref: '+invRef+'<br>':'') + 'Date: '+dateStr+'</div></div></div>');
-  w.document.write('<div class="meta-grid">');
-  w.document.write('<div class="meta-item"><div class="meta-label">Customer</div><div class="meta-val">'+customer+'</div></div>');
-  w.document.write('<div class="meta-item"><div class="meta-label">Technician</div><div class="meta-val">'+tech+'</div></div>');
-  w.document.write('<div class="meta-item"><div class="meta-label">Hours on Site</div><div class="meta-val">'+hrs+' hrs @ '+fmt(rate)+'/hr</div></div>');
-  w.document.write('<div class="meta-item"><div class="meta-label">Labour Total</div><div class="meta-val">'+fmt(labour)+'</div></div>');
-  w.document.write('</div>');
-  if(notes) w.document.write('<div class="section-title">Visit Notes</div><div style="font-size:12px;color:#333;line-height:1.6;margin-bottom:8px">'+notes+'</div>');
-  if(svMachines.length) { w.document.write('<div class="section-title">Machines Attended</div>'+machinesHtml); }
-  w.document.write('<div class="section-title">Cost Summary</div>');
-  w.document.write('<table class="cost-table">');
-  w.document.write('<tr><td class="label">Labour ('+hrs+' hrs × '+fmt(rate)+')</td><td class="amount">'+fmt(labour)+'</td></tr>');
-  if(partsTotal) w.document.write('<tr><td class="label">Parts</td><td class="amount">'+fmt(partsTotal)+'</td></tr>');
-  if(travel) w.document.write('<tr><td class="label">Travel</td><td class="amount">'+fmt(travel)+'</td></tr>');
-  if(accom) w.document.write('<tr><td class="label">Accommodation</td><td class="amount">'+fmt(accom)+'</td></tr>');
-  w.document.write('<tr class="total-row"><td class="label">TOTAL EX GST</td><td class="amount">'+fmt(grand)+'</td></tr>');
-  w.document.write('<tr><td class="label" style="color:#888">GST (10%)</td><td class="amount" style="color:#888">'+fmt(grand*0.1)+'</td></tr>');
-  w.document.write('<tr><td class="label" style="font-weight:700">TOTAL INC GST</td><td class="amount" style="font-weight:700">'+fmt(grand*1.1)+'</td></tr>');
-  w.document.write('</table>');
-  w.document.write('<div style="margin-top:30px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">X-Pak Global Service Division · rob.firth@xpak.com.au</div>');
-  w.document.write('</body></html>');
-  w.document.close(); setTimeout(function(){w.print();},500);
-}
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f1923;color:#e2e8f0}
@@ -3266,6 +2981,290 @@ async function deleteSupplier() {
     _supplierCache = null; closeSupplierModal(); await loadSupplierCards();
     showToast('Supplier deleted');
   } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
+}
+
+// ── SITE VISITS ──────────────────────────────────────────────────────────────
+var siteVisits = [], editingSvId = null, svMachines = [];
+
+function switchToSiteVisits() {
+  currentView = 'sitevisits'; hideAllViews(); renderTabs();
+  document.getElementById('svToolbar').style.display = 'flex';
+  document.getElementById('svSection').style.display = 'block';
+  document.getElementById('hSub').textContent = 'Site Visits';
+  document.getElementById('lowBadge').innerHTML = '';
+  loadSiteVisits();
+}
+
+async function loadSiteVisits() {
+  document.getElementById('svList').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
+  try {
+    siteVisits = await db('GET', 'site_visits?select=*,site_visit_machines(*,site_visit_parts(*))&order=visit_date.desc');
+    renderSiteVisits();
+  } catch(e) {
+    document.getElementById('svList').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load site visits.</div></div>';
+  }
+}
+
+function renderSiteVisits() {
+  if (!siteVisits.length) {
+    document.getElementById('svList').innerHTML = '<div class="center"><div class="icon">🔧</div><div>No site visits yet. Click + New Visit.</div></div>';
+    return;
+  }
+  document.getElementById('svList').innerHTML = siteVisits.map(function(v) {
+    var hrs = parseFloat(v.hours||0), rate = parseFloat(v.hourly_rate||220);
+    var labour = hrs * rate;
+    var parts = (v.site_visit_machines||[]).reduce(function(sum,m){ return sum + (m.site_visit_parts||[]).reduce(function(s,p){ return s + parseFloat(p.line_total||0); },0); },0);
+    var extras = parseFloat(v.travel_cost||0) + parseFloat(v.accommodation_cost||0);
+    var total = labour + parts + extras;
+    var agrName = '';
+    if (v.agreement_id) { var a = agreements.find(function(x){return x.id===v.agreement_id;}); if(a) agrName = a.customer; }
+    var machines = (v.site_visit_machines||[]).map(function(m){ return m.machine_type + (m.serial_number?' ('+m.serial_number+')':''); }).join(', ');
+    return '<div class="sv-card" onclick="openEditSv(\'' + v.id + '\')">' +
+      '<div class="sv-card-top">' +
+        '<div><div class="sv-customer">' + (v.customer||agrName||'Unknown') + '</div>' +
+        '<div class="sv-meta">' + (v.technician||'') + (machines?' · '+machines:'') + '</div>' +
+        (v.notes?'<div class="sv-meta" style="font-style:italic;margin-top:3px">' + v.notes + '</div>':'') +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div class="sv-date">' + new Date(v.visit_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + '</div>' +
+          '<div class="sv-total">$' + total.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
+          '<div class="sv-status ' + (v.status||'draft').toLowerCase() + '">' + (v.status||'Draft').toUpperCase() + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openSvModal() {
+  editingSvId = null; svMachines = [];
+  document.getElementById('svModalTitle').textContent = 'New Site Visit';
+  document.getElementById('svCustomer').value = '';
+  document.getElementById('svDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('svTech').value = 'Rob Firth';
+  document.getElementById('svHours').value = '';
+  document.getElementById('svRate').value = '220';
+  document.getElementById('svTravel').value = '';
+  document.getElementById('svAccom').value = '';
+  document.getElementById('svNotes').value = '';
+  document.getElementById('svStatus').value = 'Draft';
+  document.getElementById('svInvoiceRef').value = '';
+  document.getElementById('btnDeleteSv').style.display = 'none';
+  populateSvAgrDropdown(null);
+  renderSvMachines();
+  updateSvTotals();
+  document.getElementById('svOverlay').classList.add('show');
+}
+
+function openEditSv(id) {
+  var v = siteVisits.find(function(x){return x.id===id;}); if(!v) return;
+  editingSvId = id;
+  svMachines = (v.site_visit_machines||[]).map(function(m,i) {
+    return { _id: i, db_id: m.id, machine_type: m.machine_type||'', serial_number: m.serial_number||'', work_performed: m.work_performed||'',
+      parts: (m.site_visit_parts||[]).map(function(p,j){ return { _id: j, db_id: p.id, description: p.part_description||'', part_no: p.part_no||'', quantity: p.quantity||1, unit_cost: p.unit_cost||'', line_total: p.line_total||0 }; }) };
+  });
+  document.getElementById('svModalTitle').textContent = 'Edit Site Visit';
+  document.getElementById('svCustomer').value = v.customer||'';
+  document.getElementById('svDate').value = v.visit_date||'';
+  document.getElementById('svTech').value = v.technician||'Rob Firth';
+  document.getElementById('svHours').value = v.hours||'';
+  document.getElementById('svRate').value = v.hourly_rate||220;
+  document.getElementById('svTravel').value = v.travel_cost||'';
+  document.getElementById('svAccom').value = v.accommodation_cost||'';
+  document.getElementById('svNotes').value = v.notes||'';
+  document.getElementById('svStatus').value = v.status||'Draft';
+  document.getElementById('svInvoiceRef').value = v.invoice_ref||'';
+  document.getElementById('btnDeleteSv').style.display = 'block';
+  populateSvAgrDropdown(v.agreement_id||null);
+  renderSvMachines();
+  updateSvTotals();
+  document.getElementById('svOverlay').classList.add('show');
+}
+
+function closeSvModal() { document.getElementById('svOverlay').classList.remove('show'); }
+
+function populateSvAgrDropdown(selectedId) {
+  var sel = document.getElementById('svAgrId');
+  sel.innerHTML = '<option value="">-- None --</option>';
+  (agreements||[]).filter(function(a){return a.status==='ACTIVE';}).forEach(function(a) {
+    var opt = document.createElement('option');
+    opt.value = a.id; opt.textContent = a.customer;
+    if (a.id === selectedId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = function() {
+    var a = agreements.find(function(x){return x.id===sel.value;});
+    if (a && !document.getElementById('svCustomer').value) document.getElementById('svCustomer').value = a.customer;
+  };
+}
+
+var _svMachineIdx = 0, _svPartIdx = 0;
+function addSvMachine() {
+  svMachines.push({ _id: _svMachineIdx++, db_id: null, machine_type:'', serial_number:'', work_performed:'', parts:[] });
+  renderSvMachines();
+}
+function removeSvMachine(idx) { svMachines = svMachines.filter(function(m){return m._id!==idx;}); renderSvMachines(); updateSvTotals(); }
+function addSvPart(mIdx) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m.parts.push({_id:_svPartIdx++,db_id:null,description:'',part_no:'',quantity:1,unit_cost:'',line_total:0}); renderSvMachines(); }
+function removeSvPart(mIdx,pIdx) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m.parts=m.parts.filter(function(p){return p._id!==pIdx;}); renderSvMachines(); updateSvTotals(); }
+
+function renderSvMachines() {
+  var html = svMachines.map(function(m) {
+    var parts = m.parts.map(function(p) {
+      return '<div class="sv-part-row">' +
+        '<input style="flex:2" placeholder="Description" value="' + p.description + '" oninput="svSetPart(' + m._id + ',' + p._id + ',\'description\',this.value)">' +
+        '<input style="flex:1" placeholder="Part No." value="' + p.part_no + '" oninput="svSetPart(' + m._id + ',' + p._id + ',\'part_no\',this.value)">' +
+        '<input style="width:44px" placeholder="Qty" type="number" min="1" value="' + p.quantity + '" oninput="svSetPart(' + m._id + ',' + p._id + ',\'quantity\',this.value)">' +
+        '<input style="width:72px" placeholder="$ Unit" type="number" min="0" value="' + p.unit_cost + '" oninput="svSetPart(' + m._id + ',' + p._id + ',\'unit_cost\',this.value)">' +
+        '<span style="font-size:12px;color:#10b981;width:54px;text-align:right">$' + parseFloat(p.line_total||0).toFixed(2) + '</span>' +
+        '<button class="sv-remove-btn" onclick="removeSvPart(' + m._id + ',' + p._id + ')">×</button>' +
+      '</div>';
+    }).join('');
+    return '<div class="sv-machine-row">' +
+      '<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">' +
+        '<input style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none" placeholder="Machine type" value="' + m.machine_type + '" oninput="svSetMachine(' + m._id + ',\'machine_type\',this.value)">' +
+        '<input style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none" placeholder="Serial No." value="' + m.serial_number + '" oninput="svSetMachine(' + m._id + ',\'serial_number\',this.value)">' +
+        '<button class="sv-remove-btn" onclick="removeSvMachine(' + m._id + ')">×</button>' +
+      '</div>' +
+      '<textarea placeholder="Work performed..." style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;resize:vertical;outline:none;margin-bottom:8px" rows="2" oninput="svSetMachine(' + m._id + ',\'work_performed\',this.value)">' + m.work_performed + '</textarea>' +
+      (parts ? '<div style="font-size:10px;color:#5a8090;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px">Parts Used</div>' + parts : '') +
+      '<button class="sv-add-btn" onclick="addSvPart(' + m._id + ')">+ Add Part</button>' +
+    '</div>';
+  }).join('');
+  document.getElementById('svMachinesContainer').innerHTML = html;
+}
+
+function svSetMachine(mIdx, field, val) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m[field]=val; }
+function svSetPart(mIdx, pIdx, field, val) {
+  var m=svMachines.find(function(x){return x._id===mIdx;}); if(!m) return;
+  var p=m.parts.find(function(x){return x._id===pIdx;}); if(!p) return;
+  p[field]=val;
+  if(field==='quantity'||field==='unit_cost') { p.line_total=parseFloat(p.quantity||1)*parseFloat(p.unit_cost||0); }
+  updateSvTotals();
+  var el = document.querySelector('[data-sv-part-total="'+mIdx+'-'+pIdx+'"]');
+  if(el) el.textContent = '$'+parseFloat(p.line_total||0).toFixed(2);
+}
+
+function updateSvTotals() {
+  var hrs=parseFloat(document.getElementById('svHours').value||0);
+  var rate=parseFloat(document.getElementById('svRate').value||220);
+  var labour=hrs*rate;
+  var parts=svMachines.reduce(function(sum,m){return sum+m.parts.reduce(function(s,p){return s+parseFloat(p.line_total||0);},0);},0);
+  var extras=parseFloat(document.getElementById('svTravel').value||0)+parseFloat(document.getElementById('svAccom').value||0);
+  document.getElementById('svLabourTotal').textContent='$'+labour.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('svPartsTotal').textContent='$'+parts.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('svExtrasTotal').textContent='$'+extras.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('svGrandTotal').textContent='$'+(labour+parts+extras).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+document.addEventListener('input', function(e) {
+  if (['svHours','svRate','svTravel','svAccom'].indexOf(e.target.id) > -1) updateSvTotals();
+});
+
+async function saveSiteVisit() {
+  var customer = document.getElementById('svCustomer').value.trim();
+  var date = document.getElementById('svDate').value;
+  if (!customer||!date) { showToast('Customer and date required','error'); return; }
+  document.getElementById('btnSaveSv').disabled = true;
+  try {
+    var payload = { customer: customer, visit_date: date,
+      technician: document.getElementById('svTech').value.trim()||'Rob Firth',
+      agreement_id: document.getElementById('svAgrId').value||null,
+      hours: parseFloat(document.getElementById('svHours').value)||null,
+      hourly_rate: parseFloat(document.getElementById('svRate').value)||220,
+      travel_cost: parseFloat(document.getElementById('svTravel').value)||null,
+      accommodation_cost: parseFloat(document.getElementById('svAccom').value)||null,
+      notes: document.getElementById('svNotes').value.trim()||null,
+      status: document.getElementById('svStatus').value,
+      invoice_ref: document.getElementById('svInvoiceRef').value.trim()||null };
+    var vid;
+    if (editingSvId) {
+      await db('PATCH','site_visits?id=eq.'+editingSvId,payload); vid=editingSvId;
+      await db('DELETE','site_visit_machines?site_visit_id=eq.'+vid);
+    } else {
+      var res=await db('POST','site_visits',payload); vid=res[0].id;
+    }
+    for (var i=0;i<svMachines.length;i++) {
+      var m=svMachines[i];
+      var mres=await db('POST','site_visit_machines',{site_visit_id:vid,machine_type:m.machine_type||null,serial_number:m.serial_number||null,work_performed:m.work_performed||null});
+      var mid=mres[0].id;
+      for (var j=0;j<m.parts.length;j++) {
+        var p=m.parts[j];
+        if(p.description) await db('POST','site_visit_parts',{site_visit_id:vid,machine_ref:m.machine_type||null,part_description:p.description,part_no:p.part_no||null,quantity:parseInt(p.quantity)||1,unit_cost:parseFloat(p.unit_cost)||null,line_total:parseFloat(p.line_total)||null});
+      }
+    }
+    closeSvModal(); await loadSiteVisits();
+    showToast(editingSvId?'Visit updated':'Visit saved');
+  } catch(e) { showToast('Save failed: '+e.message,'error'); }
+  document.getElementById('btnSaveSv').disabled = false;
+}
+
+async function deleteSiteVisit() {
+  if(!editingSvId||!confirm('Delete this site visit?')) return;
+  try {
+    await db('DELETE','site_visit_machines?site_visit_id=eq.'+editingSvId);
+    await db('DELETE','site_visits?id=eq.'+editingSvId);
+    closeSvModal(); await loadSiteVisits(); showToast('Visit deleted');
+  } catch(e) { showToast('Delete failed: '+e.message,'error'); }
+}
+
+function printSvReport() {
+  var customer=document.getElementById('svCustomer').value||'Unknown';
+  var date=document.getElementById('svDate').value;
+  var tech=document.getElementById('svTech').value||'Rob Firth';
+  var hrs=parseFloat(document.getElementById('svHours').value||0);
+  var rate=parseFloat(document.getElementById('svRate').value||220);
+  var labour=hrs*rate;
+  var travel=parseFloat(document.getElementById('svTravel').value||0);
+  var accom=parseFloat(document.getElementById('svAccom').value||0);
+  var notes=document.getElementById('svNotes').value;
+  var invRef=document.getElementById('svInvoiceRef').value;
+  var fmt=function(n){return '$'+parseFloat(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  var dateStr=date?new Date(date).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}):'';
+  var partsTotal=svMachines.reduce(function(s,m){return s+m.parts.reduce(function(ps,p){return ps+parseFloat(p.line_total||0);},0);},0);
+  var grand=labour+partsTotal+travel+accom;
+  var machinesHtml=svMachines.map(function(m){
+    var partsHtml='';
+    if(m.parts.length){
+      partsHtml='<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:11px"><tr style="background:#f0f4f8"><th style="text-align:left;padding:4px 6px">Description</th><th style="padding:4px 6px">Part No.</th><th style="padding:4px 6px;text-align:center">Qty</th><th style="padding:4px 6px;text-align:right">Unit</th><th style="padding:4px 6px;text-align:right">Total</th></tr>'+
+      m.parts.map(function(p){return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:4px 6px">'+p.description+'</td><td style="padding:4px 6px;color:#555">'+p.part_no+'</td><td style="padding:4px 6px;text-align:center">'+p.quantity+'</td><td style="padding:4px 6px;text-align:right">'+fmt(p.unit_cost)+'</td><td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(p.line_total)+'</td></tr>';}).join('')+'</table>';
+    }
+    return '<div style="margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:6px;border-left:3px solid #fb923c">'+
+      '<div style="font-weight:700;font-size:13px">'+m.machine_type+(m.serial_number?' <span style="font-weight:400;color:#555">S/N: '+m.serial_number+'</span>':'')+'</div>'+
+      (m.work_performed?'<div style="font-size:12px;color:#333;margin-top:4px">'+m.work_performed+'</div>':'')+
+      partsHtml+'</div>';
+  }).join('');
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Site Visit Report - '+customer+'</title>');
+  w.document.write('<style>body{font-family:"Segoe UI",sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:30px;font-size:13px}');
+  w.document.write('.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #fb923c}');
+  w.document.write('.company{font-size:20px;font-weight:900;color:#0f1923}.sub{font-size:11px;color:#555;margin-top:2px}');
+  w.document.write('.title-block{text-align:right}.report-title{font-size:18px;font-weight:700;color:#fb923c}.ref{font-size:12px;color:#555;margin-top:2px}');
+  w.document.write('.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}');
+  w.document.write('.meta-item{background:#f8fafc;padding:8px 12px;border-radius:6px}.meta-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.3px}.meta-val{font-size:13px;font-weight:600;margin-top:2px}');
+  w.document.write('.section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#fb923c;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid #fb923c40}');
+  w.document.write('.cost-table{width:100%;border-collapse:collapse;margin-top:8px}.cost-table td{padding:7px 10px;border-bottom:1px solid #f0f0f0}.cost-table .label{color:#333}.cost-table .amount{text-align:right;font-weight:600}.total-row td{font-weight:800;font-size:15px;color:#fb923c;border-top:2px solid #fb923c;border-bottom:none}');
+  w.document.write('@media print{body{padding:10px}button{display:none}}</style></head><body>');
+  w.document.write('<div class="header"><div><div class="company">X-PAK GLOBAL</div><div class="sub">Service Division</div></div><div class="title-block"><div class="report-title">FIELD SERVICE REPORT</div><div class="ref">' + (invRef?'Invoice Ref: '+invRef+'<br>':'') + 'Date: '+dateStr+'</div></div></div>');
+  w.document.write('<div class="meta-grid">');
+  w.document.write('<div class="meta-item"><div class="meta-label">Customer</div><div class="meta-val">'+customer+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Technician</div><div class="meta-val">'+tech+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Hours on Site</div><div class="meta-val">'+hrs+' hrs @ '+fmt(rate)+'/hr</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Labour Total</div><div class="meta-val">'+fmt(labour)+'</div></div>');
+  w.document.write('</div>');
+  if(notes) w.document.write('<div class="section-title">Visit Notes</div><div style="font-size:12px;color:#333;line-height:1.6;margin-bottom:8px">'+notes+'</div>');
+  if(svMachines.length) { w.document.write('<div class="section-title">Machines Attended</div>'+machinesHtml); }
+  w.document.write('<div class="section-title">Cost Summary</div>');
+  w.document.write('<table class="cost-table">');
+  w.document.write('<tr><td class="label">Labour ('+hrs+' hrs × '+fmt(rate)+')</td><td class="amount">'+fmt(labour)+'</td></tr>');
+  if(partsTotal) w.document.write('<tr><td class="label">Parts</td><td class="amount">'+fmt(partsTotal)+'</td></tr>');
+  if(travel) w.document.write('<tr><td class="label">Travel</td><td class="amount">'+fmt(travel)+'</td></tr>');
+  if(accom) w.document.write('<tr><td class="label">Accommodation</td><td class="amount">'+fmt(accom)+'</td></tr>');
+  w.document.write('<tr class="total-row"><td class="label">TOTAL EX GST</td><td class="amount">'+fmt(grand)+'</td></tr>');
+  w.document.write('<tr><td class="label" style="color:#888">GST (10%)</td><td class="amount" style="color:#888">'+fmt(grand*0.1)+'</td></tr>');
+  w.document.write('<tr><td class="label" style="font-weight:700">TOTAL INC GST</td><td class="amount" style="font-weight:700">'+fmt(grand*1.1)+'</td></tr>');
+  w.document.write('</table>');
+  w.document.write('<div style="margin-top:30px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">X-Pak Global Service Division · rob.firth@xpak.com.au</div>');
+  w.document.write('</body></html>');
+  w.document.close(); setTimeout(function(){w.print();},500);
 }
 
 </script>
