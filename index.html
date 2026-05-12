@@ -302,6 +302,36 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   @page{size:89mm 36mm;margin:5mm 1mm 0mm}
 }
 #printArea{display:none}
+.tab.home-tab{border-color:#00c8e0;color:#00c8e0}
+.tab.home-tab:hover,.tab.home-tab.active{background:#00c8e0;border-color:#00c8e0;color:#0f1923}
+.tab-group-label{font-size:9px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;padding:0 4px;align-self:center;white-space:nowrap}
+.tab-divider{width:1px;background:#1a2a3d;margin:4px 2px;flex-shrink:0}
+.home-section{padding:14px;display:none}
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.home-tile{background:#1a2a3d;border:1px solid #2a4060;border-radius:12px;padding:16px 14px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.home-tile:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.home-tile-icon{font-size:24px;line-height:1}
+.home-tile-label{font-size:13px;font-weight:700;color:#e0f0ff}
+.home-tile-sub{font-size:11px;color:#5a8090}
+.home-tile.jobs{border-color:#3b82f680} .home-tile.jobs:hover{border-color:#3b82f6;background:#0f1e38}
+.home-tile.loans{border-color:#a78bfa80} .home-tile.loans:hover{border-color:#a78bfa;background:#1a1038}
+.home-tile.agr{border-color:#f59e0b80} .home-tile.agr:hover{border-color:#f59e0b;background:#1a1a0a}
+.home-tile.sv{border-color:#fb923c80} .home-tile.sv:hover{border-color:#fb923c;background:#1a1208}
+.home-tile.tools{border-color:#10b98180} .home-tile.tools:hover{border-color:#10b981;background:#0a1a12}
+.home-tile.orders{border-color:#10b98180} .home-tile.orders:hover{border-color:#10b981;background:#0a1a12}
+.home-tile.suppliers{border-color:#8b5cf680} .home-tile.suppliers:hover{border-color:#8b5cf6;background:#120a2a}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:18px}
+.stat-card{background:#0d1a28;border:1px solid #1a2a3d;border-radius:10px;padding:12px 14px}
+.stat-label{font-size:10px;color:#5a8090;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
+.stat-val{font-size:26px;font-weight:800;color:#e0f0ff;line-height:1}
+.stat-val.amber{color:#f59e0b} .stat-val.red{color:#ef4444} .stat-val.green{color:#10b981} .stat-val.cyan{color:#00c8e0}
+.home-section-title{font-size:11px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px}
+.recent-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#1a2a3d;border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s}
+.recent-item:hover{background:#1e3048}
+.ri-left{flex:1;min-width:0}
+.ri-title{font-size:13px;font-weight:600;color:#e0f0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ri-sub{font-size:11px;color:#5a8090;margin-top:2px}
+.ri-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:8px;flex-shrink:0}
 .tab.sv-tab{border-color:#fb923c;color:#fb923c}
 .tab.sv-tab:hover,.tab.sv-tab.active{background:#fb923c;border-color:#fb923c;color:#0f1923}
 .sv-section{padding:14px;display:none}
@@ -424,6 +454,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   <button class="btn-add" style="background:#f59e0b;margin-left:auto;color:#0f1923;font-weight:700" onclick="openAgrModal()">+ New Agreement</button>
 </div>
 <div class="loan-section" id="agrSection" style="display:none"><div id="agrList"></div></div>
+
+<!-- Home section -->
+<div class="home-section" id="homeSection"></div>
 
 <!-- Site Visits toolbar -->
 <div class="toolbar" id="svToolbar" style="display:none">
@@ -875,7 +908,7 @@ var KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 var H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' };
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
-var jobs = [], editingJob = null, jobFilter = 'ALL', currentView = 'jobs', jobViewMode = 'list';
+var jobs = [], editingJob = null, jobFilter = 'ALL', currentView = 'home', jobViewMode = 'list';
 var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
 var openBrandGroups = {};
 var allPartsFilter = 'all';
@@ -1000,7 +1033,7 @@ async function init() {
     try { if (!_supplierCache) { _supplierCache = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order'); } } catch(e) {}
     renderTabs(); await loadAllParts();
   // Start on Jobs view
-  switchToJobs();
+  switchToHome();
   try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
   } catch(e) {
     document.getElementById('hSub').textContent = 'Connection error';
@@ -1050,6 +1083,7 @@ function hideAllViews() {
   var ss = document.getElementById('supplierSection'); if(ss) ss.style.display = 'none';
   var svt = document.getElementById('svToolbar'); if(svt) svt.style.display = 'none';
   var svs = document.getElementById('svSection'); if(svs) svs.style.display = 'none';
+  var hs = document.getElementById('homeSection'); if(hs) hs.style.display = 'none';
 }
 
 function switchToJobs() {
@@ -1506,13 +1540,18 @@ function setJobView(mode) {
 function renderTabs() {
   var v = currentView;
   var html2 = '';
+  html2 += '<button class="tab home-tab' + (v==='home'?' active':'') + '" onclick="' + (v==='home'?'':'switchToHome()') + '">🏠</button>';
+  html2 += '<div class="tab-divider"></div>';
+  html2 += '<span class="tab-group-label">Service</span>';
   html2 += '<button class="tab jobs-tab'  + (v==='jobs' ?' active':'') + '" onclick="' + (v==='jobs' ?'':'switchToJobs()')    + '">Jobs</button>';
-  html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
-  html2 += '<button class="tab parts-tab' + (v==='parts'?' active':'') + '" onclick="' + (v==='parts'?'':'switchToParts()')  + '">Parts</button>';
-  html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
   html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
+  html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
+  html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
+  html2 += '<div class="tab-divider"></div>';
+  html2 += '<span class="tab-group-label">Technical</span>';
+  html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
+  html2 += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()')  + '">Orders</button>';
   html2 += '<button class="tab supplier-tab' + (v==='suppliers'?' active':'') + '" onclick="' + (v==='suppliers'?'':'switchToSuppliers()') + '">Suppliers</button>';
-  html2 += '<button class="tab sv-tab' + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
   document.getElementById('machineTabs').innerHTML = html2;
 }
 
@@ -3273,6 +3312,87 @@ function printSvReport() {
   w.document.write('<div style="margin-top:30px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">X-Pak Global Service Division · rob.firth@xpak.com.au</div>');
   w.document.write('</body></html>');
   w.document.close(); setTimeout(function(){w.print();},500);
+}
+
+
+// ── HOME DASHBOARD ──────────────────────────────────────────────────────────
+function switchToHome() {
+  currentView = 'home'; hideAllViews(); renderTabs();
+  document.getElementById('homeSection').style.display = 'block';
+  document.getElementById('hSub').textContent = 'MainFlow';
+  document.getElementById('lowBadge').innerHTML = '';
+  renderHome();
+}
+
+async function renderHome() {
+  var el = document.getElementById('homeSection');
+
+  // Stats
+  var openJobs   = jobs.filter(function(j){ return OPEN_ST.concat(ACT_ST).includes(j.status); }).length;
+  var followUp   = jobs.filter(function(j){ return FOL_ST.includes(j.status); }).length;
+  var onLoan     = (loanTools||[]).filter(function(t){ return !t.is_available; }).length;
+  var draftSv    = (siteVisits||[]).filter(function(v){ return v.status==='Draft'; }).length;
+
+  // Pending parts - fetch fresh
+  var pendingParts = 0;
+  try { var op = await db('GET','job_parts?status=eq.to_order&select=id'); pendingParts = op.length; } catch(e){}
+
+  // Recent jobs (last 5)
+  var recentJobs = jobs.slice(0,5);
+
+  // Recent site visits (last 3)
+  var recentSv = (siteVisits||[]).slice(0,3);
+
+  var statsHtml =
+    '<div class="stat-cards">' +
+      '<div class="stat-card"><div class="stat-label">Open Jobs</div><div class="stat-val cyan">' + openJobs + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Follow Up</div><div class="stat-val amber">' + followUp + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Tools on Loan</div><div class="stat-val">' + onLoan + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Parts to Order</div><div class="stat-val ' + (pendingParts>0?'red':'green') + '">' + pendingParts + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Draft Visits</div><div class="stat-val amber">' + draftSv + '</div></div>' +
+    '</div>';
+
+  var tilesHtml =
+    '<div class="home-section-title">Quick Access</div>' +
+    '<div class="home-grid">' +
+      '<div class="home-tile jobs"    onclick="switchToJobs()"><div class="home-tile-icon">🔧</div><div class="home-tile-label">Jobs</div><div class="home-tile-sub">Service cases</div></div>' +
+      '<div class="home-tile loans"   onclick="switchToLoans()"><div class="home-tile-icon">🔄</div><div class="home-tile-label">Loans</div><div class="home-tile-sub">Tool register</div></div>' +
+      '<div class="home-tile agr"     onclick="switchToAgreements()"><div class="home-tile-icon">📋</div><div class="home-tile-label">Agreements</div><div class="home-tile-sub">Service contracts</div></div>' +
+      '<div class="home-tile sv"      onclick="switchToSiteVisits()"><div class="home-tile-icon">🚗</div><div class="home-tile-label">Site Visits</div><div class="home-tile-sub">Field service</div></div>' +
+      '<div class="home-tile tools"   onclick="switchToTools()"><div class="home-tile-icon">⚙️</div><div class="home-tile-label">Tools & Parts</div><div class="home-tile-sub">Machine database</div></div>' +
+      '<div class="home-tile orders"  onclick="switchToOrder()"><div class="home-tile-icon">📦</div><div class="home-tile-label">Order List</div><div class="home-tile-sub">' + (pendingParts>0?pendingParts+' pending':'All clear') + '</div></div>' +
+      '<div class="home-tile suppliers" onclick="switchToSuppliers()"><div class="home-tile-icon">🏢</div><div class="home-tile-label">Suppliers</div><div class="home-tile-sub">Contacts & brands</div></div>' +
+    '</div>';
+
+  var recentJobsHtml = '';
+  if (recentJobs.length) {
+    recentJobsHtml = '<div class="home-section-title">Recent Jobs</div>' +
+      recentJobs.map(function(j) {
+        var col = SC[j.status] || '#3a5070';
+        return '<div class="recent-item" onclick="switchToJobs();setTimeout(function(){openEditJobModal(j)},300)">' +
+          '<div class="ri-left"><div class="ri-title">' + xpsNum(j.job_number) + ' — ' + (j.customer||'No customer') + '</div>' +
+          '<div class="ri-sub">' + (j.contact_name||'') + '</div></div>' +
+          '<span class="ri-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '60">' + j.status + '</span>' +
+        '</div>';
+      }).join('');
+  }
+
+  var recentSvHtml = '';
+  if (recentSv.length) {
+    recentSvHtml = '<div class="home-section-title">Recent Site Visits</div>' +
+      recentSv.map(function(v) {
+        var hrs = parseFloat(v.hours||0), rate = parseFloat(v.hourly_rate||220);
+        var total = hrs*rate + (v.travel_cost||0) + (v.accommodation_cost||0);
+        var col = v.status==='Invoiced' ? '#10b981' : '#f59e0b';
+        return '<div class="recent-item" onclick="switchToSiteVisits();setTimeout(function(){openEditSv(\'' + v.id + '\')},300)">' +
+          '<div class="ri-left"><div class="ri-title">' + (v.visit_number?xsvNum(v.visit_number)+' — ':'') + (v.customer||'Unknown') + '</div>' +
+          '<div class="ri-sub">' + new Date(v.visit_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + ' · $' + total.toFixed(2) + '</div></div>' +
+          '<span class="ri-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '60">' + v.status + '</span>' +
+        '</div>';
+      }).join('');
+  }
+
+  el.innerHTML = statsHtml + tilesHtml + recentJobsHtml + recentSvHtml;
 }
 
 </script>
