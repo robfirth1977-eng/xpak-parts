@@ -302,6 +302,32 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   @page{size:89mm 36mm;margin:5mm 1mm 0mm}
 }
 #printArea{display:none}
+.tab.cust-tab{border-color:#e879f9;color:#e879f9}
+.tab.cust-tab:hover,.tab.cust-tab.active{background:#e879f9;border-color:#e879f9;color:#0f1923}
+.cust-section{padding:14px;display:none}
+.cust-toolbar{display:none}
+.cust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.cust-card{background:#1a2a3d;border:1px solid #2a4060;border-radius:10px;padding:14px;cursor:pointer;transition:border-color .2s}
+.cust-card:hover{border-color:#e879f980}
+.cust-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.cust-name{font-size:14px;font-weight:700;color:#e0f0ff}
+.cust-type{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.cust-type.existing{background:#10b98120;color:#10b981;border:1px solid #10b98160}
+.cust-type.prospect{background:#e879f920;color:#e879f9;border:1px solid #e879f960}
+.cust-row{font-size:12px;color:#8aa8c0;margin-bottom:3px;display:flex;gap:6px;align-items:flex-start}
+.cust-row .ico{flex-shrink:0;width:14px}
+.cust-row .val{color:#c0d8f0;word-break:break-word}
+.cust-row a.val{color:#00c8e0;text-decoration:none}
+.cust-row a.val:hover{text-decoration:underline}
+.cust-notes{margin-top:8px;padding-top:8px;border-top:1px solid #2a4060;font-size:11px;color:#6a8a9a;font-style:italic;line-height:1.5}
+.cust-followup{font-size:11px;font-weight:600;margin-top:6px;padding:4px 8px;border-radius:6px;display:inline-block}
+.cust-followup.overdue{background:#ef444420;color:#ef4444;border:1px solid #ef444460}
+.cust-followup.soon{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b60}
+.cust-followup.ok{background:#10b98120;color:#10b981;border:1px solid #10b98160}
+.cust-search{flex:1;padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none}
+.cust-search:focus{border-color:#e879f9}
+.cust-filter-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #2a4060;background:transparent;color:#8aa8c0}
+.cust-filter-btn.active{background:#e879f9;border-color:#e879f9;color:#0f1923}
 #authOverlay{position:fixed;inset:0;background:#0f1923;z-index:9999;display:flex;align-items:center;justify-content:center}
 .auth-box{background:#1a2a3d;border:1px solid #2a4060;border-radius:16px;padding:32px;width:100%;max-width:360px;margin:16px}
 .auth-logo{font-size:22px;font-weight:900;color:#e0f0ff;margin-bottom:4px}
@@ -514,6 +540,49 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 
 <!-- Home section -->
 <div class="home-section" id="homeSection"></div>
+
+<!-- Customers toolbar -->
+<div class="toolbar cust-toolbar" id="custToolbar">
+  <input class="cust-search" id="custSearch" placeholder="Search customers..." oninput="filterCustomers()">
+  <button class="cust-filter-btn active" id="cfAll" onclick="setCustFilter('all')">All</button>
+  <button class="cust-filter-btn" id="cfExisting" onclick="setCustFilter('existing')">Existing</button>
+  <button class="cust-filter-btn" id="cfProspect" onclick="setCustFilter('prospect')">Prospects</button>
+  <button class="btn-add" style="background:#e879f9;color:#0f1923;font-weight:700;flex-shrink:0" onclick="openCustModal()">+ Add</button>
+  <button class="btn-add" style="background:#1e3048;color:#e879f9;border:1px solid #e879f960;flex-shrink:0" onclick="importCustomersFromJobs()">⬆ Import Jobs</button>
+</div>
+<div class="cust-section" id="custSection">
+  <div id="custGrid" class="cust-grid"><div class="center"><span class="spinner"></span> Loading...</div></div>
+</div>
+
+<!-- Customer modal -->
+<div class="overlay" id="custOverlay" onclick="if(event.target===this)closeCustModal()">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="custModalTitle">Add Customer</div><button class="modal-close" onclick="closeCustModal()">x</button></div>
+    <div class="section-label">Company Details</div>
+    <div class="field-row">
+      <div class="field"><label>Company Name *</label><input id="cfCompany" placeholder="e.g. Thomas Foods"></div>
+      <div class="field"><label>Type</label><select id="cfType" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="Existing">Existing Customer</option><option value="Prospect">Prospect</option></select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Contact Name</label><input id="cfContact" placeholder="e.g. James Smith"></div>
+      <div class="field"><label>Industry</label><input id="cfIndustry" placeholder="e.g. Food Processing"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Phone</label><input id="cfPhone" placeholder="e.g. 02 9123 4567"></div>
+      <div class="field"><label>Email</label><input id="cfEmail" placeholder="e.g. james@company.com.au"></div>
+    </div>
+    <div class="field"><label>Address</label><input id="cfAddress" placeholder="Street, suburb, state, postcode"></div>
+    <div class="field"><label>Machines Owned</label><input id="cfMachines" placeholder="e.g. CHT 460, OR-T 250"></div>
+    <div class="section-label">Follow Up</div>
+    <div class="field-row">
+      <div class="field"><label>Follow-up Date</label><input id="cfFollowup" type="date"></div>
+      <div class="field"><label>Follow-up Notes</label><input id="cfFollowupNotes" placeholder="e.g. Quote renewal due"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="cfNotes" rows="3" placeholder="Any notes about this customer..." style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
+    <button class="btn-save" style="background:#e879f9;color:#0f1923" id="btnSaveCust" onclick="saveCustomer()">Save Customer</button>
+    <button class="btn-delete" id="btnDeleteCust" onclick="deleteCustomer()" style="display:none">Delete This Customer</button>
+  </div>
+</div>
 
 <!-- Site Visits toolbar -->
 <div class="toolbar" id="svToolbar" style="display:none">
@@ -1144,6 +1213,8 @@ function hideAllViews() {
   var svt = document.getElementById('svToolbar'); if(svt) svt.style.display = 'none';
   var svs = document.getElementById('svSection'); if(svs) svs.style.display = 'none';
   var hs = document.getElementById('homeSection'); if(hs) hs.style.display = 'none';
+  var ct = document.getElementById('custToolbar'); if(ct) ct.style.display = 'none';
+  var cs = document.getElementById('custSection'); if(cs) cs.style.display = 'none';
 }
 
 function switchToJobs() {
@@ -1607,6 +1678,7 @@ function renderTabs() {
   html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
   html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
   html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
+  html2 += '<button class="tab cust-tab'  + (v==='customers'?' active':'') + '" onclick="' + (v==='customers'?'':'switchToCustomers()') + '">Customers</button>';
   if (!window._adminMode) {
     html2 += '<div class="tab-divider"></div>';
     html2 += '<span class="tab-group-label">Technical</span>';
@@ -3579,6 +3651,164 @@ async function doSignOut() {
   hideAllViews();
   document.getElementById('landingSection').classList.remove('show');
   document.getElementById('machineTabs').style.display = 'none';
+}
+
+
+// ── CUSTOMERS ─────────────────────────────────────────────────────────────
+var customers = [], _custCache = null, editingCustId = null, custFilter = 'all';
+
+function switchToCustomers() {
+  currentView = 'customers'; hideAllViews(); renderTabs();
+  document.getElementById('custToolbar').style.display = 'flex';
+  document.getElementById('custSection').style.display = 'block';
+  document.getElementById('hSub').textContent = 'Customers';
+  document.getElementById('lowBadge').innerHTML = '';
+  loadCustomers();
+}
+
+async function loadCustomers() {
+  if (_custCache) { renderCustomers(_custCache); return; }
+  document.getElementById('custGrid').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
+  try {
+    _custCache = await db('GET', 'customers?select=*&order=company_name.asc');
+    renderCustomers(_custCache);
+  } catch(e) {
+    document.getElementById('custGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load customers.</div></div>';
+  }
+}
+
+function filterCustomers() { renderCustomers(_custCache || []); }
+
+function setCustFilter(f) {
+  custFilter = f;
+  ['cfAll','cfExisting','cfProspect'].forEach(function(id){ document.getElementById(id).classList.remove('active'); });
+  var map = {all:'cfAll',existing:'cfExisting',prospect:'cfProspect'};
+  if(map[f]) document.getElementById(map[f]).classList.add('active');
+  renderCustomers(_custCache || []);
+}
+
+function renderCustomers(list) {
+  customers = list || [];
+  var q = (document.getElementById('custSearch').value || '').toLowerCase();
+  var filtered = customers.filter(function(c) {
+    if (custFilter === 'existing' && c.type !== 'Existing') return false;
+    if (custFilter === 'prospect' && c.type !== 'Prospect') return false;
+    if (q) return (c.company_name + ' ' + (c.contact_name||'') + ' ' + (c.industry||'') + ' ' + (c.notes||'')).toLowerCase().includes(q);
+    return true;
+  });
+  if (!filtered.length) {
+    document.getElementById('custGrid').innerHTML = '<div class="center"><div style="color:#8aa8c0">' + (customers.length ? 'No matches.' : 'No customers yet. Click + Add.') + '</div></div>';
+    return;
+  }
+  var today = new Date(); today.setHours(0,0,0,0);
+  var html = filtered.map(function(c) {
+    var rows = '';
+    if (c.contact_name) rows += '<div class="cust-row"><span class="ico">👤</span><span class="val">' + c.contact_name + '</span></div>';
+    if (c.phone)        rows += '<div class="cust-row"><span class="ico">📞</span><span class="val">' + c.phone + '</span></div>';
+    if (c.email)        rows += '<div class="cust-row"><span class="ico">✉️</span><a href="mailto:' + c.email + '" class="val" onclick="event.stopPropagation()">' + c.email + '</a></div>';
+    if (c.address)      rows += '<div class="cust-row"><span class="ico">📍</span><span class="val">' + c.address + '</span></div>';
+    if (c.industry)     rows += '<div class="cust-row"><span class="ico">🏭</span><span class="val">' + c.industry + '</span></div>';
+    if (c.machines_owned) rows += '<div class="cust-row"><span class="ico">⚙️</span><span class="val">' + c.machines_owned + '</span></div>';
+    var followupHtml = '';
+    if (c.follow_up_date) {
+      var fd = new Date(c.follow_up_date); fd.setHours(0,0,0,0);
+      var diff = Math.round((fd - today) / 86400000);
+      var cls = diff < 0 ? 'overdue' : diff <= 7 ? 'soon' : 'ok';
+      var label = diff < 0 ? 'Overdue: ' : diff === 0 ? 'Today: ' : diff <= 7 ? 'Due soon: ' : 'Follow up: ';
+      followupHtml = '<div class="cust-followup ' + cls + '">📅 ' + label + fd.toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"}) + (c.follow_up_notes ? ' — ' + c.follow_up_notes : '') + '</div>';
+    }
+    var typeClass = (c.type||'Prospect').toLowerCase();
+    return '<div class="cust-card" onclick="openEditCust(\'' + c.id + '\')">' +
+      '<div class="cust-card-top"><div class="cust-name">' + c.company_name + '</div><span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span></div>' +
+      rows +
+      (c.notes ? '<div class="cust-notes">' + c.notes + '</div>' : '') +
+      followupHtml +
+    '</div>';
+  }).join('');
+  document.getElementById('custGrid').innerHTML = html;
+}
+
+function openCustModal() {
+  editingCustId = null;
+  document.getElementById('custModalTitle').textContent = 'Add Customer';
+  ['cfCompany','cfContact','cfIndustry','cfPhone','cfEmail','cfAddress','cfMachines','cfFollowup','cfFollowupNotes','cfNotes'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('cfType').value = 'Existing';
+  document.getElementById('btnDeleteCust').style.display = 'none';
+  document.getElementById('custOverlay').classList.add('show');
+}
+
+function openEditCust(id) {
+  var c = customers.find(function(x){ return x.id === id; }); if (!c) return;
+  editingCustId = id;
+  document.getElementById('custModalTitle').textContent = 'Edit Customer';
+  document.getElementById('cfCompany').value = c.company_name || '';
+  document.getElementById('cfType').value = c.type || 'Existing';
+  document.getElementById('cfContact').value = c.contact_name || '';
+  document.getElementById('cfIndustry').value = c.industry || '';
+  document.getElementById('cfPhone').value = c.phone || '';
+  document.getElementById('cfEmail').value = c.email || '';
+  document.getElementById('cfAddress').value = c.address || '';
+  document.getElementById('cfMachines').value = c.machines_owned || '';
+  document.getElementById('cfFollowup').value = c.follow_up_date || '';
+  document.getElementById('cfFollowupNotes').value = c.follow_up_notes || '';
+  document.getElementById('cfNotes').value = c.notes || '';
+  document.getElementById('btnDeleteCust').style.display = 'block';
+  document.getElementById('custOverlay').classList.add('show');
+}
+
+function closeCustModal() { document.getElementById('custOverlay').classList.remove('show'); }
+
+async function saveCustomer() {
+  var name = document.getElementById('cfCompany').value.trim();
+  if (!name) { showToast('Company name required', 'error'); return; }
+  document.getElementById('btnSaveCust').disabled = true;
+  try {
+    var payload = { company_name: name,
+      type: document.getElementById('cfType').value,
+      contact_name: document.getElementById('cfContact').value.trim() || null,
+      industry: document.getElementById('cfIndustry').value.trim() || null,
+      phone: document.getElementById('cfPhone').value.trim() || null,
+      email: document.getElementById('cfEmail').value.trim() || null,
+      address: document.getElementById('cfAddress').value.trim() || null,
+      machines_owned: document.getElementById('cfMachines').value.trim() || null,
+      follow_up_date: document.getElementById('cfFollowup').value || null,
+      follow_up_notes: document.getElementById('cfFollowupNotes').value.trim() || null,
+      notes: document.getElementById('cfNotes').value.trim() || null };
+    if (editingCustId) {
+      await db('PATCH', 'customers?id=eq.' + editingCustId, payload);
+    } else {
+      await db('POST', 'customers', payload);
+    }
+    _custCache = null; closeCustModal(); await loadCustomers();
+    showToast(editingCustId ? 'Customer updated' : 'Customer added');
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+  document.getElementById('btnSaveCust').disabled = false;
+}
+
+async function deleteCustomer() {
+  if (!editingCustId || !confirm('Delete this customer?')) return;
+  try {
+    await db('DELETE', 'customers?id=eq.' + editingCustId);
+    _custCache = null; closeCustModal(); await loadCustomers();
+    showToast('Customer deleted');
+  } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
+}
+
+async function importCustomersFromJobs() {
+  if (!confirm('Import unique customer names from existing jobs? Duplicates will be skipped.')) return;
+  var existing = await db('GET', 'customers?select=company_name');
+  var existingNames = existing.map(function(c){ return c.company_name.toLowerCase(); });
+  var unique = {};
+  jobs.forEach(function(j) {
+    if (j.customer && !unique[j.customer.toLowerCase()] && !existingNames.includes(j.customer.toLowerCase())) {
+      unique[j.customer.toLowerCase()] = { company_name: j.customer, contact_name: j.contact_name || null, phone: j.mobile || null, email: j.email || null, type: 'Existing' };
+    }
+  });
+  var toImport = Object.values(unique);
+  if (!toImport.length) { showToast('No new customers to import'); return; }
+  for (var i = 0; i < toImport.length; i++) { await db('POST', 'customers', toImport[i]); }
+  _custCache = null; await loadCustomers();
+  showToast(toImport.length + ' customers imported!');
 }
 
 </script>
