@@ -1602,24 +1602,17 @@ function renderTabs() {
   var html2 = '';
   html2 += '<button class="tab home-tab' + (v==='home'?' active':'') + '" onclick="' + (v==='home'?'':'switchToHome()') + '">🏠</button>';
   html2 += '<div class="tab-divider"></div>';
-  html2 += '<span class="tab-group-label">Service</span>';
+  if (!window._adminMode) html2 += '<span class="tab-group-label">Service</span>';
   html2 += '<button class="tab jobs-tab'  + (v==='jobs' ?' active':'') + '" onclick="' + (v==='jobs' ?'':'switchToJobs()')    + '">Jobs</button>';
   html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
   html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
   html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
-  html2 += '<div class="tab-divider"></div>';
-  html2 += '<span class="tab-group-label">Technical</span>';
-  html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
-  html2 += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()')  + '">Orders</button>';
-  html2 += '<button class="tab supplier-tab' + (v==='suppliers'?' active':'') + '" onclick="' + (v==='suppliers'?'':'switchToSuppliers()') + '">Suppliers</button>';
-  if (window._adminMode) {
-    html2 = '';
-    html2 += '<button class="tab home-tab' + (v==='home'?' active':'') + '" onclick="' + (v==='home'?'':'switchToHome()') + '">🏠</button>';
+  if (!window._adminMode) {
     html2 += '<div class="tab-divider"></div>';
-    html2 += '<button class="tab jobs-tab'  + (v==='jobs' ?' active':'') + '" onclick="' + (v==='jobs' ?'':'switchToJobs()')    + '">Jobs</button>';
-    html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
-    html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
-    html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
+    html2 += '<span class="tab-group-label">Technical</span>';
+    html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
+    html2 += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()')  + '">Orders</button>';
+    html2 += '<button class="tab supplier-tab' + (v==='suppliers'?' active':'') + '" onclick="' + (v==='suppliers'?'':'switchToSuppliers()') + '">Suppliers</button>';
   }
   document.getElementById('machineTabs').innerHTML = html2;
 }
@@ -3417,7 +3410,7 @@ async function renderHome() {
       '<div class="stat-card"><div class="stat-label">Open Jobs</div><div class="stat-val cyan">' + openJobs + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Follow Up</div><div class="stat-val amber">' + followUp + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Tools on Loan</div><div class="stat-val">' + onLoan + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Parts to Order</div><div class="stat-val ' + (pendingParts>0?'red':'green') + '">' + pendingParts + '</div></div>' +
+      (!window._adminMode ? '<div class="stat-card"><div class="stat-label">Parts to Order</div><div class="stat-val ' + (pendingParts>0?'red':'green') + '">' + pendingParts + '</div></div>' : '') +
       '<div class="stat-card"><div class="stat-label">Draft Visits</div><div class="stat-val amber">' + draftSv + '</div></div>' +
     '</div>';
 
@@ -3428,9 +3421,9 @@ async function renderHome() {
       '<div class="home-tile loans"   onclick="switchToLoans()"><div class="home-tile-icon">🔄</div><div class="home-tile-label">Loans</div><div class="home-tile-sub">Tool register</div></div>' +
       '<div class="home-tile agr"     onclick="switchToAgreements()"><div class="home-tile-icon">📋</div><div class="home-tile-label">Agreements</div><div class="home-tile-sub">Service contracts</div></div>' +
       '<div class="home-tile sv"      onclick="switchToSiteVisits()"><div class="home-tile-icon">🚗</div><div class="home-tile-label">Site Visits</div><div class="home-tile-sub">Field service</div></div>' +
-      '<div class="home-tile tools"   onclick="switchToTools()"><div class="home-tile-icon">⚙️</div><div class="home-tile-label">Tools & Parts</div><div class="home-tile-sub">Machine database</div></div>' +
-      '<div class="home-tile orders"  onclick="switchToOrder()"><div class="home-tile-icon">📦</div><div class="home-tile-label">Order List</div><div class="home-tile-sub">' + (pendingParts>0?pendingParts+' pending':'All clear') + '</div></div>' +
-      '<div class="home-tile suppliers" onclick="switchToSuppliers()"><div class="home-tile-icon">🏢</div><div class="home-tile-label">Suppliers</div><div class="home-tile-sub">Contacts & brands</div></div>' +
+      (!window._adminMode ? '<div class="home-tile tools"   onclick="switchToTools()"><div class="home-tile-icon">⚙️</div><div class="home-tile-label">Tools & Parts</div><div class="home-tile-sub">Machine database</div></div>' : '') +
+      (!window._adminMode ? '<div class="home-tile orders"  onclick="switchToOrder()"><div class="home-tile-icon">📦</div><div class="home-tile-label">Order List</div><div class="home-tile-sub">' + (pendingParts>0?pendingParts+' pending':'All clear') + '</div></div>' : '') +
+      (!window._adminMode ? '<div class="home-tile suppliers" onclick="switchToSuppliers()"><div class="home-tile-icon">🏢</div><div class="home-tile-label">Suppliers</div><div class="home-tile-sub">Contacts & brands</div></div>' : '') +
     '</div>';
 
   var recentJobsHtml = '';
@@ -3554,10 +3547,13 @@ async function onAuthSuccess(user) {
   sob.textContent = user.email.split('@')[0];
   // Look up role
   try {
-    var roles = await fetch(BASE + '/user_roles?email=eq.' + encodeURIComponent(user.email) + '&select=role', { headers: H }).then(function(r){ return r.json(); });
-    var role = (roles && roles[0]) ? roles[0].role : 'admin';
+    var roleRes = await fetch(BASE + '/user_roles?email=eq.' + encodeURIComponent(user.email) + '&select=role', { headers: H });
+    var roles = await roleRes.json();
+    var role = (roles && roles.length && roles[0].role) ? roles[0].role : 'admin';
     window._adminMode = (role !== 'service');
+    console.log('User role:', role, 'adminMode:', window._adminMode);
   } catch(e) {
+    console.log('Role lookup error:', e);
     window._adminMode = true; // default to admin on error
   }
   // Initialise app
