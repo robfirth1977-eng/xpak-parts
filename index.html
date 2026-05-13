@@ -3504,26 +3504,11 @@ function goHome() {
 // ── AUTH ─────────────────────────────────────────────────────────────────────
 var SUPABASE_URL = 'https://hoahfuxxefvfgxcjyqhp.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvYWhmdXh4ZWZ2Zmd4Y2p5cWhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMDk5OTEsImV4cCI6MjA5Mjg4NTk5MX0.rqV79ekcylTNqlAEIENJZe_lhuxBhhE54d2CXfRve8g';
-var _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var _supabase = null;
 var _currentUser = null;
 
-// Override db() to use auth token when available
-async function db(method, path, body) {
-  var hdrs = { apikey: KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' };
-  if (_currentUser) {
-    var sess = (await _supabase.auth.getSession()).data.session;
-    if (sess) hdrs['Authorization'] = 'Bearer ' + sess.access_token;
-    else hdrs['Authorization'] = 'Bearer ' + KEY;
-  } else {
-    hdrs['Authorization'] = 'Bearer ' + KEY;
-  }
-  var r = await fetch(BASE + '/' + path, { method: method, headers: hdrs, body: body ? JSON.stringify(body) : undefined });
-  if (!r.ok) throw new Error(await r.text());
-  if (method === 'DELETE') return true;
-  var t = await r.text(); return t ? JSON.parse(t) : [];
-}
-
 document.addEventListener('DOMContentLoaded', function() {
+  _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   // Check for existing session
   _supabase.auth.getSession().then(function(res) {
     if (res.data.session) {
