@@ -302,6 +302,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   @page{size:89mm 36mm;margin:5mm 1mm 0mm}
 }
 #printArea{display:none}
+#authOverlay{position:fixed;inset:0;background:#0f1923;z-index:9999;display:flex;align-items:center;justify-content:center}
+.auth-box{background:#1a2a3d;border:1px solid #2a4060;border-radius:16px;padding:32px;width:100%;max-width:360px;margin:16px}
+.auth-logo{font-size:22px;font-weight:900;color:#e0f0ff;margin-bottom:4px}
+.auth-sub{font-size:12px;color:#5a8090;margin-bottom:24px}
+.auth-field{margin-bottom:14px}
+.auth-field label{font-size:11px;font-weight:700;color:#5a8090;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px}
+.auth-field input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:14px;outline:none;box-sizing:border-box}
+.auth-field input:focus{border-color:#00c8e0}
+.auth-btn{width:100%;padding:12px;border-radius:8px;background:#00c8e0;color:#0f1923;font-size:14px;font-weight:800;border:none;cursor:pointer;margin-top:4px}
+.auth-btn:hover{background:#00e0ff}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-error{color:#ef4444;font-size:12px;margin-top:8px;min-height:18px}
+.auth-user{font-size:11px;color:#5a8090;cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid #2a4060;background:transparent;white-space:nowrap}
+.auth-user:hover{border-color:#ef4444;color:#ef4444}
 .tab.home-tab{border-color:#00c8e0;color:#00c8e0}
 .tab.home-tab:hover,.tab.home-tab.active{background:#00c8e0;border-color:#00c8e0;color:#0f1923}
 .tab-group-label{font-size:9px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;padding:0 4px;align-self:center;white-space:nowrap}
@@ -397,12 +411,23 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .s-notes{margin-top:8px;padding-top:8px;border-top:1px solid #2a4060;font-size:11px;color:#6a8a9a;font-style:italic;line-height:1.5}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">MainFlow</div>
+    <div class="auth-sub">X-Pak Global Service</div>
+    <div class="auth-field"><label>Email</label><input id="authEmail" type="email" placeholder="you@xpak.com.au" autocomplete="email"></div>
+    <div class="auth-field"><label>Password</label><input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="auth-btn" id="authBtn" onclick="doLogin()">Sign In</button>
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
 
 <div class="header">
   <div><div class="header-title" onclick="showLanding()" style="cursor:pointer" title="Back to menu">MAINFLOW</div><div class="header-sub" id="hSub">Connecting...</div></div>
-  <div id="lowBadge"></div>
+  <div id="lowBadge"></div><button class="auth-user" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
 </div>
 <div class="machine-tabs" id="machineTabs"></div>
 <div class="docs-bar" id="docsBar"></div>
@@ -2956,7 +2981,7 @@ function showToast(msg, type) {
   setTimeout(function() { t.className = 'toast'; }, 2500);
 }
 
-init();
+// init() is now called after auth in onAuthSuccess()
 function switchToSuppliers() {
   currentView = 'suppliers'; hideAllViews(); renderTabs();
   document.getElementById('supplierToolbar').style.display = 'flex';
@@ -3473,6 +3498,101 @@ function enterAdmin() {
 function goHome() {
   hideAllViews();
   showLanding();
+}
+
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+var SUPABASE_URL = 'https://hoahfuxxefvfgxcjyqhp.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvYWhmdXh4ZWZ2Zmd4Y2p5cWhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMDk5OTEsImV4cCI6MjA5Mjg4NTk5MX0.rqV79ekcylTNqlAEIENJZe_lhuxBhhE54d2CXfRve8g';
+var _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var _currentUser = null;
+
+// Override db() to use auth token when available
+async function db(method, path, body) {
+  var hdrs = { apikey: KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' };
+  if (_currentUser) {
+    var sess = (await _supabase.auth.getSession()).data.session;
+    if (sess) hdrs['Authorization'] = 'Bearer ' + sess.access_token;
+    else hdrs['Authorization'] = 'Bearer ' + KEY;
+  } else {
+    hdrs['Authorization'] = 'Bearer ' + KEY;
+  }
+  var r = await fetch(BASE + '/' + path, { method: method, headers: hdrs, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) throw new Error(await r.text());
+  if (method === 'DELETE') return true;
+  var t = await r.text(); return t ? JSON.parse(t) : [];
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Check for existing session
+  _supabase.auth.getSession().then(function(res) {
+    if (res.data.session) {
+      _currentUser = res.data.session.user;
+      onAuthSuccess(_currentUser);
+    }
+    // else overlay stays visible
+  });
+
+  // Enter key on password field
+  document.getElementById('authPass').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('authEmail').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('authPass').focus();
+  });
+});
+
+async function doLogin() {
+  var email = document.getElementById('authEmail').value.trim();
+  var pass  = document.getElementById('authPass').value;
+  var btn   = document.getElementById('authBtn');
+  var err   = document.getElementById('authError');
+  if (!email || !pass) { err.textContent = 'Please enter email and password'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in...'; err.textContent = '';
+  try {
+    var res = await _supabase.auth.signInWithPassword({ email: email, password: pass });
+    if (res.error) throw res.error;
+    _currentUser = res.data.user;
+    onAuthSuccess(_currentUser);
+  } catch(e) {
+    err.textContent = e.message || 'Sign in failed';
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+async function onAuthSuccess(user) {
+  // Hide auth overlay
+  document.getElementById('authOverlay').style.display = 'none';
+  // Show sign out button with user email
+  var sob = document.getElementById('signOutBtn');
+  sob.style.display = 'block';
+  sob.textContent = user.email.split('@')[0];
+  // Look up role
+  try {
+    var roles = await fetch(BASE + '/user_roles?email=eq.' + encodeURIComponent(user.email) + '&select=role', { headers: H }).then(function(r){ return r.json(); });
+    var role = (roles && roles[0]) ? roles[0].role : 'admin';
+    window._adminMode = (role !== 'service');
+  } catch(e) {
+    window._adminMode = true; // default to admin on error
+  }
+  // Initialise app
+  await init();
+}
+
+async function doSignOut() {
+  await _supabase.auth.signOut();
+  _currentUser = null;
+  window._adminMode = false;
+  document.getElementById('authOverlay').style.display = 'flex';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPass').value = '';
+  document.getElementById('authBtn').disabled = false;
+  document.getElementById('authBtn').textContent = 'Sign In';
+  document.getElementById('authError').textContent = '';
+  document.getElementById('signOutBtn').style.display = 'none';
+  hideAllViews();
+  document.getElementById('landingSection').classList.remove('show');
+  document.getElementById('machineTabs').style.display = 'none';
 }
 
 </script>
