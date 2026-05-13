@@ -307,6 +307,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .tab-group-label{font-size:9px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;padding:0 4px;align-self:center;white-space:nowrap}
 .tab-divider{width:1px;background:#1a2a3d;margin:4px 2px;flex-shrink:0}
 .home-section{padding:14px;display:none}
+.landing-section{position:fixed;inset:0;background:#0f1923;display:none;align-items:center;justify-content:center;flex-direction:column;gap:24px;z-index:50}
+.landing-section.show{display:flex}
+.landing-title{font-size:28px;font-weight:900;color:#e0f0ff;letter-spacing:-0.5px;margin-bottom:8px;text-align:center}
+.landing-sub{font-size:13px;color:#5a8090;text-align:center;margin-top:-16px;margin-bottom:8px}
+.landing-buttons{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.landing-btn{width:160px;height:160px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;border:2px solid transparent;transition:all .2s;font-family:inherit}
+.landing-btn:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.landing-btn-icon{font-size:42px;line-height:1}
+.landing-btn-label{font-size:15px;font-weight:800;letter-spacing:.3px}
+.landing-btn-sub{font-size:11px;opacity:.7}
+.landing-btn.service{background:#0d2a1a;border-color:#10b981;color:#10b981}
+.landing-btn.service:hover{background:#0f3020;border-color:#34d399}
+.landing-btn.admin{background:#1a1a0d;border-color:#f59e0b;color:#f59e0b}
+.landing-btn.admin:hover{background:#222210;border-color:#fbbf24}
 .home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px}
 .home-tile{background:#1a2a3d;border:1px solid #2a4060;border-radius:12px;padding:16px 14px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .home-tile:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
@@ -387,7 +401,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 <body>
 
 <div class="header">
-  <div><div class="header-title">MAINFLOW</div><div class="header-sub" id="hSub">Connecting...</div></div>
+  <div><div class="header-title" onclick="showLanding()" style="cursor:pointer" title="Back to menu">MAINFLOW</div><div class="header-sub" id="hSub">Connecting...</div></div>
   <div id="lowBadge"></div>
 </div>
 <div class="machine-tabs" id="machineTabs"></div>
@@ -454,6 +468,24 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
   <button class="btn-add" style="background:#f59e0b;margin-left:auto;color:#0f1923;font-weight:700" onclick="openAgrModal()">+ New Agreement</button>
 </div>
 <div class="loan-section" id="agrSection" style="display:none"><div id="agrList"></div></div>
+
+<!-- Landing page -->
+<div class="landing-section" id="landingSection">
+  <div class="landing-title">MainFlow</div>
+  <div class="landing-sub">X-Pak Global Service</div>
+  <div class="landing-buttons">
+    <button class="landing-btn service" onclick="enterService()">
+      <div class="landing-btn-icon">🔧</div>
+      <div class="landing-btn-label">SERVICE</div>
+      <div class="landing-btn-sub">Full access</div>
+    </button>
+    <button class="landing-btn admin" onclick="enterAdmin()">
+      <div class="landing-btn-icon">📋</div>
+      <div class="landing-btn-label">ADMIN</div>
+      <div class="landing-btn-sub">Jobs, Agreements, Loans</div>
+    </button>
+  </div>
+</div>
 
 <!-- Home section -->
 <div class="home-section" id="homeSection"></div>
@@ -1032,9 +1064,12 @@ async function init() {
     machines = await db('GET', 'machines?select=*&order=brand_order.asc,name.asc');
     try { if (!_supplierCache) { _supplierCache = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order'); } } catch(e) {}
     renderTabs(); await loadAllParts();
-  // Start on Jobs view
-  switchToHome();
-  try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
+    // Pre-load data for home page stats
+    try { await loadJobs(); } catch(e) {}
+    try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) {}
+    try { var visits = await db('GET','site_visits?select=*&order=visit_date.desc'); var svM = await db('GET','site_visit_machines?select=*'); var svP = await db('GET','site_visit_parts?select=*'); svM.forEach(function(m){m.site_visit_parts=svP.filter(function(p){return p.site_visit_id===m.site_visit_id;});}); visits.forEach(function(v){v.site_visit_machines=svM.filter(function(m){return m.site_visit_id===v.id;});}); siteVisits=visits; } catch(e) {}
+    try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
+    showLanding();
   } catch(e) {
     document.getElementById('hSub').textContent = 'Connection error';
     document.getElementById('partsList').innerHTML = '<div class="center"><div style="color:#ef4444">Cannot connect</div></div>';
@@ -1552,6 +1587,15 @@ function renderTabs() {
   html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
   html2 += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()')  + '">Orders</button>';
   html2 += '<button class="tab supplier-tab' + (v==='suppliers'?' active':'') + '" onclick="' + (v==='suppliers'?'':'switchToSuppliers()') + '">Suppliers</button>';
+  if (window._adminMode) {
+    html2 = '';
+    html2 += '<button class="tab home-tab' + (v==='home'?' active':'') + '" onclick="' + (v==='home'?'':'switchToHome()') + '">🏠</button>';
+    html2 += '<div class="tab-divider"></div>';
+    html2 += '<button class="tab jobs-tab'  + (v==='jobs' ?' active':'') + '" onclick="' + (v==='jobs' ?'':'switchToJobs()')    + '">Jobs</button>';
+    html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
+    html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
+    html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
+  }
   document.getElementById('machineTabs').innerHTML = html2;
 }
 
@@ -3393,6 +3437,42 @@ async function renderHome() {
   }
 
   el.innerHTML = statsHtml + tilesHtml + recentJobsHtml + recentSvHtml;
+}
+
+
+// ── LANDING PAGE ─────────────────────────────────────────────────────────────
+window._adminMode = false;
+
+function showLanding() {
+  document.getElementById('landingSection').classList.add('show');
+  document.getElementById('machineTabs').style.display = 'none';
+  document.getElementById('hSub').textContent = 'Welcome';
+  document.getElementById('lowBadge').innerHTML = '';
+}
+
+function hideLanding() {
+  document.getElementById('landingSection').classList.remove('show');
+  document.getElementById('machineTabs').style.display = 'flex';
+}
+
+function enterService() {
+  window._adminMode = false;
+  hideLanding();
+  renderTabs();
+  switchToHome();
+}
+
+function enterAdmin() {
+  window._adminMode = true;
+  hideLanding();
+  renderTabs();
+  switchToHome();
+}
+
+// Add Home button back to landing from header
+function goHome() {
+  hideAllViews();
+  showLanding();
 }
 
 </script>
