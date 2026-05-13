@@ -1094,7 +1094,6 @@ async function init() {
     try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) {}
     try { var visits = await db('GET','site_visits?select=*&order=visit_date.desc'); var svM = await db('GET','site_visit_machines?select=*'); var svP = await db('GET','site_visit_parts?select=*'); svM.forEach(function(m){m.site_visit_parts=svP.filter(function(p){return p.site_visit_id===m.site_visit_id;});}); visits.forEach(function(v){v.site_visit_machines=svM.filter(function(m){return m.site_visit_id===v.id;});}); siteVisits=visits; } catch(e) {}
     try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
-    showLanding();
   } catch(e) {
     document.getElementById('hSub').textContent = 'Connection error';
     document.getElementById('partsList').innerHTML = '<div class="center"><div style="color:#ef4444">Cannot connect</div></div>';
@@ -2742,7 +2741,7 @@ function printCaseLabel(jobId) {
 
 // ── MULTI-TOOL MANAGEMENT ─────────────────────────────────────────
 
-var FAULT_OPTIONS = ['Not cutting','Tension / force issue','Jammed / mechanical fault','Motor fault / error code','Battery / charging issue','Gripper foot worn / slipping','Physical damage','Control panel / software fault','General service / maintenance','Unknown / to assess','Other'];
+var FAULT_OPTIONS = ['Feeding Issue','Tensioning Issue','Welding Issue','Cutting Issue','Battery / Power Issue','Error Code Showing','Jammed / Seized','Motor / Gearbox Issue','Physical Damage','Routine Service'];
 
 function addTool() {
   var num = jobToolsLocal.length + 1;
@@ -2791,7 +2790,7 @@ function renderToolsList() {
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
         '<div class="field full"><label>Work Completed</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'work_completed\',this.value)" placeholder="Describe all work carried out..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.work_completed||'') + '</textarea></div>' +
-        '<div class="field"><label>Service Fee ($)</label><input type="number" step="0.01" min="0" value="' + (t.service_fee||'') + '" placeholder="350.00" oninput="setToolField(\'' + t._tempId + '\',\'service_fee\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #f97316;background:#0f1923;color:#f97316;font-size:13px;outline:none;font-weight:700"></div>' +
+        '<div class="field"><label>Service Fee ($)</label><input type="number" step="0.01" min="0" value="' + (t.service_fee||'') + '" placeholder="400.00" oninput="setToolField(\'' + t._tempId + '\',\'service_fee\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #f97316;background:#0f1923;color:#f97316;font-size:13px;outline:none;font-weight:700"></div>' +
       '</div>' +
       '<div style="margin-top:10px;border-top:1px solid #1e3048;padding-top:10px">' +
         '<div style="font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Parts Required — Tool ' + t.tool_number + '</div>' +
@@ -3556,8 +3555,10 @@ async function onAuthSuccess(user) {
     console.log('Role lookup error:', e);
     window._adminMode = true; // default to admin on error
   }
-  // Initialise app
+  // Initialise app AFTER role is known
   await init();
+  renderTabs();
+  switchToHome();
 }
 
 async function doSignOut() {
