@@ -698,6 +698,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div class="field"><label>Machine Name / Model *</label><input id="mName" placeholder="e.g. OR-T 250, CHT 460, BXT3-16"></div>
     <div class="field"><label>Description</label><input id="mDesc" placeholder="e.g. Battery powered strapping tool"></div>
     <div class="field"><label>Default Supplier</label><select id="mSupplierId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- None --</option></select></div>
+    <div class="field"><label>Notes</label><textarea id="mNotes" rows="3" placeholder="e.g. Default PIN: 5878, firmware notes, known issues..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;resize:vertical"></textarea></div>
     <button class="btn-save green" id="btnSaveMachine" onclick="saveMachine()">Create Machine</button>
     <button class="btn-delete" id="btnDeleteMachine" onclick="deleteMachine()" style="display:none">Delete This Machine and All Its Parts</button>
   </div>
@@ -2227,7 +2228,7 @@ var _editingMachineId = null;
 function openMachineModal() {
   machineModalFromJob = false; _editingMachineId = null;
   document.getElementById('machineModalTitle').textContent = '+ New Machine';
-  document.getElementById('mName').value = ''; document.getElementById('mDesc').value = '';
+  document.getElementById('mName').value = ''; document.getElementById('mDesc').value = ''; document.getElementById('mNotes').value = '';
   document.getElementById('btnSaveMachine').style.display = 'block';
   document.getElementById('btnSaveMachine').textContent = 'Create Machine';
   document.getElementById('btnDeleteMachine').style.display = 'none';
@@ -2243,6 +2244,7 @@ function openEditMachineModal(idx) {
   document.getElementById('machineModalTitle').textContent = 'Edit Machine';
   document.getElementById('mName').value = m.name || '';
   document.getElementById('mDesc').value = m.description || '';
+  document.getElementById('mNotes').value = m.machine_notes || '';
   document.getElementById('btnSaveMachine').style.display = 'block';
   document.getElementById('btnSaveMachine').textContent = 'Save Changes';
   document.getElementById('btnDeleteMachine').style.display = 'block';
@@ -2286,16 +2288,18 @@ async function saveMachine() {
     if (_editingMachineId) {
       btn.textContent = 'Saving...';
       var suppId = document.getElementById('mSupplierId').value || null;
-      var payload = { name: name, description: document.getElementById('mDesc').value.trim() || null, supplier_id: suppId };
+      var mNotes = document.getElementById('mNotes').value.trim() || null;
+      var payload = { name: name, description: document.getElementById('mDesc').value.trim() || null, supplier_id: suppId, machine_notes: mNotes };
       await db('PATCH', 'machines?id=eq.' + _editingMachineId, payload);
       var idx = machines.findIndex(function(m) { return m.id === _editingMachineId; });
-      if (idx > -1) { machines[idx].name = name; machines[idx].description = payload.description; machines[idx].supplier_id = suppId; }
+      if (idx > -1) { machines[idx].name = name; machines[idx].description = payload.description; machines[idx].supplier_id = suppId; machines[idx].machine_notes = mNotes; }
       _editingMachineId = null;
       closeMachineModal(); renderMachineCardList(); showToast(name + ' updated');
     } else {
       btn.textContent = 'Creating...';
       var suppId = document.getElementById('mSupplierId').value || null;
-      var res = await db('POST', 'machines', { name: name, description: document.getElementById('mDesc').value.trim() || null, supplier_id: suppId });
+      var mNotes = document.getElementById('mNotes').value.trim() || null;
+      var res = await db('POST', 'machines', { name: name, description: document.getElementById('mDesc').value.trim() || null, supplier_id: suppId, machine_notes: mNotes });
       var newM = res[0]; machines.push(newM); machines.sort(function(a,b) { return a.name.localeCompare(b.name); });
       closeMachineModal(); showToast(name + ' added');
       if (machineModalFromJob) {
