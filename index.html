@@ -324,6 +324,21 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .cust-followup.overdue{background:#ef444420;color:#ef4444;border:1px solid #ef444460}
 .cust-followup.soon{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b60}
 .cust-followup.ok{background:#10b98120;color:#10b981;border:1px solid #10b98160}
+.contact-list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.contact-item{background:#0d1a28;border-radius:6px;padding:7px 10px;font-size:12px}
+.contact-name{font-weight:700;color:#e0f0ff;display:flex;align-items:center;gap:6px}
+.contact-role{font-size:10px;color:#5a8090;font-weight:400}
+.contact-primary{font-size:9px;font-weight:700;background:#00c8e020;color:#00c8e0;border:1px solid #00c8e040;padding:1px 6px;border-radius:8px}
+.contact-detail{color:#8aa8c0;margin-top:2px}
+.contact-detail a{color:#00c8e0;text-decoration:none}
+.contact-detail a:hover{text-decoration:underline}
+.contacts-section{margin-top:10px;padding-top:10px;border-top:1px solid #2a4060}
+.contacts-section-hdr{font-size:10px;font-weight:700;color:#5a8090;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.contact-row-edit{display:flex;gap:6px;align-items:flex-start;background:#0d1a28;border-radius:8px;padding:8px;margin-bottom:6px;flex-wrap:wrap}
+.contact-row-edit input{padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;outline:none;min-width:0}
+.contact-row-edit input:focus{border-color:#e879f9}
+.add-contact-btn{background:#1e3048;border:1px dashed #2a4060;color:#8aa8c0;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;width:100%}
+.add-contact-btn:hover{border-color:#e879f9;color:#e879f9}
 .cust-search{flex:1;padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none}
 .cust-search:focus{border-color:#e879f9}
 .cust-filter-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #2a4060;background:transparent;color:#8aa8c0}
@@ -579,6 +594,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field"><label>Follow-up Notes</label><input id="cfFollowupNotes" placeholder="e.g. Quote renewal due"></div>
     </div>
     <div class="field"><label>Notes</label><textarea id="cfNotes" rows="3" placeholder="Any notes about this customer..." style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
+    <div class="contacts-section">
+      <div class="contacts-section-hdr"><span>Contacts</span><button class="add-contact-btn" style="width:auto;padding:3px 10px" onclick="addContactRow()">+ Add Contact</button></div>
+      <div id="contactRowsContainer"></div>
+    </div>
     <button class="btn-save" style="background:#e879f9;color:#0f1923" id="btnSaveCust" onclick="saveCustomer()">Save Customer</button>
     <button class="btn-delete" id="btnDeleteCust" onclick="deleteCustomer()" style="display:none">Delete This Customer</button>
   </div>
@@ -2942,7 +2961,7 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.write('.report-title{text-align:right}.report-title h1{font-size:18pt;font-weight:900;color:#1e3799;letter-spacing:1px}.report-title .case-num{font-size:13pt;font-weight:700;color:#f97316;margin-top:3px}.report-title .date{font-size:10pt;color:#666;margin-top:3px}');
   w.document.write('.customer-box{background:#f4f7ff;border:1px solid #c8d5f0;border-radius:6px;padding:12px 16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}');
   w.document.write('.cb-field{font-size:10pt}.cb-label{font-size:8.5pt;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.3px}.cb-val{color:#1a1a2e;font-weight:600}');
-  w.document.write('.tool-section{border:1px solid #dde3f0;border-radius:8px;margin-bottom:20px;overflow:hidden}');
+  w.document.write('.tool-section{border:1px solid #dde3f0;border-radius:8px;margin-bottom:20px;overflow:hidden;page-break-inside:avoid;break-inside:avoid}');
   w.document.write('.tool-header{background:#1e3799;color:#fff;padding:9px 14px;display:flex;align-items:center;gap:14px}');
   w.document.write('.tool-num{font-size:10pt;font-weight:900;letter-spacing:1px}.tool-model{font-size:12pt;font-weight:700}.tool-sn{font-size:10pt;opacity:0.8;margin-left:auto}');
   w.document.write('.field-block{padding:10px 14px;border-bottom:1px solid #eef0f8}');
@@ -2958,7 +2977,7 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.write('.totals-box td{padding:4px 12px;font-size:11pt}.totals-box td:first-child{color:#666;text-align:right}.totals-box td:last-child{font-weight:700;text-align:right;min-width:80px}');
   w.document.write('.total-row td{border-top:2px solid #1e3799;font-size:13pt;color:#1e3799;padding-top:8px}');
   w.document.write('.gst-note{font-size:9pt;color:#888;text-align:right;margin-top:4px;margin-bottom:20px}');
-  w.document.write('.approval-box{border:1px solid #dde3f0;border-radius:8px;padding:16px;margin-top:20px}');
+  w.document.write('.approval-box{border:1px solid #dde3f0;border-radius:8px;padding:16px;margin-top:20px;page-break-inside:avoid;break-inside:avoid}');
   w.document.write('.approval-box h3{font-size:11pt;font-weight:700;color:#1e3799;margin-bottom:12px}');
   w.document.write('.sig-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px}');
   w.document.write('.sig-field{border-bottom:1px solid #999;padding-bottom:2px;margin-bottom:4px;height:36px}');
@@ -3722,6 +3741,16 @@ function renderCustomers(list) {
       '<div class="cust-card-top"><div class="cust-name">' + c.company_name + '</div><span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span></div>' +
       rows +
       (c.notes ? '<div class="cust-notes">' + c.notes + '</div>' : '') +
+      (c._contacts && c._contacts.length ? '<div class="contact-list">' + c._contacts.map(function(ct){
+        return '<div class="contact-item"><div class="contact-name">' + ct.name +
+          (ct.role ? '<span class="contact-role">— ' + ct.role + '</span>' : '') +
+          (ct.is_primary ? '<span class="contact-primary">Primary</span>' : '') + '</div>' +
+          '<div class="contact-detail">' +
+          (ct.phone ? '📞 ' + ct.phone : '') +
+          (ct.phone && ct.email ? ' · ' : '') +
+          (ct.email ? '<a href="mailto:' + ct.email + '" onclick="event.stopPropagation()">✉️ ' + ct.email + '</a>' : '') +
+          '</div></div>';
+      }).join('') + '</div>' : '') +
       followupHtml +
     '</div>';
   }).join('');
@@ -3808,6 +3837,109 @@ async function importCustomersFromJobs() {
   _custCache = null; await loadCustomers();
   showToast(toImport.length + ' customers imported!');
 }
+
+
+// ── CUSTOMER CONTACTS ────────────────────────────────────────────────────────
+var _contactRows = [], _contactRowIdx = 0;
+
+async function loadCustomers() {
+  if (_custCache) { renderCustomers(_custCache); return; }
+  document.getElementById('custGrid').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
+  try {
+    var custs = await db('GET', 'customers?select=*&order=company_name.asc');
+    var contacts = await db('GET', 'customer_contacts?select=*&order=is_primary.desc,name.asc');
+    custs.forEach(function(c) { c._contacts = contacts.filter(function(ct){ return ct.customer_id === c.id; }); });
+    _custCache = custs;
+    renderCustomers(_custCache);
+  } catch(e) {
+    document.getElementById('custGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load customers.</div></div>';
+  }
+}
+
+function addContactRow(ct) {
+  var idx = _contactRowIdx++;
+  _contactRows.push({ _idx: idx, db_id: ct ? ct.id : null, name: ct ? ct.name : '', role: ct ? ct.role||'' : '', phone: ct ? ct.phone||'' : '', email: ct ? ct.email||'' : '', is_primary: ct ? ct.is_primary : false, notes: ct ? ct.notes||'' : '' });
+  renderContactRows();
+}
+
+function removeContactRow(idx) {
+  _contactRows = _contactRows.filter(function(r){ return r._idx !== idx; });
+  renderContactRows();
+}
+
+function setContactField(idx, field, val) {
+  var r = _contactRows.find(function(x){ return x._idx === idx; }); if(r) r[field] = val;
+}
+
+function renderContactRows() {
+  var html = _contactRows.map(function(r) {
+    return '<div class="contact-row-edit">' +
+      '<input style="flex:2;min-width:100px" placeholder="Name *" value="' + r.name + '" oninput="setContactField(' + r._idx + ',\'name\',this.value)">' +
+      '<input style="flex:1;min-width:80px" placeholder="Role/Title" value="' + r.role + '" oninput="setContactField(' + r._idx + ',\'role\',this.value)">' +
+      '<input style="flex:1;min-width:90px" placeholder="Phone" value="' + r.phone + '" oninput="setContactField(' + r._idx + ',\'phone\',this.value)">' +
+      '<input style="flex:2;min-width:120px" placeholder="Email" value="' + r.email + '" oninput="setContactField(' + r._idx + ',\'email\',this.value)">' +
+      '<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#8aa8c0;flex-shrink:0;cursor:pointer"><input type="checkbox" ' + (r.is_primary?'checked':'') + ' onchange="setContactField(' + r._idx + ',\'is_primary\',this.checked)"> Primary</label>' +
+      '<button class="sv-remove-btn" onclick="removeContactRow(' + r._idx + ')">×</button>' +
+    '</div>';
+  }).join('');
+  document.getElementById('contactRowsContainer').innerHTML = html || '<div style="font-size:12px;color:#3a5070;padding:4px 0">No contacts yet.</div>';
+}
+
+// Override openCustModal to reset contacts
+var _origOpenCustModal = openCustModal;
+openCustModal = function() {
+  _contactRows = []; _contactRowIdx = 0;
+  _origOpenCustModal();
+  renderContactRows();
+};
+
+// Override openEditCust to load contacts
+var _origOpenEditCust = openEditCust;
+openEditCust = function(id) {
+  _contactRows = []; _contactRowIdx = 0;
+  _origOpenEditCust(id);
+  var c = customers.find(function(x){ return x.id === id; });
+  if (c && c._contacts) { c._contacts.forEach(function(ct){ addContactRow(ct); }); }
+  else renderContactRows();
+};
+
+// Override saveCustomer to also save contacts
+var _origSaveCustomer = saveCustomer;
+saveCustomer = async function() {
+  var name = document.getElementById('cfCompany').value.trim();
+  if (!name) { showToast('Company name required', 'error'); return; }
+  document.getElementById('btnSaveCust').disabled = true;
+  try {
+    var payload = { company_name: name,
+      type: document.getElementById('cfType').value,
+      contact_name: document.getElementById('cfContact').value.trim() || null,
+      industry: document.getElementById('cfIndustry').value || null,
+      phone: document.getElementById('cfPhone').value.trim() || null,
+      email: document.getElementById('cfEmail').value.trim() || null,
+      address: document.getElementById('cfAddress').value.trim() || null,
+      machines_owned: document.getElementById('cfMachines').value.trim() || null,
+      follow_up_date: document.getElementById('cfFollowup').value || null,
+      follow_up_notes: document.getElementById('cfFollowupNotes') ? document.getElementById('cfFollowupNotes').value.trim() || null : null,
+      notes: document.getElementById('cfNotes').value.trim() || null };
+    // Remove undefined keys
+    Object.keys(payload).forEach(function(k){ if(payload[k]===undefined) delete payload[k]; });
+    var cid;
+    if (editingCustId) {
+      await db('PATCH', 'customers?id=eq.' + editingCustId, payload); cid = editingCustId;
+      await db('DELETE', 'customer_contacts?customer_id=eq.' + cid);
+    } else {
+      var res = await db('POST', 'customers', payload); cid = res[0].id;
+    }
+    for (var i = 0; i < _contactRows.length; i++) {
+      var r = _contactRows[i];
+      if (!r.name.trim()) continue;
+      await db('POST', 'customer_contacts', { customer_id: cid, name: r.name.trim(), role: r.role||null, phone: r.phone||null, email: r.email||null, is_primary: r.is_primary||false, notes: r.notes||null });
+    }
+    _custCache = null; closeCustModal(); await loadCustomers();
+    showToast(editingCustId ? 'Customer updated' : 'Customer added');
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+  document.getElementById('btnSaveCust').disabled = false;
+};
 
 </script>
 </body>
