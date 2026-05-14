@@ -2607,6 +2607,18 @@ function openEditModal(partId) {
   document.getElementById('fMyobIncome').value = p.myob_account_income || ''; document.getElementById('fMyobAsset').value = p.myob_account_asset || '';
   document.getElementById('fMyobCogs').value = p.myob_account_cogs || ''; document.getElementById('fNotes').value = p.notes || '';
   try { partSuppliers = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e) { partSuppliers = []; }
+  // Populate supplier dropdown
+  var sNameSelE = document.getElementById('sName');
+  if (sNameSelE && sNameSelE.tagName === 'SELECT') {
+    var populateSNameE = function() {
+      var cur = sNameSelE.value;
+      sNameSelE.innerHTML = '<option value="">-- Select Supplier --</option>';
+      (_supplierCache||[]).forEach(function(s){ var o=document.createElement('option'); o.value=s.company_name; o.textContent=s.company_name; sNameSelE.appendChild(o); });
+      if (cur) sNameSelE.value = cur;
+    };
+    if (_supplierCache && _supplierCache.length) { populateSNameE(); }
+    else { db('GET','suppliers?select=*,supplier_brands(brand_name)&order=sort_order').then(function(d){ _supplierCache=d; populateSNameE(); }).catch(function(){}); }
+  }
   renderSuppliersList();
   document.getElementById('fLoc').value = s.location || ''; document.getElementById('fQty').value = s.quantity !== undefined ? s.quantity : 0;
   document.getElementById('fThreshold').value = s.reorder_threshold || 1;
