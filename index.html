@@ -2100,6 +2100,7 @@ function renderList() {
       '<div class="job-links">' +
         '<button class="job-link-tile" onclick="event.stopPropagation();printCaseLabel(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f4a;border-color:#00c8e0;color:#00c8e0">Print Bin Label</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Assessment Report</button>' +
+        '<button class="job-link-tile" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')" style="cursor:pointer;background:#1a0a2a;border-color:#e879f9;color:#e879f9">Invoice Notice</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Export Quote</button>' +
       '</div>' +
       '</div>';
@@ -2125,8 +2126,9 @@ function renderBoard() {
         '</div>' +
         '<div class="board-card-actions">' +
           '<button class="bca-btn edit" onclick="event.stopPropagation();openEditJobModal(\'' + j.id + '\')">✏️ Edit</button>' +
-          '<button class="bca-btn report" onclick="event.stopPropagation();printAssessmentReport(\'' + j.id + '\')">📄 Report</button>' +
+          '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')">📄 Report</button>' +
           '<button class="bca-btn quote" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')">📦 Quote</button>' +
+          '<button class="bca-btn" style="background:#1e3048;color:#e879f9;flex:1" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')">🧾 Invoice</button>' +
         '</div>' +
       '</div>';
     }).join('') : '<div style="font-size:11px;color:#2a4060;padding:6px;text-align:center">-</div>';
@@ -4076,6 +4078,99 @@ saveCustomer = async function() {
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   document.getElementById('btnSaveCust').disabled = false;
 };
+
+
+// ── INVOICE NOTICE ───────────────────────────────────────────────────────────
+function generateInvoiceNotice(jobId) {
+  var j = jobs.find(function(x){ return x.id === jobId; }); if (!j) return;
+  db('GET','job_tools?job_id=eq.'+jobId+'&select=*&order=tool_number.asc').then(function(tools){
+    db('GET','job_parts?job_id=eq.'+jobId+'&status=in.(use_stock,ordered,arrived)&select=*').then(function(jparts){
+      renderInvoiceNotice(j, tools, jparts);
+    }).catch(function(){ renderInvoiceNotice(j, tools, []); });
+  }).catch(function(){ renderInvoiceNotice(j, [], []); });
+}
+
+function renderInvoiceNotice(j, tools, jparts) {
+  var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+  var mLookup = function(id){ var m=machines.find(function(x){return x.id===id;}); return m?m.name:''; };
+  var fmt = function(n){ return '$'+parseFloat(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+
+  // Calculate totals
+  var serviceFeeTotal = tools.reduce(function(s,t){ return s+parseFloat(t.service_fee||0); },0);
+  var partsTotal = jparts.reduce(function(s,p){ return s+(parseFloat(p.quantity||1)*parseFloat(p.sell_price||p.unit_sell||0)); },0);
+  var grandTotal = serviceFeeTotal + partsTotal;
+  var gst = grandTotal * 0.1;
+
+  // Tool sections
+  var toolSections = tools.map(function(t){
+    var mName = mLookup(t.machine_id);
+    var toolParts = jparts.filter(function(p){ return p.tool_number === t.tool_number; });
+    var partsRows = toolParts.length ? '<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:10pt"><tr style="background:#f0f4f8;font-size:9pt"><th style="text-align:left;padding:4px 6px">Part No.</th><th style="text-align:left;padding:4px 6px">Description</th><th style="padding:4px 6px;text-align:center">Qty</th><th style="padding:4px 6px;text-align:right">Unit</th><th style="padding:4px 6px;text-align:right">Total</th></tr>' +
+      toolParts.map(function(p){
+        var unit = parseFloat(p.sell_price||p.unit_sell||0);
+        var qty = parseInt(p.quantity||1);
+        return '<tr style="border-bottom:1px solid #eee"><td style="padding:4px 6px;font-family:monospace;font-size:9pt">'+p.part_key_no+'</td><td style="padding:4px 6px">'+p.part_description+'</td><td style="padding:4px 6px;text-align:center">'+qty+'</td><td style="padding:4px 6px;text-align:right">'+fmt(unit)+'</td><td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(unit*qty)+'</td></tr>';
+      }).join('') + '</table>' : '';
+    var workDone = (t.work_completed||'').trim();
+    return '<div style="margin-bottom:12px;padding:10px 12px;background:#f8fafc;border-radius:6px;border-left:3px solid #10b981">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">' +
+        '<span style="font-weight:700;font-size:11pt">'+mName+(t.serial_number?' <span style="font-weight:400;font-size:9pt;color:#555">S/N: '+t.serial_number+'</span>':'')+'</span>' +
+        (t.service_fee ? '<span style="font-weight:700;color:#1e3799">Service Fee: '+fmt(t.service_fee)+'</span>' : '') +
+      '</div>' +
+      (workDone ? '<div style="font-size:9pt;color:#333;margin-bottom:4px">'+workDone+'</div>' : '') +
+      partsRows +
+    '</div>';
+  }).join('');
+
+  var w = window.open('','_blank');
+  if (!w) { showToast('Allow pop-ups to generate invoice notice','error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
+  w.document.write('<title>Invoice Notice - '+(j.customer||'')+' '+xpsNum(j.job_number)+'</title>');
+  w.document.write('<style>');
+  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:28px;font-size:11pt}');
+  w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #e879f9}');
+  w.document.write('.co-name{font-size:20px;font-weight:900;color:#0f1923}.co-sub{font-size:10pt;color:#666;margin-top:2px}');
+  w.document.write('.notice-title{text-align:right}.notice-h{font-size:17px;font-weight:800;color:#e879f9}.notice-ref{font-size:10pt;color:#555;margin-top:2px}');
+  w.document.write('.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}');
+  w.document.write('.meta-box{background:#f8fafc;padding:8px 12px;border-radius:6px}.meta-label{font-size:8pt;color:#888;text-transform:uppercase;letter-spacing:.3px}.meta-val{font-size:11pt;font-weight:600;margin-top:2px}');
+  w.document.write('.section-title{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#555;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid #eee}');
+  w.document.write('.totals{margin-top:14px;margin-left:auto;width:280px}');
+  w.document.write('.tot-row{display:flex;justify-content:space-between;padding:5px 10px;font-size:11pt}');
+  w.document.write('.tot-row.grand{background:#e879f910;border:1px solid #e879f940;border-radius:6px;font-size:14pt;font-weight:800;color:#e879f9;margin-top:4px}');
+  w.document.write('.tot-row.gst{color:#888;font-size:10pt}');
+  w.document.write('.note{margin-top:20px;padding:10px 14px;background:#fff8e6;border:1px solid #f59e0b40;border-radius:6px;font-size:10pt;color:#666}');
+  w.document.write('.footer{margin-top:24px;font-size:9pt;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}');
+  w.document.write('@media print{body{padding:12px}button{display:none}}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="hdr"><div><div class="co-name">X-PAK GLOBAL</div><div class="co-sub">Service Division</div></div><div class="notice-title"><div class="notice-h">INVOICE NOTICE</div><div class="notice-ref">'+xpsNum(j.job_number)+'&nbsp;&nbsp;·&nbsp;&nbsp;'+today+'</div></div></div>');
+  w.document.write('<div class="meta">');
+  w.document.write('<div class="meta-box"><div class="meta-label">Bill To</div><div class="meta-val">'+(j.customer||'—')+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Contact</div><div class="meta-val">'+(j.contact_name||'—')+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Phone</div><div class="meta-val">'+(j.mobile||'—')+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Email</div><div class="meta-val">'+(j.email||'—')+'</div></div>');
+  w.document.write('</div>');
+  w.document.write('<div class="section-title">Tools &amp; Work Completed</div>');
+  w.document.write(toolSections || '<div style="color:#888;font-size:10pt">No tools recorded.</div>');
+  w.document.write('<div class="totals">');
+  if (serviceFeeTotal) w.document.write('<div class="tot-row"><span>Service Fee</span><span>'+fmt(serviceFeeTotal)+'</span></div>');
+  if (partsTotal) w.document.write('<div class="tot-row"><span>Parts</span><span>'+fmt(partsTotal)+'</span></div>');
+  w.document.write('<div class="tot-row grand"><span>Total ex GST</span><span>'+fmt(grandTotal)+'</span></div>');
+  w.document.write('<div class="tot-row gst"><span>GST (10%)</span><span>'+fmt(gst)+'</span></div>');
+  w.document.write('<div class="tot-row" style="font-weight:700"><span>Total inc GST</span><span>'+fmt(grandTotal+gst)+'</span></div>');
+  w.document.write('</div>');
+  if (j.notes) w.document.write('<div class="note">📝 ' + j.notes + '</div>');
+  w.document.write('<div class="footer">X-Pak Global Service Division &nbsp;·&nbsp; rob.firth@xpak.com.au &nbsp;·&nbsp; Generated by MainFlow</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  // Auto-update status to Waiting to be Invoiced
+  if (j.status === 'IN WORKSHOP' || j.status === 'WAITING ON PARTS') {
+    if (confirm('Update job status to "WAITING TO BE INVOICED"?')) {
+      j.status = 'WAITING TO BE INVOICED';
+      db('PATCH','jobs?id=eq.'+j.id,{status:'WAITING TO BE INVOICED'}).then(function(){ renderBoard(); renderList(); }).catch(function(){});
+    }
+  }
+  setTimeout(function(){ w.print(); }, 500);
+}
 
 </script>
 </body>
