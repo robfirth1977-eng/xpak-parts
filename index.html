@@ -2531,12 +2531,21 @@ function openAddModal() {
   // Populate supplier name dropdown
   var sNameSel = document.getElementById('sName');
   if (sNameSel && sNameSel.tagName === 'SELECT') {
-    sNameSel.innerHTML = '<option value="">-- Select Supplier --</option>';
-    (_supplierCache||[]).forEach(function(s) {
-      var opt = document.createElement('option');
-      opt.value = s.company_name; opt.textContent = s.company_name;
-      sNameSel.appendChild(opt);
-    });
+    var populateSNameDrop = function() {
+      sNameSel.innerHTML = '<option value="">-- Select Supplier --</option>';
+      (_supplierCache||[]).forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s.company_name; opt.textContent = s.company_name;
+        sNameSel.appendChild(opt);
+      });
+    };
+    if (_supplierCache && _supplierCache.length) {
+      populateSNameDrop();
+    } else {
+      db('GET','suppliers?select=*,supplier_brands(brand_name)&order=sort_order').then(function(data){
+        _supplierCache = data; populateSNameDrop();
+      }).catch(function(){});
+    }
   }
   partSuppliers = [];
   if (selectedMachine && selectedMachine.supplier_id && _supplierCache) {
