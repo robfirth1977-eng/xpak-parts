@@ -2523,30 +2523,14 @@ async function updateQty(partId, delta) {
 
 function openAddModal() {
   editingPart = null; document.getElementById('modalTitle').textContent = '+ New Part';
-  ['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fSell','fMyobIncome','fMyobAsset','fMyobCogs'].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('fGP').value = '50'; document.getElementById('fMyobCogs').value = document.getElementById('fMyobCogs').value || '5.1750';
+  ['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fSell','fMyobIncome','fMyobAsset'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('fMyobCogs').value = '5.1750';
+  document.getElementById('fGP').value = '50';
   document.getElementById('fCategory').value = ''; document.getElementById('fMaterial').value = ''; document.getElementById('fUom').value = '';
   document.getElementById('fQty').value = '0'; document.getElementById('fThreshold').value = '1';
   document.getElementById('btnDeletePart').style.display = 'none'; document.getElementById('autoGenBtn').style.display = 'block';
   // Populate supplier name dropdown
-  var sNameSel = document.getElementById('sName');
-  if (sNameSel && sNameSel.tagName === 'SELECT') {
-    var populateSNameDrop = function() {
-      sNameSel.innerHTML = '<option value="">-- Select Supplier --</option>';
-      (_supplierCache||[]).forEach(function(s) {
-        var opt = document.createElement('option');
-        opt.value = s.company_name; opt.textContent = s.company_name;
-        sNameSel.appendChild(opt);
-      });
-    };
-    if (_supplierCache && _supplierCache.length) {
-      populateSNameDrop();
-    } else {
-      db('GET','suppliers?select=*,supplier_brands(brand_name)&order=sort_order').then(function(data){
-        _supplierCache = data; populateSNameDrop();
-      }).catch(function(){});
-    }
-  }
+  populatePartSupplierDrop();
   partSuppliers = [];
   if (selectedMachine && selectedMachine.supplier_id && _supplierCache) {
     var mSupp = _supplierCache.find(function(s) { return s.id === selectedMachine.supplier_id; });
@@ -2605,24 +2589,26 @@ function openEditModal(partId) {
     document.getElementById('fGP').value = '50';
   }
   document.getElementById('fMyobIncome').value = p.myob_account_income || ''; document.getElementById('fMyobAsset').value = p.myob_account_asset || '';
-  document.getElementById('fMyobCogs').value = p.myob_account_cogs || ''; document.getElementById('fNotes').value = p.notes || '';
+  document.getElementById('fMyobCogs').value = p.myob_account_cogs || '5.1750'; document.getElementById('fNotes').value = p.notes || '';
   try { partSuppliers = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e) { partSuppliers = []; }
-  // Populate supplier dropdown
-  var sNameSelE = document.getElementById('sName');
-  if (sNameSelE && sNameSelE.tagName === 'SELECT') {
-    var populateSNameE = function() {
-      var cur = sNameSelE.value;
-      sNameSelE.innerHTML = '<option value="">-- Select Supplier --</option>';
-      (_supplierCache||[]).forEach(function(s){ var o=document.createElement('option'); o.value=s.company_name; o.textContent=s.company_name; sNameSelE.appendChild(o); });
-      if (cur) sNameSelE.value = cur;
-    };
-    if (_supplierCache && _supplierCache.length) { populateSNameE(); }
-    else { db('GET','suppliers?select=*,supplier_brands(brand_name)&order=sort_order').then(function(d){ _supplierCache=d; populateSNameE(); }).catch(function(){}); }
-  }
+  populatePartSupplierDrop();
   renderSuppliersList();
   document.getElementById('fLoc').value = s.location || ''; document.getElementById('fQty').value = s.quantity !== undefined ? s.quantity : 0;
   document.getElementById('fThreshold').value = s.reorder_threshold || 1;
   document.getElementById('btnDeletePart').style.display = 'block'; document.getElementById('overlay').classList.add('show');
+}
+
+function populatePartSupplierDrop() {
+  var sel = document.getElementById('sName');
+  if (!sel || sel.tagName !== 'SELECT') return;
+  var doFill = function() {
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">-- Select Supplier --</option>';
+    (_supplierCache||[]).forEach(function(s){ var o=document.createElement('option'); o.value=s.company_name; o.textContent=s.company_name; sel.appendChild(o); });
+    if (cur) sel.value = cur;
+  };
+  if (_supplierCache && _supplierCache.length) { doFill(); }
+  else { db('GET','suppliers?select=*,supplier_brands(brand_name)&order=sort_order').then(function(d){ _supplierCache=d; doFill(); }).catch(function(){}); }
 }
 
 function closeModal() { document.getElementById('overlay').classList.remove('show'); }
