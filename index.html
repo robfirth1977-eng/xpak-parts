@@ -749,7 +749,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div class="section-label">Pricing</div>
     <div class="g2">
       <div class="field"><label>Cost Price ($)</label><input id="fCost" type="number" step="0.01" min="0" placeholder="0.00" oninput="autoCalcSell()"></div>
-      <div class="field"><label>GP %</label><input id="fGP" type="number" step="1" min="0" max="100" placeholder="40" oninput="autoCalcSell()"></div>
+      <div class="field"><label>GP %</label><input id="fGP" type="number" step="1" min="0" max="100" placeholder="50" oninput="autoCalcSell()"></div>
       <div class="field"><label>Sell Price ($)</label><input id="fSell" type="number" step="0.01" min="0" placeholder="0.00" oninput="autoCalcGP()"></div>
       <div class="field" style="display:flex;align-items:flex-end;padding-bottom:2px"><span style="font-size:11px;color:#5a8090">Enter cost + GP% to auto-calc sell.</span></div>
     </div>
@@ -762,7 +762,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div style="font-size:11px;color:#5a8090;margin-bottom:7px">Add one or more suppliers for this part. Mark preferred.</div>
       <div id="suppliersList" style="margin-bottom:6px"></div>
       <div class="g2">
-        <div class="field"><label>Supplier Name</label><input id="sName" placeholder="e.g. ITA, Makopak"></div>
+        <div class="field"><label>Supplier Name</label><select id="sName" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select Supplier --</option></select></div>
         <div class="field"><label>Their Part No.</label><input id="sPartNo" placeholder="e.g. 05082000001"></div>
         <div class="field"><label>Unit Price ($)</label><input id="sPrice" type="number" step="0.01" min="0" placeholder="0.00"></div>
         <div class="field" style="display:flex;align-items:center;padding-top:18px"><input type="checkbox" id="sPreferred" style="width:18px;height:18px;margin-right:8px;accent-color:#10b981"><label for="sPreferred" style="font-size:13px;color:#e2e8f0">Preferred</label></div>
@@ -1054,7 +1054,7 @@ var KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 var H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' };
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
-var jobs = [], editingJob = null, jobFilter = 'ALL', currentView = 'home', jobViewMode = 'list';
+var jobs = [], editingJob = null, jobFilter = 'OPEN', currentView = 'home', jobViewMode = 'board';
 var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
 var openBrandGroups = {};
 var allPartsFilter = 'all';
@@ -1432,8 +1432,10 @@ function closeLoanToolModal(){document.getElementById('loanToolOverlay').classLi
 
 function printToolIdLabel() {
   var t = editingLoanTool; if (!t) return;
+  var qrData = [t.name, t.serial_number ? 'S/N: ' + t.serial_number : '', t.xpak_name || '', 'X-Pak Service Loan Tool'].filter(Boolean).join(' | ');
   var w = window.open('', '_blank');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ID Label ' + t.name + '</title>');
+  w.document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
   w.document.write('<style>');
   w.document.write('@page { size: 101mm 54mm; margin: 3mm 3.5mm; }');
   w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
@@ -1444,12 +1446,15 @@ function printToolIdLabel() {
   w.document.write('.brand { text-align: right; }');
   w.document.write('.brand-top { font-size: 7pt; font-weight: 900; color: #000; letter-spacing: 2px; text-transform: uppercase; }');
   w.document.write('.brand-sub { font-size: 6pt; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 1px; }');
-  w.document.write('.mid { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 2mm 0; }');
-  w.document.write('.tool-name { font-size: 22pt; font-weight: 900; color: #000; line-height: 1; letter-spacing: -0.5px; }');
+  w.document.write('.mid { flex: 1; display: flex; align-items: center; gap: 3mm; padding: 1.5mm 0; }');
+  w.document.write('.mid-text { flex: 1; min-width: 0; }');
+  w.document.write('.tool-name { font-size: 18pt; font-weight: 900; color: #000; line-height: 1; letter-spacing: -0.5px; }');
   w.document.write('.tool-type { font-size: 8pt; color: #444; margin-top: 1mm; }');
+  w.document.write('.qr-box { flex-shrink: 0; width: 18mm; height: 18mm; display: flex; align-items: center; justify-content: center; }');
+  w.document.write('.qr-box img, .qr-box canvas { width: 18mm !important; height: 18mm !important; }');
   w.document.write('.bot { display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.3mm solid #ccc; padding-top: 2mm; }');
   w.document.write('.sn-label { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }');
-  w.document.write('.sn-val { font-size: 22pt; font-weight: 900; color: #000; font-family: "Courier New", monospace; line-height: 1; letter-spacing: -0.5px; }');
+  w.document.write('.sn-val { font-size: 18pt; font-weight: 900; color: #000; font-family: "Courier New", monospace; line-height: 1; letter-spacing: -0.5px; }');
   w.document.write('.cyc { text-align: right; }');
   w.document.write('.cyc-label { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }');
   w.document.write('.cyc-val { font-size: 8pt; font-weight: 700; color: #000; margin-top: 0.5mm; }');
@@ -1460,8 +1465,8 @@ function printToolIdLabel() {
   w.document.write('<div class="brand"><div class="brand-top">X-PAK</div><div class="brand-sub">SERVICE</div></div>');
   w.document.write('</div>');
   w.document.write('<div class="mid">');
-  w.document.write('<div class="tool-name">' + t.name + '</div>');
-
+  w.document.write('<div class="mid-text"><div class="tool-name">' + t.name + '</div></div>');
+  w.document.write('<div class="qr-box" id="qrLabel"></div>');
   w.document.write('</div>');
   w.document.write('<div class="bot">');
   if (t.serial_number) {
@@ -1474,9 +1479,9 @@ function printToolIdLabel() {
   }
   w.document.write('</div>');
   w.document.write('</div>');
+  w.document.write('<script>new QRCode(document.getElementById("qrLabel"),{text:' + JSON.stringify(qrData) + ',width:68,height:68,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print();},600);<\/script>');
   w.document.write('</body></html>');
   w.document.close();
-  setTimeout(function() { w.print(); }, 300);
 }
 async function saveLoanTool(){
   var name=document.getElementById('ltName').value.trim(); if(!name){showToast('Tool name required','error');return;}
@@ -2519,10 +2524,20 @@ async function updateQty(partId, delta) {
 function openAddModal() {
   editingPart = null; document.getElementById('modalTitle').textContent = '+ New Part';
   ['fKeyno','fRef','fDesc','fSpec','fAltPartNo','fSection','fDiagramRefs','fNotes','fLoc','fCost','fSell','fMyobIncome','fMyobAsset','fMyobCogs'].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('fGP').value = '40';
+  document.getElementById('fGP').value = '50'; document.getElementById('fMyobCogs').value = document.getElementById('fMyobCogs').value || '5.1750';
   document.getElementById('fCategory').value = ''; document.getElementById('fMaterial').value = ''; document.getElementById('fUom').value = '';
   document.getElementById('fQty').value = '0'; document.getElementById('fThreshold').value = '1';
   document.getElementById('btnDeletePart').style.display = 'none'; document.getElementById('autoGenBtn').style.display = 'block';
+  // Populate supplier name dropdown
+  var sNameSel = document.getElementById('sName');
+  if (sNameSel && sNameSel.tagName === 'SELECT') {
+    sNameSel.innerHTML = '<option value="">-- Select Supplier --</option>';
+    (_supplierCache||[]).forEach(function(s) {
+      var opt = document.createElement('option');
+      opt.value = s.company_name; opt.textContent = s.company_name;
+      sNameSel.appendChild(opt);
+    });
+  }
   partSuppliers = [];
   if (selectedMachine && selectedMachine.supplier_id && _supplierCache) {
     var mSupp = _supplierCache.find(function(s) { return s.id === selectedMachine.supplier_id; });
@@ -2574,11 +2589,11 @@ function openEditModal(partId) {
     document.getElementById('fGP').value = Math.round((1 - parseFloat(p.cost_price) / parseFloat(p.sell_price)) * 100);
   } else if (p.cost_price && parseFloat(p.cost_price) > 0) {
     // Cost exists but no sell price — default to 40% and auto-calc sell
-    document.getElementById('fGP').value = '40';
+    document.getElementById('fGP').value = '50';
     autoCalcSell();
   } else {
     // No prices at all — default GP to 40%, leave sell blank
-    document.getElementById('fGP').value = '40';
+    document.getElementById('fGP').value = '50';
   }
   document.getElementById('fMyobIncome').value = p.myob_account_income || ''; document.getElementById('fMyobAsset').value = p.myob_account_asset || '';
   document.getElementById('fMyobCogs').value = p.myob_account_cogs || ''; document.getElementById('fNotes').value = p.notes || '';
@@ -2873,7 +2888,10 @@ function renderToolsList() {
     return '<div class="tool-card" id="tc_' + t._tempId + '">' +
       '<div class="tool-card-header">' +
         '<span class="tool-card-title">Tool ' + t.tool_number + (mName ? ' — ' + mName : '') + '</span>' +
+        '<div style="display:flex;gap:6px">' +
+        '<button style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer" onclick="printReturnSlip(\'' + t._tempId + '\')">🏷 Return Slip</button>' +
         (jobToolsLocal.length > 1 ? '<button class="tool-remove-btn" onclick="removeTool(\'' + t._tempId + '\')">Remove</button>' : '') +
+        '</div>' +
       '</div>' +
       '<div class="g2">' +
         '<div class="field"><label>Machine Model</label><div class="machine-row"><select onchange="setToolField(\'' + t._tempId + '\',\'machine_id\',this.value);renderToolsList()" style="flex:1;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">' + mOpts + '</select><button class="btn-add-machine" onclick="openMachineModalFromJob(\'' + t._tempId + '\')">+ New</button></div></div>' +
@@ -2899,6 +2917,61 @@ function renderToolsList() {
       '</div>' +
       '</div>';
   }).join('');
+}
+
+// ── RETURN DISPATCH SLIP ────────────────────────────────────────────────────
+
+function printReturnSlip(tempId) {
+  var t = jobToolsLocal.find(function(x){ return x._tempId === tempId; }); if (!t) return;
+  var j = editingJob || {};
+  var mName = t.machine_id ? (machines.find(function(m){return m.id===t.machine_id;})||{}).name || '' : '';
+  var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
+  var jobNum = j.job_number ? xpsNum(j.job_number) : '';
+  var customer = j.customer || '';
+  var contact = j.contact_name || '';
+  var workDone = (t.work_completed||'').replace(/\n/g,' ').trim();
+  var cycles = t.cycle_count_in != null ? parseInt(t.cycle_count_in).toLocaleString() : (t.cycle_count ? parseInt(t.cycle_count).toLocaleString() : null);
+
+  var w = window.open('','_blank');
+  if (!w) { showToast('Allow pop-ups to print return slip','error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Return Slip ' + jobNum + '</title>');
+  w.document.write('<style>');
+  w.document.write('@page{size:101mm 54mm;margin:2.5mm 3mm}');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+  w.document.write('body{font-family:Arial,sans-serif;width:95mm;height:49mm;overflow:hidden;font-size:7pt}');
+  w.document.write('.slip{width:95mm;height:49mm;border:0.4mm solid #000;border-radius:1.5mm;padding:2.5mm 3mm;display:flex;flex-direction:column;gap:1.5mm}');
+  w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:0.3mm solid #000;padding-bottom:1.5mm}');
+  w.document.write('.hdr-left .title{font-size:9pt;font-weight:900;letter-spacing:0.5px}');
+  w.document.write('.hdr-left .brand{font-size:6pt;color:#555;font-weight:700;letter-spacing:1px;text-transform:uppercase}');
+  w.document.write('.hdr-right{text-align:right}');
+  w.document.write('.job-num{font-size:9pt;font-weight:900;font-family:"Courier New",monospace}');
+  w.document.write('.date{font-size:6pt;color:#555;margin-top:0.5mm}');
+  w.document.write('.tool-row{display:flex;justify-content:space-between;align-items:baseline}');
+  w.document.write('.tool-name{font-size:11pt;font-weight:900;line-height:1}');
+  w.document.write('.sn{font-size:7pt;color:#333;font-weight:700}');
+  w.document.write('.work-label{font-size:6pt;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:0.5mm}');
+  w.document.write('.work-text{font-size:7pt;color:#000;line-height:1.3;max-height:10mm;overflow:hidden}');
+  w.document.write('.footer{display:flex;justify-content:space-between;align-items:flex-end;border-top:0.3mm solid #ccc;padding-top:1.5mm;margin-top:auto}');
+  w.document.write('.customer{font-size:7pt;font-weight:700;color:#000;max-width:60mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}');
+  w.document.write('.badges{display:flex;gap:2mm;align-items:center;flex-shrink:0}');
+  w.document.write('.badge{font-size:6pt;font-weight:700;padding:0.8mm 2mm;border:0.3mm solid #000;border-radius:1mm;white-space:nowrap}');
+  w.document.write('.badge.pass{border-color:#10b981;color:#10b981}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="slip">');
+  w.document.write('<div class="hdr"><div class="hdr-left"><div class="title">RETURN DISPATCH</div><div class="brand">X-Pak &nbsp;·&nbsp; Service Division</div></div><div class="hdr-right"><div class="job-num">' + (jobNum||'—') + '</div><div class="date">' + today + '</div></div></div>');
+  w.document.write('<div class="tool-row"><div class="tool-name">' + (mName||'Unknown Tool') + '</div>' + (t.serial_number ? '<div class="sn">S/N: ' + t.serial_number + '</div>' : '') + '</div>');
+  if (workDone) {
+    w.document.write('<div><div class="work-label">Work Completed</div><div class="work-text">' + workDone + '</div></div>');
+  }
+  w.document.write('<div class="footer">');
+  w.document.write('<div><div class="customer">' + customer + (contact ? ' &nbsp;·&nbsp; ' + contact : '') + '</div></div>');
+  w.document.write('<div class="badges">');
+  if (cycles) w.document.write('<div class="badge">⟳ ' + cycles + ' cycles</div>');
+  w.document.write('<div class="badge pass">✓ Tested: Passed</div>');
+  w.document.write('</div></div>');
+  w.document.write('</div></body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 400);
 }
 
 // ── ASSESSMENT REPORT ──────────────────────────────────────────────
@@ -2936,13 +3009,14 @@ function renderAssessmentReport(j, tools, jparts) {
     }).join('');
     var partsTable = toolParts.length ? '<table class="parts-tbl"><colgroup><col style="width:18%"><col style="width:47%"><col style="width:5%"><col style="width:15%"><col style="width:15%"></colgroup><thead><tr><th>Part No.</th><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead><tbody>' + partsRows + '</tbody></table>' : '<p style="color:#666;font-style:italic;font-size:11pt">No parts recorded for this tool.</p>';
     return '<div class="tool-section">' +
-      '<div class="tool-header"><span class="tool-num">TOOL ' + t.tool_number + '</span>' + (mName ? '<span class="tool-model">' + mName + '</span>' : '') + (t.serial_number ? '<span class="tool-sn">S/N: ' + t.serial_number + '</span>' : '') + '</div>' +
+      '<div class="tool-header"><span class="tool-num">TOOL ' + t.tool_number + '</span>' + (mName ? '<span class="tool-model">' + mName + '</span>' : '') + (t.serial_number ? '<span class="tool-sn">S/N: ' + t.serial_number + '</span>' : '') + (t.cycle_count_in != null ? '<span class="tool-sn" style="margin-left:auto;opacity:0.9">⟳ ' + parseInt(t.cycle_count_in).toLocaleString() + ' cycles</span>' : '') + '</div>' +
       (t.fault_type ? '<div class="field-block"><div class="field-label">Fault Reported</div><div class="field-val">' + t.fault_type + (t.error_code ? ' &nbsp;|&nbsp; Error Code: ' + t.error_code : '') + '</div></div>' : '') +
       (t.customer_issue ? '<div class="field-block"><div class="field-label">Customer Description</div><div class="field-val">' + t.customer_issue.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.diagnosis ? '<div class="field-block"><div class="field-label">Assessment / Findings</div><div class="field-val">' + t.diagnosis.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.recommendation ? '<div class="field-block"><div class="field-label">Recommendation</div><div class="field-val">' + t.recommendation.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.work_completed ? '<div class="field-block"><div class="field-label">Work Completed</div><div class="field-val">' + t.work_completed.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.workshop_notes ? '<div class="field-block"><div class="field-label">Workshop Notes</div><div class="field-val">' + t.workshop_notes.replace(/\n/g,'<br>') + '</div></div>' : '') +
+      (t.cycle_count_in != null ? '<div class="field-block"><div class="field-label">Cycle Count (Return)</div><div class="field-val">' + parseInt(t.cycle_count_in).toLocaleString() + ' cycles</div></div>' : '') +
       '<div class="field-block"><div class="field-label">Parts Required</div>' + partsTable + '</div>' +
       (t.service_fee ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Service Fee</div><div class="field-val" style="color:#f97316;font-weight:700">$' + parseFloat(t.service_fee).toFixed(2) + '</div></div>' : '') +
       '</div>';
@@ -2953,7 +3027,7 @@ function renderAssessmentReport(j, tools, jparts) {
   var grandTotal = partsTotal + serviceFeeTotal;
 
   var w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Assessment Report ' + xpsNum(j.job_number) + '</title><style>');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Assessment Report - ' + (j.customer||'') + ' ' + xpsNum(j.job_number) + '</title><style>');
   w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
   w.document.write('body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a2e;background:#fff;padding:20mm 18mm}');
   w.document.write('.header-row{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3799;padding-bottom:12px;margin-bottom:18px}');
