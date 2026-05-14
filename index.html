@@ -1643,7 +1643,7 @@ function generateMonthlyReport(){
   w.document.write('.totals{margin-top:6mm;text-align:right}');
   w.document.write('.total-row{font-size:12pt;font-weight:700;color:#1a3550;border-top:0.5mm solid #1a3550;padding-top:3mm;margin-top:2mm}');
   w.document.write('.footer{margin-top:12mm;font-size:8pt;color:#8aa8c0;text-align:center;border-top:0.3mm solid #dde6ee;padding-top:4mm}');
-  w.document.write('@media print{body{padding:10mm}}');
+  w.document.write('@media print{body{padding:10mm}@page{margin:10mm}}');
   w.document.write('</style></head><body>');
   w.document.write('<h1>Service Report</h1>');
   w.document.write('<div class="logo-line">X-Pak Global &mdash; Service Department &mdash; '+dateStr+'</div>');
@@ -2983,7 +2983,7 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.write('.sig-field{border-bottom:1px solid #999;padding-bottom:2px;margin-bottom:4px;height:36px}');
   w.document.write('.sig-label{font-size:8.5pt;color:#666}');
   w.document.write('.footer{margin-top:28px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:9pt;color:#888}');
-  w.document.write('@media print{body{padding:12mm 14mm}@page{size:A4;margin:0}}');
+  w.document.write('@media print{body{padding:6mm 14mm}@page{size:A4;margin:10mm}}');
   w.document.write('</style></head><body>');
 
   // Header
