@@ -811,7 +811,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <select id="jStatus">
         <option value="NEW JOB">New Job</option>
         <option value="AWAITING ASSESSMENT">Awaiting Assessment</option>
-        <option value="AWAITING GOODS">Awaiting Goods</option>
+        <option value="WAITING FOR TOOLS">Waiting for Tools</option>
         <option value="QUOTED - AWAITING APPROVAL">Quote Sent — Awaiting Approval</option>
         <option value="WAITING ON PARTS">WAITING ON PARTS</option>
         <option value="IN WORKSHOP">IN WORKSHOP</option>
@@ -1129,17 +1129,17 @@ var jobLinks = [], jobPartsLocal = [], jobToolsLocal = [], machineModalFromJob =
 var partsFilter = 'all';
 
 var SC = {
-  'NEW JOB':'#3b82f6','AWAITING ASSESSMENT':'#8b5cf6','AWAITING GOODS':'#f59e0b',
+  'NEW JOB':'#3b82f6','AWAITING ASSESSMENT':'#8b5cf6','WAITING FOR TOOLS':'#f59e0b',
   'QUOTED - AWAITING APPROVAL':'#eab308','WAITING ON PARTS':'#f97316','IN WORKSHOP':'#06b6d4',
   'WAITING TO BE INVOICED':'#10b981','INVOICED AND SENT':'#00c8e0','COMPLETED':'#4a6080'
 };
-var ALL_ST = ['NEW JOB','AWAITING ASSESSMENT','AWAITING GOODS','QUOTED - AWAITING APPROVAL',
+var ALL_ST = ['NEW JOB','WAITING FOR TOOLS','AWAITING ASSESSMENT','QUOTED - AWAITING APPROVAL',
   'WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED','INVOICED AND SENT','COMPLETED'];
-var OPEN_ST  = ['NEW JOB','AWAITING ASSESSMENT','AWAITING GOODS','QUOTED - AWAITING APPROVAL'];
+var OPEN_ST  = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','QUOTED - AWAITING APPROVAL'];
 var ACT_ST   = ['WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
 var FOL_ST   = ['INVOICED AND SENT'];
 
-var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981', 'NEW JOB':'#f59e0b', 'IN PROGRESS':'#64b5c8', 'WAITING ON PARTS':'#f97316', 'AWAITING ASSESSMENT':'#a78bfa', 'AWAITING GOODS':'#f97316', 'QUOTED - AWAITING APPROVAL':'#a78bfa', COMPLETED:'#10b981', 'ON HOLD':'#5a8090' };
+var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981', 'NEW JOB':'#f59e0b', 'IN PROGRESS':'#64b5c8', 'WAITING ON PARTS':'#f97316', 'AWAITING ASSESSMENT':'#a78bfa', 'WAITING FOR TOOLS':'#f97316', 'QUOTED - AWAITING APPROVAL':'#a78bfa', COMPLETED:'#10b981', 'ON HOLD':'#5a8090' };
 var STATUS_LABELS  = { to_order:'To Order', ordered:'Ordered', arrived:'Arrived', use_stock:'Use Stock' };
 
 async function db(method, path, body) {
