@@ -3518,6 +3518,7 @@ async function saveSiteVisit() {
     if (editingSvId) {
       await db('PATCH','site_visits?id=eq.'+editingSvId,payload); vid=editingSvId;
       await db('DELETE','site_visit_machines?site_visit_id=eq.'+vid);
+      await db('DELETE','site_visit_parts?site_visit_id=eq.'+vid);
     } else {
       var res=await db('POST','site_visits',payload); vid=res[0].id;
     }
@@ -4097,7 +4098,11 @@ function renderInvoiceNotice(j, tools, jparts) {
 
   // Calculate totals
   var serviceFeeTotal = tools.reduce(function(s,t){ return s+parseFloat(t.service_fee||0); },0);
-  var partsTotal = jparts.reduce(function(s,p){ return s+(parseFloat(p.quantity||1)*parseFloat(p.sell_price||p.unit_sell||0)); },0);
+  var partsTotal = jparts.reduce(function(s,p){
+    var pd = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null;
+    var sell = pd && pd.sell_price ? parseFloat(pd.sell_price) : parseFloat(p.sell_price||0);
+    return s + (sell * parseInt(p.quantity||1));
+  },0);
   var grandTotal = serviceFeeTotal + partsTotal;
   var gst = grandTotal * 0.1;
 
@@ -4107,7 +4112,7 @@ function renderInvoiceNotice(j, tools, jparts) {
     var toolParts = jparts.filter(function(p){ return p.tool_number === t.tool_number; });
     var partsRows = toolParts.length ? '<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:10pt"><tr style="background:#f0f4f8;font-size:9pt"><th style="text-align:left;padding:4px 6px">Part No.</th><th style="text-align:left;padding:4px 6px">Description</th><th style="padding:4px 6px;text-align:center">Qty</th><th style="padding:4px 6px;text-align:right">Unit</th><th style="padding:4px 6px;text-align:right">Total</th></tr>' +
       toolParts.map(function(p){
-        var unit = parseFloat(p.sell_price||p.unit_sell||0);
+        var unit = parseFloat(p.sell_price||0) || (p.part_id ? (function(){ var pd=allParts.find(function(x){return x.id===p.part_id;}); return pd&&pd.sell_price?parseFloat(pd.sell_price):0; })() : 0);
         var qty = parseInt(p.quantity||1);
         return '<tr style="border-bottom:1px solid #eee"><td style="padding:4px 6px;font-family:monospace;font-size:9pt">'+p.part_key_no+'</td><td style="padding:4px 6px">'+p.part_description+'</td><td style="padding:4px 6px;text-align:center">'+qty+'</td><td style="padding:4px 6px;text-align:right">'+fmt(unit)+'</td><td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(unit*qty)+'</td></tr>';
       }).join('') + '</table>' : '';
