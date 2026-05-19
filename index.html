@@ -888,6 +888,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="field full"><label>Internal Notes</label><textarea id="jInternalNotes" placeholder="Internal notes only..."></textarea></div>
     </div>
 
+    <div class="contacts-section" id="jobActivitySection" style="display:none">
+      <div class="contacts-section-hdr">
+        <span>Activity History</span>
+        <button class="add-contact-btn" style="width:auto;padding:3px 10px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(editingJob?editingJob.id:null,null)">+ Log Activity</button>
+      </div>
+      <div id="jobActivityList" style="max-height:220px;overflow-y:auto"></div>
+    </div>
+
     <div style="display:flex;gap:8px">
     <button class="btn-save orange" id="btnSaveJob" onclick="saveJob()" style="flex:1">Save Service Case</button>
     <button onclick="closeJobModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
@@ -2256,6 +2264,7 @@ function openNewJobModal() {
   document.getElementById('jobModalTitle').textContent = 'New Service Case';
   clearJobForm();
   document.getElementById('btnDeleteJob').style.display = 'none';
+  var jas = document.getElementById('jobActivitySection'); if(jas) jas.style.display = 'none';
   document.getElementById('jobOverlay').classList.add('show');
   setTimeout(function() { document.getElementById('jCustomer').focus(); }, 100);
 }
@@ -2306,6 +2315,26 @@ async function openEditJobModal(jobId) {
   } catch(e) { jobPartsLocal = []; }
   jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
   document.getElementById('btnDeleteJob').style.display = 'block';
+  // Load activity history for this job
+  var jobActSec = document.getElementById('jobActivitySection');
+  var jobActList = document.getElementById('jobActivityList');
+  jobActSec.style.display = 'none'; jobActList.innerHTML = '';
+  db('GET', 'activities?job_id=eq.' + j.id + '&order=activity_date.desc,created_at.desc').then(function(acts) {
+    if (acts && acts.length) {
+      jobActSec.style.display = 'block';
+      jobActList.innerHTML = acts.map(function(a) {
+        var cls = a.type === 'Phone Call' ? 'phone' : a.type === 'Email' ? 'email' : a.type === 'Site Visit' ? 'visit' : 'note';
+        var dateStr = a.activity_date ? new Date(a.activity_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
+        return '<div class="activity-item ' + cls + '">' +
+          '<div class="act-top"><span class="act-type ' + cls + '">' + a.type + '</span><span class="act-date">' + dateStr + '</span></div>' +
+          '<div class="act-subject">' + a.subject + '</div>' +
+          (a.notes ? '<div class="act-notes">' + a.notes + '</div>' : '') +
+        '</div>';
+      }).join('');
+    } else {
+      jobActSec.style.display = 'block';
+    }
+  }).catch(function(){});
   document.getElementById('jobOverlay').classList.add('show');
 }
 
@@ -4264,11 +4293,16 @@ async function saveActivity() {
       created_by: 'Rob Firth'
     };
     await db('POST', 'activities', payload);
-    _custCache = null; // refresh customer cache to pick up new activity count
+    _custCache = null;
     closeActModal();
     showToast('Activity logged');
-    // Refresh customer card if open
+    // Refresh customer view if open
     if (currentView === 'customers') { await loadCustomers(); }
+    // Refresh job activity list if job modal is open
+    if (_actJobId && document.getElementById('jobOverlay').classList.contains('show')) {
+      var j2 = jobs.find(function(x){ return x.id === _actJobId; });
+      if (j2) openEditJobModal(_actJobId);
+    }
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
 }
 
