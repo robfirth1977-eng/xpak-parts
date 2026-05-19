@@ -453,6 +453,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .act-subject{font-size:12px;font-weight:700;color:#e0f0ff;margin-bottom:2px}
 .act-notes{font-size:11px;color:#6a8a9a;line-height:1.4;white-space:pre-wrap}
 .act-job{font-size:10px;color:#64b5c8;margin-top:3px}
+.act-actions{display:flex;gap:4px;margin-top:5px}
+.act-btn{font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;cursor:pointer;border:none}
+.act-btn.edit{background:#1e3048;color:#64b5c8}
+.act-btn.edit:hover{background:#243850}
+.act-btn.del{background:transparent;color:#ef444480;border:1px solid #ef444440}
+.act-btn.del:hover{color:#ef4444;border-color:#ef4444}
 .overlay.act-overlay .modal{max-height:85vh;overflow-y:auto}
 .tab.order-tab{border-color:#10b981;color:#10b981}
 .tab.order-tab:hover,.tab.order-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
@@ -2336,15 +2342,8 @@ async function openEditJobModal(jobId) {
   db('GET', 'activities?job_id=eq.' + j.id + '&order=activity_date.desc,created_at.desc').then(function(acts) {
     if (acts && acts.length) {
       jobActSec.style.display = 'block';
-      jobActList.innerHTML = acts.map(function(a) {
-        var cls = a.type === 'Phone Call' ? 'phone' : a.type === 'Email' ? 'email' : a.type === 'Site Visit' ? 'visit' : 'note';
-        var dateStr = a.activity_date ? new Date(a.activity_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
-        return '<div class="activity-item ' + cls + '">' +
-          '<div class="act-top"><span class="act-type ' + cls + '">' + a.type + '</span><span class="act-date">' + dateStr + '</span></div>' +
-          '<div class="act-subject">' + a.subject + '</div>' +
-          (a.notes ? '<div class="act-notes">' + a.notes + '</div>' : '') +
-        '</div>';
-      }).join('');
+      acts.forEach(function(a){ _cachedActs[a.id]=a; });
+      jobActList.innerHTML = acts.map(renderActivityItem).join('');
     } else {
       jobActSec.style.display = 'block';
     }
@@ -4131,16 +4130,8 @@ openEditCust = async function(id) {
     var secEl = document.getElementById('activityLogSection');
     secEl.style.display = 'block';
     if (acts && acts.length) {
-      logEl.innerHTML = acts.map(function(a) {
-        var cls = a.type === 'Phone Call' ? 'phone' : a.type === 'Email' ? 'email' : a.type === 'Site Visit' ? 'visit' : 'note';
-        var dateStr = a.activity_date ? new Date(a.activity_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
-        var jobRef = a.job_id ? (function(){ var j=jobs.find(function(x){return x.id===a.job_id;}); return j?'<div class="act-job">🔗 '+xpsNum(j.job_number)+'</div>':''; })() : '';
-        return '<div class="activity-item ' + cls + '">' +
-          '<div class="act-top"><span class="act-type ' + cls + '">' + a.type + '</span><span class="act-date">' + dateStr + '</span></div>' +
-          '<div class="act-subject">' + a.subject + '</div>' +
-          (a.notes ? '<div class="act-notes">' + a.notes + '</div>' : '') +
-          jobRef + '</div>';
-      }).join('');
+      acts.forEach(function(a){ _cachedActs[a.id]=a; });
+      logEl.innerHTML = acts.map(renderActivityItem).join('');
     } else {
       logEl.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:4px">No activities yet.</div>';
     }
@@ -4284,11 +4275,12 @@ function renderInvoiceNotice(j, tools, jparts) {
 
 
 // ── ACTIVITIES ────────────────────────────────────────────────────────────────
-var _actJobId = null, _actCustId = null;
+var _actJobId = null, _actCustId = null, _editingActId = null;
 
 function openActModal(jobId, custId) {
   _actJobId = jobId || null;
   _actCustId = custId || null;
+  _editingActId = null;
   // If from job, try to find customer
   if (jobId && !custId) {
     var j = jobs.find(function(x){ return x.id === jobId; });
@@ -4325,7 +4317,11 @@ async function saveActivity() {
       job_id: _actJobId || null,
       created_by: 'Rob Firth'
     };
-    await db('POST', 'activities', payload);
+    if (_editingActId) {
+      await db('PATCH', 'activities?id=eq.' + _editingActId, payload);
+    } else {
+      await db('POST', 'activities', payload);
+    }
     _custCache = null;
     closeActModal();
     showToast('Activity logged');
@@ -4361,6 +4357,55 @@ loadCustomers = async function() {
     document.getElementById('custGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load customers.</div></div>';
   }
 };
+
+
+function renderActivityItem(a) {
+  var cls = a.type === 'Phone Call' ? 'phone' : a.type === 'Email' ? 'email' : a.type === 'Site Visit' ? 'visit' : 'note';
+  var dateStr = a.activity_date ? new Date(a.activity_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
+  var jobRef = a.job_id ? (function(){ var j=jobs.find(function(x){return x.id===a.job_id;}); return j?'<div class="act-job">🔗 '+xpsNum(j.job_number)+'</div>':''; })() : '';
+  return '<div class="activity-item ' + cls + '" data-act-id="' + a.id + '">' +
+    '<div class="act-top"><span class="act-type ' + cls + '">' + a.type + '</span><span class="act-date">' + dateStr + '</span></div>' +
+    '<div class="act-subject">' + a.subject + '</div>' +
+    (a.notes ? '<div class="act-notes">' + a.notes + '</div>' : '') +
+    jobRef +
+    '<div class="act-actions">' +
+      '<button class="act-btn edit" onclick="openEditAct(\'' + a.id + '\',this)">✏️ Edit</button>' +
+      '<button class="act-btn del" onclick="deleteAct(\'' + a.id + '\',this)">🗑 Delete</button>' +
+    '</div>' +
+  '</div>';
+}
+
+var _cachedActs = {};
+
+function openEditAct(actId, btn) {
+  var card = btn.closest('[data-act-id]');
+  var subject = card.querySelector('.act-subject').textContent;
+  var notes = card.querySelector('.act-notes') ? card.querySelector('.act-notes').textContent : '';
+  var typeEl = card.querySelector('.act-type');
+  var type = typeEl ? typeEl.textContent : 'Note';
+  // Find full act from cache
+  var a = Object.values(_cachedActs).find(function(x){ return x.id === actId; }) || { id: actId, type: type, subject: subject, notes: notes, activity_date: '' };
+  _actJobId = a.job_id || null;
+  _actCustId = a.customer_id || null;
+  _editingActId = actId;
+  document.getElementById('actDate').value = a.activity_date || new Date().toISOString().split('T')[0];
+  document.getElementById('actType').value = a.type || 'Note';
+  document.getElementById('actSubject').value = a.subject || '';
+  document.getElementById('actNotes').value = a.notes || '';
+  document.getElementById('actLinkedTo').textContent = '';
+  document.getElementById('actOverlay').classList.add('show');
+}
+
+async function deleteAct(actId, btn) {
+  if (!confirm('Delete this activity?')) return;
+  try {
+    await db('DELETE', 'activities?id=eq.' + actId);
+    var card = btn.closest('[data-act-id]');
+    card.remove();
+    showToast('Activity deleted');
+    _custCache = null;
+  } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
+}
 
 </script>
 </body>
