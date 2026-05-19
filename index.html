@@ -621,8 +621,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div id="contactRowsContainer"></div>
     </div>
     <div class="contacts-section" id="activityLogSection" style="display:none">
-      <div class="contacts-section-hdr"><span>Activity History</span></div>
+      <div class="contacts-section-hdr"><span>Activity History</span><button class="add-contact-btn" style="width:auto;padding:3px 10px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,editingCustId)">+ Log Activity</button></div>
       <div id="activityLogList" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:4px">
+      <button class="add-contact-btn" style="border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,editingCustId)">+ Log Activity</button>
     </div>
     <button class="btn-save" style="background:#e879f9;color:#0f1923" id="btnSaveCust" onclick="saveCustomer()">Save Customer</button>
     <button class="btn-delete" id="btnDeleteCust" onclick="deleteCustomer()" style="display:none">Delete This Customer</button>
@@ -4142,10 +4145,10 @@ saveCustomer = async function() {
   try {
     var payload = { company_name: name,
       type: document.getElementById('cfType').value,
-      contact_name: document.getElementById('cfContact').value.trim() || null,
+      contact_name: null,
       industry: document.getElementById('cfIndustry').value || null,
       phone: document.getElementById('cfPhone').value.trim() || null,
-      email: document.getElementById('cfEmail').value.trim() || null,
+      email: null,
       address: document.getElementById('cfAddress').value.trim() || null,
       machines_owned: document.getElementById('cfMachines').value.trim() || null,
       follow_up_date: document.getElementById('cfFollowup').value || null,
