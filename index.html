@@ -4106,12 +4106,33 @@ openCustModal = function() {
 
 // Override openEditCust to load contacts
 var _origOpenEditCust = openEditCust;
-openEditCust = function(id) {
+openEditCust = async function(id) {
   _contactRows = []; _contactRowIdx = 0;
   _origOpenEditCust(id);
   var c = customers.find(function(x){ return x.id === id; });
   if (c && c._contacts) { c._contacts.forEach(function(ct){ addContactRow(ct); }); }
   else renderContactRows();
+  // Load activity history
+  try {
+    var acts = await db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc,created_at.desc');
+    var logEl = document.getElementById('activityLogList');
+    var secEl = document.getElementById('activityLogSection');
+    if (acts && acts.length) {
+      secEl.style.display = 'block';
+      logEl.innerHTML = acts.map(function(a) {
+        var cls = a.type === 'Phone Call' ? 'phone' : a.type === 'Email' ? 'email' : a.type === 'Site Visit' ? 'visit' : 'note';
+        var dateStr = a.activity_date ? new Date(a.activity_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
+        var jobRef = a.job_id ? (function(){ var j=jobs.find(function(x){return x.id===a.job_id;}); return j?'<div class="act-job">🔗 '+xpsNum(j.job_number)+'</div>':''; })() : '';
+        return '<div class="activity-item ' + cls + '">' +
+          '<div class="act-top"><span class="act-type ' + cls + '">' + a.type + '</span><span class="act-date">' + dateStr + '</span></div>' +
+          '<div class="act-subject">' + a.subject + '</div>' +
+          (a.notes ? '<div class="act-notes">' + a.notes + '</div>' : '') +
+          jobRef + '</div>';
+      }).join('');
+    } else {
+      secEl.style.display = 'none';
+    }
+  } catch(e) {}
 };
 
 // Override saveCustomer to also save contacts
@@ -4307,31 +4328,7 @@ async function saveActivity() {
 }
 
 // Load activities when opening customer edit modal
-var _origOpenEditCustForAct = openEditCust;
-openEditCust = async function(id) {
-  _origOpenEditCustForAct(id);
-  // Load activity history
-  try {
-    var acts = await db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc,created_at.desc');
-    var logEl = document.getElementById('activityLogList');
-    var secEl = document.getElementById('activityLogSection');
-    if (acts && acts.length) {
-      secEl.style.display = 'block';
-      logEl.innerHTML = acts.map(function(a) {
-        var cls = a.type === 'Phone Call' ? 'phone' : a.type === 'Email' ? 'email' : a.type === 'Site Visit' ? 'visit' : 'note';
-        var dateStr = a.activity_date ? new Date(a.activity_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
-        var jobRef = a.job_id ? (function(){ var j=jobs.find(function(x){return x.id===a.job_id;}); return j?'<div class="act-job">🔗 '+xpsNum(j.job_number)+'</div>':''; })() : '';
-        return '<div class="activity-item ' + cls + '">' +
-          '<div class="act-top"><span class="act-type ' + cls + '">' + a.type + '</span><span class="act-date">' + dateStr + '</span></div>' +
-          '<div class="act-subject">' + a.subject + '</div>' +
-          (a.notes ? '<div class="act-notes">' + a.notes + '</div>' : '') +
-          jobRef + '</div>';
-      }).join('');
-    } else {
-      secEl.style.display = 'none';
-    }
-  } catch(e) {}
-};
+
 
 // Augment loadCustomers to also fetch activity counts
 var _origLoadCustomers = loadCustomers;
