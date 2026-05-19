@@ -624,9 +624,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
       <div class="contacts-section-hdr"><span>Activity History</span><button class="add-contact-btn" style="width:auto;padding:3px 10px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,editingCustId)">+ Log Activity</button></div>
       <div id="activityLogList" style="max-height:200px;overflow-y:auto"></div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:4px">
-      <button class="add-contact-btn" style="border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,editingCustId)">+ Log Activity</button>
-    </div>
     <button class="btn-save" style="background:#e879f9;color:#0f1923" id="btnSaveCust" onclick="saveCustomer()">Save Customer</button>
     <button class="btn-delete" id="btnDeleteCust" onclick="deleteCustomer()" style="display:none">Delete This Customer</button>
   </div>
@@ -1434,7 +1431,21 @@ async function saveLoan(){
   var payload={loan_tool_id:toolId,customer:customer,contact_name:document.getElementById('lContact').value||null,phone:document.getElementById('lPhone').value||null,mobile:document.getElementById('lMobile').value||null,email:document.getElementById('lEmail').value||null,condition_out:document.getElementById('lConditionOut').value||null,condition_in:document.getElementById('lConditionIn').value||null,cycle_count_out:parseInt(document.getElementById('lCycleCountOut').value)||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_out:document.getElementById('lPhotoOut').value||null,photo_in:document.getElementById('lPhotoIn').value||null,reason_for_loan:document.getElementById('lReason').value||null,loaned_date:document.getElementById('lLoanedDate').value||null,expected_return:document.getElementById('lExpectedReturn').value||null,returned_date:document.getElementById('lReturnedDate').value||null,loaned_by:document.getElementById('lLoanedBy').value||null,linked_job:document.getElementById('lLinkedJob').value||null,notes:document.getElementById('lNotes').value||null,status:'ACTIVE',updated_at:new Date().toISOString()};
   try{
     if(editingLoan) await db('PATCH','loans?id=eq.'+editingLoan.id,payload);
-    else{await db('POST','loans',payload); await db('PATCH','loan_tools?id=eq.'+toolId,{is_available:false,updated_at:new Date().toISOString()});}
+    else{
+      await db('POST','loans',payload);
+      await db('PATCH','loan_tools?id=eq.'+toolId,{is_available:false,updated_at:new Date().toISOString()});
+      // Auto-log to customer activity
+      try {
+        var custMatch = (_custCache||[]).find(function(x){ return x.company_name && x.company_name.toLowerCase()===customer.toLowerCase(); });
+        if (custMatch) {
+          var lt = loanTools.find(function(x){ return x.id===toolId; });
+          var toolName = lt ? lt.name : 'Tool';
+          var lDate = document.getElementById('lLoanedDate').value || new Date().toISOString().split('T')[0];
+          await db('POST','activities',{ customer_id: custMatch.id, type: 'Note', subject: 'Loan out — ' + toolName, notes: 'Reason: ' + (document.getElementById('lReason').value||'Not specified'), activity_date: lDate, created_by: 'Rob Firth' });
+          _custCache = null;
+        }
+      } catch(e) {}
+    }
     showToast(editingLoan?'Loan updated':'Loan created');
     await loadLoans();
     if (!editingLoan) closeLoanModal(); // Only close on new loan, stay open when editing
@@ -4118,8 +4129,8 @@ openEditCust = async function(id) {
     var acts = await db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc,created_at.desc');
     var logEl = document.getElementById('activityLogList');
     var secEl = document.getElementById('activityLogSection');
+    secEl.style.display = 'block';
     if (acts && acts.length) {
-      secEl.style.display = 'block';
       logEl.innerHTML = acts.map(function(a) {
         var cls = a.type === 'Phone Call' ? 'phone' : a.type === 'Email' ? 'email' : a.type === 'Site Visit' ? 'visit' : 'note';
         var dateStr = a.activity_date ? new Date(a.activity_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
@@ -4131,7 +4142,7 @@ openEditCust = async function(id) {
           jobRef + '</div>';
       }).join('');
     } else {
-      secEl.style.display = 'none';
+      logEl.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:4px">No activities yet.</div>';
     }
   } catch(e) {}
 };
@@ -4165,8 +4176,8 @@ saveCustomer = async function() {
     }
     for (var i = 0; i < _contactRows.length; i++) {
       var r = _contactRows[i];
-      if (!r.name.trim()) continue;
-      await db('POST', 'customer_contacts', { customer_id: cid, name: r.name.trim(), role: r.role||null, phone: r.phone||null, email: r.email||null, is_primary: r.is_primary||false, notes: r.notes||null });
+      if (!r.name || !r.name.trim()) continue;
+      await db('POST', 'customer_contacts', { customer_id: cid, name: r.name.trim(), role: (r.role||'').trim()||null, phone: (r.phone||'').trim()||null, email: (r.email||'').trim()||null, is_primary: r.is_primary||false, notes: (r.notes||'').trim()||null });
     }
     _custCache = null; closeCustModal(); await loadCustomers();
     showToast(editingCustId ? 'Customer updated' : 'Customer added');
