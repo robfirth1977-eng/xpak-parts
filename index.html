@@ -3971,7 +3971,7 @@ function renderCustomers(list) {
 function openCustModal() {
   editingCustId = null;
   document.getElementById('custModalTitle').textContent = 'Add Customer';
-  ['cfCompany','cfContact','cfIndustry','cfPhone','cfEmail','cfAddress','cfMachines','cfFollowup','cfNotes'].forEach(function(id){ document.getElementById(id).value = ''; });
+  ['cfCompany','cfPhone','cfAddress','cfMachines','cfFollowup','cfNotes'].forEach(function(id){ document.getElementById(id).value = ''; });
   document.getElementById('cfType').value = 'Existing';
   document.getElementById('btnDeleteCust').style.display = 'none';
   document.getElementById('custOverlay').classList.add('show');
@@ -3983,10 +3983,8 @@ function openEditCust(id) {
   document.getElementById('custModalTitle').textContent = 'Edit Customer';
   document.getElementById('cfCompany').value = c.company_name || '';
   document.getElementById('cfType').value = c.type || 'Existing';
-  document.getElementById('cfContact').value = c.contact_name || '';
   document.getElementById('cfIndustry').value = c.industry || '';
   document.getElementById('cfPhone').value = c.phone || '';
-  document.getElementById('cfEmail').value = c.email || '';
   document.getElementById('cfAddress').value = c.address || '';
   document.getElementById('cfMachines').value = c.machines_owned || '';
   document.getElementById('cfFollowup').value = c.follow_up_date || '';
@@ -4004,10 +4002,10 @@ async function saveCustomer() {
   try {
     var payload = { company_name: name,
       type: document.getElementById('cfType').value,
-      contact_name: document.getElementById('cfContact').value.trim() || null,
-      industry: document.getElementById('cfIndustry').value.trim() || null,
+      contact_name: null,
+      industry: document.getElementById('cfIndustry').value || null,
       phone: document.getElementById('cfPhone').value.trim() || null,
-      email: document.getElementById('cfEmail').value.trim() || null,
+      email: null,
       address: document.getElementById('cfAddress').value.trim() || null,
       machines_owned: document.getElementById('cfMachines').value.trim() || null,
       follow_up_date: document.getElementById('cfFollowup').value || null,
