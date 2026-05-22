@@ -3038,6 +3038,7 @@ function renderToolsList() {
         (jobToolsLocal.length > 1 ? '<button class="tool-remove-btn" onclick="removeTool(\'' + t._tempId + '\')">Remove</button>' : '') +
         '</div>' +
       '</div>' +
+      '<div id="svc-hist-' + t._tempId + '"></div>' +
       '<div class="g2">' +
         '<div class="field"><label>Machine Model</label><div class="machine-row"><select onchange="setToolField(\'' + t._tempId + '\',\'machine_id\',this.value);renderToolsList()" style="flex:1;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">' + mOpts + '</select><button class="btn-add-machine" onclick="openMachineModalFromJob(\'' + t._tempId + '\')">+ New</button></div></div>' +
         '<div class="field"><label>Serial Number</label><input value="' + (t.serial_number||'') + '" placeholder="e.g. 56096" oninput="setToolField(\'' + t._tempId + '\',\'serial_number\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
@@ -4405,6 +4406,117 @@ async function deleteAct(actId, btn) {
     showToast('Activity deleted');
     _custCache = null;
   } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
+}
+
+
+// ── SERVICE HISTORY ──────────────────────────────────────────────────────────
+var _svcHistoryCache = {};
+
+async function checkSerialHistory(serial, tempId) {
+  serial = (serial || '').trim();
+  var panel = document.getElementById('svc-hist-' + tempId);
+  if (!panel) return;
+  if (!serial || serial.length < 3) { panel.innerHTML = ''; return; }
+
+  // Check cache
+  if (_svcHistoryCache[serial] !== undefined) {
+    renderSvcHistory(serial, tempId, _svcHistoryCache[serial]);
+    return;
+  }
+
+  try {
+    // Search job_tools for matching serial (case-insensitive partial match)
+    var results = await db('GET', 'job_tools?serial_number=ilike.*' + encodeURIComponent(serial) + '*&select=*&order=created_at.desc');
+    // Filter out current job
+    var editingJobId = editingJob ? editingJob.id : null;
+    var history = results.filter(function(t) { return t.job_id !== editingJobId; });
+    // Enrich with job data
+    var enriched = history.map(function(t) {
+      var j = jobs.find(function(x){ return x.id === t.job_id; }) || {};
+      return Object.assign({}, t, { _job: j });
+    }).filter(function(t){ return t._job && t._job.job_number; });
+    _svcHistoryCache[serial] = enriched;
+    renderSvcHistory(serial, tempId, enriched);
+  } catch(e) { panel.innerHTML = ''; }
+}
+
+function renderSvcHistory(serial, tempId, history) {
+  var panel = document.getElementById('svc-hist-' + tempId);
+  if (!panel) return;
+  if (!history.length) { panel.innerHTML = ''; return; }
+
+  var items = history.map(function(t) {
+    var j = t._job;
+    var dateStr = j.created_at ? new Date(j.created_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    var mName = t.machine_id ? (machines.find(function(m){ return m.id === t.machine_id; }) || {}).name || '' : '';
+    return '<div class="svc-history-item">' +
+      '<div class="svc-hi-top"><span class="svc-hi-job">' + xpsNum(j.job_number) + '</span><span class="svc-hi-date">' + dateStr + '</span></div>' +
+      '<div class="svc-hi-customer">' + (j.customer || 'Unknown') + (mName ? ' &nbsp;·&nbsp; ' + mName : '') + '</div>' +
+      (t.fault_type ? '<div class="svc-hi-fault">⚠️ ' + t.fault_type + (t.error_code ? ' — ' + t.error_code : '') + '</div>' : '') +
+      (t.work_completed ? '<div class="svc-hi-work">✓ ' + t.work_completed.substring(0,120) + (t.work_completed.length>120?'…':'') + '</div>' : '') +
+      (t.cycle_count_in ? '<div class="svc-hi-parts">⟳ ' + parseInt(t.cycle_count_in).toLocaleString() + ' cycles at return</div>' : '') +
+    '</div>';
+  }).join('');
+
+  panel.innerHTML = '<div class="svc-history-panel">' +
+    '<div class="svc-history-hdr">' +
+      '<span class="svc-history-title">⚠️ Previously Serviced — S/N: ' + serial + '</span>' +
+      '<span class="svc-history-count">' + history.length + ' record' + (history.length>1?'s':'') + '</span>' +
+    '</div>' +
+    items +
+    '<div class="svc-history-actions">' +
+      '<button class="svc-hist-btn print" onclick="printSvcHistory(\'' + serial + '\',\'' + tempId + '\')">🖨 Print History</button>' +
+      '<button class="svc-hist-btn dismiss" onclick="document.getElementById(\'svc-hist-' + tempId + '\').innerHTML=\'\'" >Dismiss</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function printSvcHistory(serial, tempId) {
+  var history = _svcHistoryCache[serial] || [];
+  if (!history.length) return;
+  var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+  var currentCustomer = document.getElementById('jCustomer') ? document.getElementById('jCustomer').value : '';
+  var w = window.open('','_blank');
+  if (!w) { showToast('Allow pop-ups to print','error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Service History — S/N: ' + serial + '</title>');
+  w.document.write('<style>');
+  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;color:#1a1a1a;max-width:750px;margin:0 auto;padding:28px;font-size:11pt}');
+  w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #f59e0b}');
+  w.document.write('.co{font-size:20px;font-weight:900;color:#0f1923}.co-sub{font-size:10pt;color:#666;margin-top:2px}');
+  w.document.write('.rhs{text-align:right}.rhs-title{font-size:17px;font-weight:800;color:#f59e0b}.rhs-sub{font-size:10pt;color:#555;margin-top:2px}');
+  w.document.write('.meta{background:#f8fafc;padding:10px 14px;border-radius:6px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:6px}');
+  w.document.write('.ml{font-size:9pt;color:#888;text-transform:uppercase;letter-spacing:.3px}.mv{font-size:12pt;font-weight:700;margin-top:2px}');
+  w.document.write('.rec{border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:10px;border-left:4px solid #f59e0b}');
+  w.document.write('.rec-top{display:flex;justify-content:space-between;margin-bottom:6px}.rec-job{font-family:monospace;font-weight:700;font-size:12pt;color:#1e3799}.rec-date{color:#888;font-size:10pt}');
+  w.document.write('.rec-cust{font-size:12pt;font-weight:600;margin-bottom:4px}.rec-fault{color:#f59e0b;font-size:11pt;margin-bottom:4px}');
+  w.document.write('.rec-work{color:#333;font-size:10pt;line-height:1.5;margin-bottom:4px}.rec-cycles{color:#888;font-size:9pt}');
+  w.document.write('.footer{margin-top:24px;font-size:9pt;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}');
+  w.document.write('@media print{body{padding:10px}button{display:none}}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="hdr"><div><div class="co">X-PAK GLOBAL</div><div class="co-sub">Service Division</div></div><div class="rhs"><div class="rhs-title">SERVICE HISTORY</div><div class="rhs-sub">Printed: ' + today + '</div></div></div>');
+  w.document.write('<div class="meta">');
+  w.document.write('<div><div class="ml">Serial Number</div><div class="mv">' + serial + '</div></div>');
+  w.document.write('<div><div class="ml">Total Services</div><div class="mv">' + history.length + '</div></div>');
+  if (currentCustomer) w.document.write('<div><div class="ml">Current Customer</div><div class="mv">' + currentCustomer + '</div></div>');
+  w.document.write('</div>');
+  w.document.write('<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#f59e0b;margin-bottom:10px;border-bottom:1px solid #f59e0b40;padding-bottom:6px">Service Records</div>');
+  history.forEach(function(t) {
+    var j = t._job;
+    var dateStr = j.created_at ? new Date(j.created_at).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}) : '';
+    var mName = t.machine_id ? (machines.find(function(m){ return m.id===t.machine_id; })||{}).name||'' : '';
+    w.document.write('<div class="rec">');
+    w.document.write('<div class="rec-top"><span class="rec-job">' + xpsNum(j.job_number) + (mName?' &nbsp;·&nbsp; '+mName:'') + '</span><span class="rec-date">' + dateStr + '</span></div>');
+    w.document.write('<div class="rec-cust">' + (j.customer||'') + '</div>');
+    if (t.fault_type) w.document.write('<div class="rec-fault">⚠️ ' + t.fault_type + (t.error_code?' — Error: '+t.error_code:'') + '</div>');
+    if (t.customer_issue) w.document.write('<div class="rec-work"><strong>Customer reported:</strong> ' + t.customer_issue + '</div>');
+    if (t.work_completed) w.document.write('<div class="rec-work"><strong>Work completed:</strong> ' + t.work_completed + '</div>');
+    if (t.cycle_count_in) w.document.write('<div class="rec-cycles">⟳ Cycle count at return: ' + parseInt(t.cycle_count_in).toLocaleString() + '</div>');
+    w.document.write('</div>');
+  });
+  w.document.write('<div class="footer">X-Pak Global Service Division &nbsp;·&nbsp; rob.firth@xpak.com.au &nbsp;·&nbsp; Generated by MainFlow</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 500);
 }
 
 </script>
