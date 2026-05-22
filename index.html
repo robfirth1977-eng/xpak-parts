@@ -2325,6 +2325,14 @@ async function openEditJobModal(jobId) {
     }
   } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: 'Full service inspection, clean and lubrication completed.', service_fee: '' }]; }
   renderToolsList();
+  // Auto-check serial history for existing tools
+  setTimeout(function() {
+    jobToolsLocal.forEach(function(t) {
+      if (t.serial_number && t.serial_number.length >= 3) {
+        checkSerialHistory(t.serial_number, t._tempId);
+      }
+    });
+  }, 400);
   // Load existing job parts
   try {
     var existing = await db('GET', 'job_parts?job_id=eq.' + j.id + '&select=*&order=created_at.asc');
@@ -3041,7 +3049,7 @@ function renderToolsList() {
       '<div id="svc-hist-' + t._tempId + '"></div>' +
       '<div class="g2">' +
         '<div class="field"><label>Machine Model</label><div class="machine-row"><select onchange="setToolField(\'' + t._tempId + '\',\'machine_id\',this.value);renderToolsList()" style="flex:1;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">' + mOpts + '</select><button class="btn-add-machine" onclick="openMachineModalFromJob(\'' + t._tempId + '\')">+ New</button></div></div>' +
-        '<div class="field"><label>Serial Number</label><input value="' + (t.serial_number||'') + '" placeholder="e.g. 56096" oninput="setToolField(\'' + t._tempId + '\',\'serial_number\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
+        '<div class="field"><label>Serial Number</label><input value="' + (t.serial_number||'') + '" placeholder="e.g. 56096" oninput="setToolField(\'' + t._tempId + '\',\'serial_number\',this.value)" onblur="checkSerialHistory(this.value,\'' + t._tempId + '\')" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field"><label>Fault Type</label><input value="' + (t.fault_type||'') + '" list="fltOpts_' + t._tempId + '" placeholder="Select or type..." oninput="setToolField(\'' + t._tempId + '\',\'fault_type\',this.value)" autocomplete="off" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><datalist id="fltOpts_' + t._tempId + '">' + FAULT_OPTIONS.map(function(f){return'<option value="'+f+'">';}).join('') + '</datalist></div>' +
         '<div class="field"><label>Error Code</label><input value="' + (t.error_code||'') + '" placeholder="e.g. E.2" oninput="setToolField(\'' + t._tempId + '\',\'error_code\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field"><label>Cycle Count</label><input type="number" value="' + (t.cycle_count||'') + '" placeholder="e.g. 16835" min="0" oninput="setToolField(\'' + t._tempId + '\',\'cycle_count\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
