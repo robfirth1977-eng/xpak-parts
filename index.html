@@ -4278,6 +4278,12 @@ function renderInvoiceNotice(j, tools, jparts) {
       db('PATCH','jobs?id=eq.'+j.id,{status:'WAITING TO BE INVOICED'}).then(function(){ renderBoard(); renderList(); }).catch(function(){});
     }
   }
+  // Open mailto to accounts
+  var subject = encodeURIComponent('Invoice Notice — ' + xpsNum(j.job_number) + ' — ' + (j.customer||''));
+  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + (j.customer||'') + ' (' + xpsNum(j.job_number) + ').\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nThanks,\nRob');
+  setTimeout(function(){
+    window.location.href = 'mailto:info@xpak.com.au?subject=' + subject + '&body=' + body;
+  }, 600);
   setTimeout(function(){ w.print(); }, 500);
 }
 
