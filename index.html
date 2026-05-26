@@ -1288,6 +1288,23 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+function getDefaultWorkCompleted(machineId) {
+  var POWERED = 'Internal components inspected for wear and damage. Motor, gearbox and drive train checked for correct operation. Sealing and cutting assemblies inspected and adjusted. Electrical circuit tested. All external fasteners checked and tightened. Unit fully cleaned and lubricated. Tool function tested under load and operation confirmed satisfactory.';
+  var MANUAL  = 'Internal components inspected for wear and damage. Tensioning and sealing assemblies inspected and adjusted. All external fasteners checked and tightened. Unit fully cleaned and lubricated. Tool function tested and operation confirmed satisfactory.';
+  var CORD    = 'Internal components inspected for wear and damage. Motor and drive train checked for correct operation. Cord feeding and sealing assemblies inspected and adjusted. All external fasteners checked and tightened. Unit fully cleaned and lubricated. Tool function tested under load and operation confirmed satisfactory.';
+  if (!machineId) return POWERED;
+  var m = machines.find(function(x){ return x.id === machineId; });
+  if (!m) return POWERED;
+  var name = (m.name || '').toUpperCase();
+  var brand = (m.brand || '').toUpperCase();
+  // Manual tensioners
+  if (name.includes('MUL') || name.includes('EP-') || name.includes('EP1') || name.includes('ENCORE') || brand === 'X-PAK' && (name.includes('MUL') || name.includes('EP'))) return MANUAL;
+  // Cord strapping
+  if (name.includes('CORD') || name.includes('MRC') || name.includes('PRC')) return CORD;
+  // Everything else - powered
+  return POWERED;
+}
+
 async function init() {
   try {
     machines = await db('GET', 'machines?select=*&order=brand_order.asc,name.asc');
@@ -2328,7 +2345,7 @@ function clearJobForm() {
   document.getElementById('jHoursSpent').value = '';
   jobLinks = []; renderLinksList();
   jobPartsLocal = [];
-  jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: 'Full service inspection, clean and lubrication completed.', service_fee: '' }];
+  jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' }];
   renderToolsList();
 }
 
@@ -2370,13 +2387,13 @@ async function openEditJobModal(jobId) {
     var existingTools = await db('GET', 'job_tools?job_id=eq.' + j.id + '&select=*&order=tool_number.asc');
     if (existingTools.length) {
       jobToolsLocal = existingTools.map(function(t) {
-        return Object.assign({ _tempId: 'tool_' + t.id, _existingId: t.id, work_completed: t.work_completed||'Full service inspection, clean and lubrication completed.', service_fee: t.service_fee||'' }, t);
+        return Object.assign({ _tempId: 'tool_' + t.id, _existingId: t.id, work_completed: t.work_completed||getDefaultWorkCompleted(t.machine_id||''), service_fee: t.service_fee||'' }, t);
       });
     } else {
       // Migrate legacy single-tool job fields into Tool 1
-      jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '', work_completed: 'Full service inspection, clean and lubrication completed.', service_fee: j.labour_cost || '' }];
+      jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(j.machine_id||''), service_fee: j.labour_cost || '' }];
     }
-  } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: 'Full service inspection, clean and lubrication completed.', service_fee: '' }]; }
+  } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: 'Internal components inspected for wear and damage. Motor, gearbox and drive train checked for correct operation. Sealing and cutting assemblies inspected and adjusted. Electrical circuit tested. All external fasteners checked and tightened. Unit fully cleaned and lubricated. Tool function tested under load and operation confirmed satisfactory.', service_fee: '' }]; }
   renderToolsList();
   // Auto-check serial history for existing tools
   setTimeout(function() {
@@ -3060,7 +3077,7 @@ var FAULT_OPTIONS = ['Feeding Issue','Tensioning Issue','Welding Issue','Cutting
 
 function addTool() {
   var num = jobToolsLocal.length + 1;
-  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: 'Full service inspection, clean and lubrication completed.', service_fee: '' });
+  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' });
   renderToolsList();
 }
 
@@ -3073,7 +3090,16 @@ function removeTool(tempId) {
 
 function setToolField(tempId, field, val) {
   var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; });
-  if (t) t[field] = val;
+  if (!t) return;
+  t[field] = val;
+  // When machine changes, update work_completed if still a default value
+  if (field === 'machine_id') {
+    var powered = getDefaultWorkCompleted('');
+    var manual  = (function(){ var m={id:'x',name:'MUL-20',brand:'X-PAK'}; machines.push(m); var r=getDefaultWorkCompleted('x'); machines.pop(); return r; })();
+    var cord    = (function(){ var m={id:'y',name:'ManuCord MRC',brand:'FROMM'}; machines.push(m); var r=getDefaultWorkCompleted('y'); machines.pop(); return r; })();
+    var isDefault = !t.work_completed || t.work_completed === powered || t.work_completed === manual || t.work_completed === cord;
+    if (isDefault) { t.work_completed = getDefaultWorkCompleted(val); renderToolsList(); }
+  }
 }
 
 function renderToolsList() {
