@@ -2347,10 +2347,11 @@ async function openEditJobModal(jobId) {
   setTimeout(function() {
     jobToolsLocal.forEach(function(t) {
       if (t.serial_number && t.serial_number.length >= 3) {
+        _svcHistoryCache = {}; // clear cache to force fresh lookup
         checkSerialHistory(t.serial_number, t._tempId);
       }
     });
-  }, 400);
+  }, 800);
   // Load existing job parts
   try {
     var existing = await db('GET', 'job_parts?job_id=eq.' + j.id + '&select=*&order=created_at.asc');
@@ -4457,7 +4458,7 @@ async function checkSerialHistory(serial, tempId) {
 
   try {
     // Search job_tools for matching serial (case-insensitive partial match)
-    var results = await db('GET', 'job_tools?serial_number=ilike.*' + encodeURIComponent(serial) + '*&select=*&order=created_at.desc');
+    var results = await db('GET', 'job_tools?serial_number=ilike.*' + serial + '*&select=*&order=created_at.desc');
     // Filter out current job
     var editingJobId = editingJob ? editingJob.id : null;
     var history = results.filter(function(t) { return t.job_id !== editingJobId; });
@@ -4554,3 +4555,4 @@ function printSvcHistory(serial, tempId) {
 </script>
 </body>
 </html>
+  
