@@ -2960,42 +2960,40 @@ async function saveDirectOrder() {
 function printCaseLabel(jobId) {
   var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
   db('GET', 'job_tools?job_id=eq.' + jobId + '&select=*&order=tool_number.asc').then(function(tools) {
-    // Fall back to legacy job fields if no tools saved yet
     if (!tools.length && j.machine_id) {
-      var m = machines.find(function(x) { return x.id === j.machine_id; });
       tools = [{ tool_number:1, machine_id: j.machine_id, serial_number: j.serial_number, fault_type: j.fault_type }];
     }
-    var toolLines = tools.map(function(t) {
-      var mName = t.machine_id ? ((machines.find(function(x){return x.id===t.machine_id;})||{}).name||'') : '';
-      return (mName || 'Unknown Model') +
-        (t.serial_number ? ' &nbsp;|&nbsp; S/N: ' + t.serial_number : '') +
-        (t.fault_type ? ' &nbsp;|&nbsp; ' + t.fault_type : '');
-    }).join('<br>');
-
     var w = window.open('', '_blank');
-    w.document.write('<html><head><title>Label ' + xpsNum(j.job_number) + '</title>');
+    if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
+    w.document.write('<html><head><title>Labels ' + xpsNum(j.job_number) + '</title>');
     w.document.write('<style>');
     w.document.write('@page { size: 89mm 36mm; margin: 2.5mm 5mm 2.5mm 3.5mm; }');
     w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
-    w.document.write('body { font-family: Arial, sans-serif; width: 82mm; height: 31mm; overflow: hidden; }');
-    w.document.write('.label { display: flex; width: 82mm; height: 31mm; align-items: stretch; border: 0.4mm solid #000; border-radius: 1mm; overflow: hidden; }');
+    w.document.write('body { font-family: Arial, sans-serif; }');
+    w.document.write('.label { display: flex; width: 82mm; height: 31mm; align-items: stretch; border: 0.4mm solid #000; border-radius: 1mm; overflow: hidden; page-break-after: always; }');
     w.document.write('.left { flex: 1; padding: 2mm 2.5mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border-right: 0.4mm solid #ccc; }');
     w.document.write('.cust { font-size: 13pt; font-weight: 900; color: #000; line-height: 1.1; }');
     w.document.write('.xpsref { font-size: 7.5pt; font-weight: 700; font-family: "Courier New", monospace; color: #444; margin-top: 0.8mm; }');
-    w.document.write('.tools { font-size: 6.5pt; color: #555; margin-top: 0.5mm; line-height: 1.3; }');
+    w.document.write('.tool-line { font-size: 7pt; color: #222; font-weight: 700; margin-top: 0.5mm; line-height: 1.3; }');
+    w.document.write('.fault-line { font-size: 6.5pt; color: #555; margin-top: 0.5mm; line-height: 1.3; }');
     w.document.write('.right { width: 18mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; background: #f0f0f0; flex-shrink: 0; }');
     w.document.write('.xpak { font-size: 7pt; font-weight: 900; color: #333; letter-spacing: 0.5px; text-transform: uppercase; text-align: center; line-height: 1.5; }');
+    w.document.write('.tool-num { font-size: 6pt; color: #888; margin-top: 1mm; }');
     w.document.write('</style></head><body>');
-    w.document.write('<div class="label">');
-    w.document.write('<div class="left">');
-    w.document.write('<div class="cust">' + (j.customer || '') + '</div>');
-    w.document.write('<div>');
-    w.document.write('<div class="xpsref">' + xpsNum(j.job_number) + ' &nbsp;&middot;&nbsp; Service Case</div>');
-    w.document.write('<div class="tools">' + toolLines + '</div>');
-    w.document.write('</div>');
-    w.document.write('</div>');
-    w.document.write('<div class="right"><div class="xpak">X-PAK<br>SERVICE</div></div>');
-    w.document.write('</div>');
+    tools.forEach(function(t, idx) {
+      var mName = t.machine_id ? ((machines.find(function(x){return x.id===t.machine_id;})||{}).name||'') : '';
+      w.document.write('<div class="label">');
+      w.document.write('<div class="left">');
+      w.document.write('<div><div class="cust">' + (j.customer || '') + '</div></div>');
+      w.document.write('<div>');
+      w.document.write('<div class="xpsref">' + xpsNum(j.job_number) + ' &nbsp;&middot;&nbsp; Tool ' + t.tool_number + ' of ' + tools.length + '</div>');
+      w.document.write('<div class="tool-line">' + (mName || 'Unknown Model') + (t.serial_number ? ' &nbsp;|&nbsp; S/N: ' + t.serial_number : '') + '</div>');
+      if (t.fault_type) w.document.write('<div class="fault-line">' + t.fault_type + '</div>');
+      w.document.write('</div>');
+      w.document.write('</div>');
+      w.document.write('<div class="right"><div class="xpak">X-PAK<br>SERVICE</div></div>');
+      w.document.write('</div>');
+    });
     w.document.write('</body></html>');
     w.document.close();
     setTimeout(function() { w.print(); }, 300);
