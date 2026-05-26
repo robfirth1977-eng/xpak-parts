@@ -4473,9 +4473,10 @@ function renderSvcHistory(serial, tempId, history) {
 
   panel.innerHTML = '<div class="svc-history-panel">' +
     '<div class="svc-history-hdr">' +
-      '<span class="svc-history-title">⚠️ Previously Serviced — S/N: ' + serial + '</span>' +
+      '<span class="svc-history-title">⚠️ Previously Serviced</span>' +
       '<span class="svc-history-count">' + history.length + ' previous service' + (history.length>1?'s':'') + '</span>' +
     '</div>' +
+    '<div style="font-size:11px;color:#f59e0b;margin-bottom:8px">S/N: ' + serial + '</div>' +
     items +
     '<div class="svc-history-actions">' +
       '<button class="svc-hist-btn print" onclick="printSvcHistory(\'' + serial + '\',\'' + tempId + '\')">🖨 Print History</button>' +
