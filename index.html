@@ -297,6 +297,27 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .toast.error{background:#ef4444;color:white}
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid #2a4060;border-top-color:#00c8e0;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.tool-search-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding-top:60px}
+.tool-search-overlay.show{display:flex}
+.tool-search-box{background:#1a2a3d;border:1px solid #2a4060;border-radius:14px;width:100%;max-width:560px;margin:0 16px;overflow:hidden}
+.tool-search-input-row{display:flex;align-items:center;padding:14px 16px;gap:10px;border-bottom:1px solid #2a4060}
+.tool-search-input-row input{flex:1;background:transparent;border:none;outline:none;font-size:16px;color:#e2e8f0;font-family:inherit}
+.tool-search-input-row input::placeholder{color:#3a5070}
+.tool-search-close{background:none;border:none;color:#5a8090;font-size:18px;cursor:pointer;padding:4px 8px}
+.tool-search-results{max-height:65vh;overflow-y:auto;padding:10px}
+.ts-section{margin-bottom:12px}
+.ts-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:6px;padding:0 4px}
+.ts-item{padding:10px 12px;border-radius:8px;background:#0d1a28;margin-bottom:5px;cursor:pointer;transition:background .15s}
+.ts-item:hover{background:#1e3048}
+.ts-item-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.ts-item-title{font-size:13px;font-weight:700;color:#e0f0ff}
+.ts-item-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px}
+.ts-item-badge.job{background:#3b82f620;color:#3b82f6;border:1px solid #3b82f660}
+.ts-item-badge.loan{background:#a78bfa20;color:#a78bfa;border:1px solid #a78bfa60}
+.ts-item-badge.sv{background:#fb923c20;color:#fb923c;border:1px solid #fb923c60}
+.ts-item-sub{font-size:11px;color:#5a8090}
+.ts-empty{text-align:center;color:#3a5070;font-size:13px;padding:24px}
+.ts-searching{text-align:center;color:#5a8090;font-size:13px;padding:24px}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .svc-history-panel{background:#0a1520;border:2px solid #f59e0b60;border-radius:10px;padding:12px;margin-top:8px;animation:fadeIn .2s ease}
 .svc-history-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:12px}
@@ -518,7 +539,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 
 <div class="header">
   <div><div class="header-title" onclick="showLanding()" style="cursor:pointer" title="Back to menu">MAINFLOW</div><div class="header-sub" id="hSub">Connecting...</div></div>
-  <div id="lowBadge"></div><button class="auth-user" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
+  <div id="lowBadge"></div><button class="auth-user" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;margin-right:6px" onclick="openToolSearch()">🔍 Find Tool</button><button class="auth-user" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
 </div>
 <div class="machine-tabs" id="machineTabs"></div>
 <div class="docs-bar" id="docsBar"></div>
@@ -1122,6 +1143,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
     <div class="field"><label>Notes</label><textarea id="actNotes" rows="5" placeholder="Paste email content or add notes here..." style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
     <div class="field" style="font-size:11px;color:#5a8090" id="actLinkedTo"></div>
     <button class="btn-save" style="background:#00c8e0;color:#0f1923" onclick="saveActivity()">Save Activity</button>
+  </div>
+</div>
+
+<!-- Tool Search Overlay -->
+<div class="tool-search-overlay" id="toolSearchOverlay" onclick="if(event.target===this)closeToolSearch()">
+  <div class="tool-search-box">
+    <div class="tool-search-input-row">
+      <span style="font-size:16px">🔍</span>
+      <input id="toolSearchInput" type="text" placeholder="Enter serial number..." autocomplete="off" oninput="runToolSearch(this.value)">
+      <button class="tool-search-close" onclick="closeToolSearch()">✕</button>
+    </div>
+    <div id="toolSearchResults" class="tool-search-results">
+      <div class="ts-empty">Type a serial number to search across all modules</div>
+    </div>
   </div>
 </div>
 
@@ -4552,7 +4587,121 @@ function printSvcHistory(serial, tempId) {
   setTimeout(function(){ w.print(); }, 500);
 }
 
+
+// ── GLOBAL TOOL SEARCH ───────────────────────────────────────────────────────
+var _tsTimer = null;
+
+function openToolSearch() {
+  document.getElementById('toolSearchOverlay').classList.add('show');
+  document.getElementById('toolSearchInput').value = '';
+  document.getElementById('toolSearchResults').innerHTML = '<div class="ts-empty">Type a serial number to search across all modules</div>';
+  setTimeout(function(){ document.getElementById('toolSearchInput').focus(); }, 100);
+}
+
+function closeToolSearch() {
+  document.getElementById('toolSearchOverlay').classList.remove('show');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('toolSearchOverlay').classList.contains('show')) {
+    closeToolSearch();
+  }
+});
+
+function runToolSearch(val) {
+  clearTimeout(_tsTimer);
+  val = (val||'').trim();
+  if (val.length < 2) {
+    document.getElementById('toolSearchResults').innerHTML = '<div class="ts-empty">Type a serial number to search across all modules</div>';
+    return;
+  }
+  document.getElementById('toolSearchResults').innerHTML = '<div class="ts-searching"><span class="spinner"></span> Searching...</div>';
+  _tsTimer = setTimeout(function(){ doToolSearch(val); }, 350);
+}
+
+async function doToolSearch(serial) {
+  var results = { jobs: [], loans: [], sv: [] };
+  var pattern = serial.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  try {
+    // Search job_tools
+    var jt = await db('GET', 'job_tools?serial_number=ilike.*' + serial + '*&select=*');
+    jt.forEach(function(t) {
+      var j = jobs.find(function(x){ return x.id === t.job_id; });
+      if (j) results.jobs.push({ tool: t, job: j });
+    });
+  } catch(e) {}
+
+  try {
+    // Search loan tools register
+    var lt = loanTools.filter(function(t){ return t.serial_number && t.serial_number.toLowerCase().includes(serial.toLowerCase()); });
+    results.loans = lt;
+  } catch(e) {}
+
+  try {
+    // Search site visit machines
+    var svm = await db('GET', 'site_visit_machines?serial_number=ilike.*' + serial + '*&select=*');
+    svm.forEach(function(m) {
+      var v = siteVisits.find(function(x){ return x.id === m.site_visit_id; });
+      if (v) results.sv.push({ machine: m, visit: v });
+    });
+  } catch(e) {}
+
+  renderToolSearchResults(serial, results);
+}
+
+function renderToolSearchResults(serial, results) {
+  var html = '';
+  var total = results.jobs.length + results.loans.length + results.sv.length;
+
+  if (!total) {
+    document.getElementById('toolSearchResults').innerHTML = '<div class="ts-empty">No results found for "' + serial + '"</div>';
+    return;
+  }
+
+  if (results.jobs.length) {
+    html += '<div class="ts-section"><div class="ts-section-title">Service Jobs (' + results.jobs.length + ')</div>';
+    html += results.jobs.map(function(r) {
+      var j = r.job, t = r.tool;
+      var mName = t.machine_id ? (machines.find(function(m){return m.id===t.machine_id;})||{}).name||'' : '';
+      var dateStr = j.created_at ? new Date(j.created_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
+      return '<div class="ts-item" onclick="closeToolSearch();openEditJobModal(\'' + j.id + '\')">' +
+        '<div class="ts-item-top"><span class="ts-item-title">' + (j.customer||'Unknown') + '</span><span class="ts-item-badge job">' + xpsNum(j.job_number) + '</span></div>' +
+        '<div class="ts-item-sub">' + (mName||'Unknown model') + ' &nbsp;·&nbsp; S/N: ' + (t.serial_number||'') + ' &nbsp;·&nbsp; ' + dateStr + '</div>' +
+        (t.fault_type ? '<div class="ts-item-sub" style="color:#f59e0b;margin-top:2px">⚠️ ' + t.fault_type + '</div>' : '') +
+      '</div>';
+    }).join('');
+    html += '</div>';
+  }
+
+  if (results.loans.length) {
+    html += '<div class="ts-section"><div class="ts-section-title">Loan Register (' + results.loans.length + ')</div>';
+    html += results.loans.map(function(t) {
+      var status = t.is_available ? '<span style="color:#10b981">✓ Available</span>' : '<span style="color:#ef4444">● On Loan</span>';
+      return '<div class="ts-item" onclick="closeToolSearch();switchToLoans()">' +
+        '<div class="ts-item-top"><span class="ts-item-title">' + t.name + '</span><span class="ts-item-badge loan">Loan Tool</span></div>' +
+        '<div class="ts-item-sub">S/N: ' + (t.serial_number||'') + ' &nbsp;·&nbsp; ' + status + (t.current_cycle_count!=null?' &nbsp;·&nbsp; ⟳ '+t.current_cycle_count.toLocaleString()+' cycles':'') + '</div>' +
+      '</div>';
+    }).join('');
+    html += '</div>';
+  }
+
+  if (results.sv.length) {
+    html += '<div class="ts-section"><div class="ts-section-title">Site Visits (' + results.sv.length + ')</div>';
+    html += results.sv.map(function(r) {
+      var v = r.visit, m = r.machine;
+      var dateStr = v.visit_date ? new Date(v.visit_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
+      return '<div class="ts-item" onclick="closeToolSearch();switchToSiteVisits();setTimeout(function(){openEditSv(\'' + v.id + '\')},300)">' +
+        '<div class="ts-item-top"><span class="ts-item-title">' + (v.customer||'Unknown') + '</span><span class="ts-item-badge sv">' + (v.visit_number?xsvNum(v.visit_number):'Visit') + '</span></div>' +
+        '<div class="ts-item-sub">' + (m.machine_type||'') + ' &nbsp;·&nbsp; S/N: ' + (m.serial_number||'') + ' &nbsp;·&nbsp; ' + dateStr + '</div>' +
+      '</div>';
+    }).join('');
+    html += '</div>';
+  }
+
+  document.getElementById('toolSearchResults').innerHTML = html;
+}
+
 </script>
 </body>
 </html>
-  
