@@ -394,6 +394,42 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .cust-search:focus{border-color:#e879f9}
 .cust-filter-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #2a4060;background:transparent;color:#8aa8c0}
 .cust-filter-btn.active{background:#e879f9;border-color:#e879f9;color:#0f1923}
+.acct-back{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:#5a8090;cursor:pointer;border-bottom:1px solid #1e3048;margin-bottom:14px}
+.acct-back:hover{color:#e2e8f0}
+.acct-layout{display:grid;grid-template-columns:280px 1fr;gap:16px}
+@media(max-width:700px){.acct-layout{grid-template-columns:1fr}}
+.acct-name{font-size:20px;font-weight:900;color:#e0f0ff;line-height:1.2}
+.acct-detail-card{background:#1a2a3d;border:1px solid #2a4060;border-radius:10px;padding:14px;margin-bottom:10px}
+.acct-field{margin-bottom:8px}
+.acct-field-lbl{font-size:8.5pt;color:#5a8090;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.acct-field-val{font-size:11pt;color:#e0f0ff;font-weight:600;word-break:break-word}
+.acct-panel{background:#141f2d;border-radius:10px;margin-bottom:10px;overflow:hidden;border:1px solid #1e3048}
+.acct-panel-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid #1e3048}
+.acct-panel-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#e879f9}
+.acct-panel-count{font-size:11px;font-weight:700;background:#1e3048;border-radius:10px;padding:1px 8px;color:#8aa8c0}
+.acct-panel-item{padding:9px 14px;border-bottom:1px solid #141f2d;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .1s}
+.acct-panel-item:last-child{border-bottom:none}
+.acct-panel-item:hover{background:#1e3048}
+.acct-item-ref{font-size:11px;font-weight:700;font-family:"Courier New",monospace;color:#64b5c8;flex-shrink:0;min-width:70px}
+.acct-item-main{flex:1;min-width:0}
+.acct-item-title{font-size:12px;font-weight:600;color:#e0f0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct-item-sub{font-size:10px;color:#5a8090;margin-top:1px}
+.acct-item-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;flex-shrink:0}
+.acct-machine-row{background:#0d1a28;border-radius:7px;padding:8px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s}
+.acct-machine-row:hover{background:#1e3048}
+.acct-machine-name{font-size:12px;font-weight:700;color:#00c8e0}
+.acct-machine-sn{font-size:11px;color:#5a8090;font-family:"Courier New",monospace}
+.cust-ta-wrap{position:relative;width:100%;grid-column:1/-1}
+.cust-dropdown{position:absolute;top:100%;left:0;right:0;background:#1a2a3d;border:1px solid #e879f9;border-top:none;border-radius:0 0 8px 8px;z-index:9000;max-height:220px;overflow-y:auto;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.cust-dropdown.show{display:block}
+.cust-dd-item{padding:9px 13px;cursor:pointer;border-bottom:1px solid #1e3048;transition:background .1s}
+.cust-dd-item:last-child{border-bottom:none}
+.cust-dd-item:hover,.cust-dd-item.active{background:#1e3048}
+.cust-dd-name{font-size:13px;font-weight:700;color:#e0f0ff}
+.cust-dd-sub{font-size:11px;color:#5a8090;margin-top:2px}
+.machine-edit-row{display:flex;gap:6px;align-items:center;background:#0d1a28;border-radius:6px;padding:7px 10px;margin-bottom:5px}
+.machine-edit-row input{padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;outline:none;min-width:0}
+.machine-edit-row input:focus{border-color:#e879f9}
 #authOverlay{position:fixed;inset:0;background:#0f1923;z-index:9999;display:flex;align-items:center;justify-content:center}
 .auth-box{background:#1a2a3d;border:1px solid #2a4060;border-radius:16px;padding:32px;width:100%;max-width:360px;margin:16px}
 .auth-logo{font-size:22px;font-weight:900;color:#e0f0ff;margin-bottom:4px}
@@ -635,20 +671,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   <button class="cust-filter-btn active" id="cfAll" onclick="setCustFilter('all')">All</button>
   <button class="cust-filter-btn" id="cfExisting" onclick="setCustFilter('existing')">Existing</button>
   <button class="cust-filter-btn" id="cfProspect" onclick="setCustFilter('prospect')">Prospects</button>
-  <button class="btn-add" style="background:#e879f9;color:#0f1923;font-weight:700;flex-shrink:0" onclick="openCustModal()">+ Add</button>
+  <button class="btn-add" style="background:#e879f9;color:#0f1923;font-weight:700;flex-shrink:0" onclick="openCustModal()">+ Add Account</button>
   <button class="btn-add" style="background:#1e3048;color:#e879f9;border:1px solid #e879f960;flex-shrink:0" onclick="importCustomersFromJobs()">⬆ Import Jobs</button>
 </div>
 <div class="cust-section" id="custSection">
   <div id="custGrid" class="cust-grid"><div class="center"><span class="spinner"></span> Loading...</div></div>
+  <div id="custAccountSection" style="display:none;padding:0 14px 20px">
+    <div class="acct-back" onclick="closeCustAccount()">&#9664; Accounts / <span id="acctBreadcrumb" style="color:#e879f9;font-weight:700"></span></div>
+    <div class="acct-layout" id="acctLayout"></div>
+  </div>
 </div>
 
 <!-- Customer modal -->
 <div class="overlay" id="custOverlay" onclick="if(event.target===this)closeCustModal()">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="custModalTitle">Add Customer</div><button class="modal-close" onclick="closeCustModal()">x</button></div>
-    <div class="section-label">Company Details</div>
+    <div class="modal-header"><div class="modal-title" id="custModalTitle">Add Account</div><button class="modal-close" onclick="closeCustModal()">x</button></div>
+    <div class="section-label">Account Details</div>
     <div class="field-row">
-      <div class="field"><label>Company Name *</label><input id="cfCompany" placeholder="e.g. Thomas Foods"></div>
+      <div class="field"><label>Account Name *</label><input id="cfCompany" placeholder="e.g. Thomas Foods"></div>
       <div class="field"><label>Type</label><select id="cfType" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="Existing">Existing Customer</option><option value="Prospect">Prospect</option></select></div>
     </div>
     <div class="field-row">
@@ -656,7 +696,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <div class="field"><label>Industry</label><select id="cfIndustry" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option>Food & Beverage</option><option>Meat Processing</option><option>Timber & Hardware</option><option>Truss & Frame</option><option>Steel Fabrication</option><option>Logistics & Warehousing</option><option>Scaffolding</option><option>Agriculture</option><option>Mining & Resources</option><option>Government & Utilities</option><option>Other</option></select></div>
     </div>
     <div class="field"><label>Address</label><input id="cfAddress" placeholder="Street, suburb, state, postcode"></div>
-    <div class="field"><label>Machines Owned</label><input id="cfMachines" placeholder="e.g. CHT 460, OR-T 250"></div>
+    <div class="field"><label>Website</label><input id="cfWebsite" placeholder="e.g. www.thomasfoods.com.au"></div>
+    <div class="section-label">Machines Owned</div>
+    <div style="font-size:11px;color:#5a8090;margin-bottom:7px">Auto-populated from jobs. Add or edit manually.</div>
+    <div id="machineRowsContainer"></div>
+    <button class="add-contact-btn" onclick="addMachineRow()" style="margin-bottom:4px">+ Add Machine</button>
     <div class="section-label">Follow Up</div>
     <div class="field-row">
       <div class="field"><label>Follow-up Date</label><input id="cfFollowup" type="date"></div>
@@ -671,8 +715,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <div class="contacts-section-hdr"><span>Activity History</span><button class="add-contact-btn" style="width:auto;padding:3px 10px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,editingCustId)">+ Log Activity</button></div>
       <div id="activityLogList" style="max-height:200px;overflow-y:auto"></div>
     </div>
-    <button class="btn-save" style="background:#e879f9;color:#0f1923" id="btnSaveCust" onclick="saveCustomer()">Save Customer</button>
-    <button class="btn-delete" id="btnDeleteCust" onclick="deleteCustomer()" style="display:none">Delete This Customer</button>
+    <button class="btn-save" style="background:#e879f9;color:#0f1923" id="btnSaveCust" onclick="saveCustomer()">Save Account</button>
+    <button class="btn-delete" id="btnDeleteCust" onclick="deleteCustomer()" style="display:none">Delete This Account</button>
   </div>
 </div>
 
@@ -886,7 +930,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 
     <div class="section-label">Customer Details</div>
     <div class="g2">
-      <div class="field full"><label>Customer / Company *</label><input id="jCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour"></div>
+      <div class="field full"><label>Account / Company *</label>
+        <div class="cust-ta-wrap">
+          <input id="jCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour" autocomplete="off" oninput="custTypeahead(this.value)" onfocus="custTypeahead(this.value)" onblur="setTimeout(hideCustDropdown,200)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <div class="cust-dropdown" id="custDropdown"></div>
+        </div>
+      </div>
       <div class="field"><label>Contact Name</label><input id="jContact" placeholder="e.g. John Smith"></div>
       <div class="field"><label>Phone</label><input id="jPhone" placeholder="e.g. 02 6652 0000"></div>
       <div class="field"><label>Mobile</label><input id="jMobile" placeholder="e.g. 0412 345 678"></div>
@@ -1105,7 +1154,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 <div class="overlay" id="supplierOverlay" onclick="if(event.target===this)closeSupplierModal()">
   <div class="modal">
     <div class="modal-header"><div class="modal-title" id="supplierModalTitle">Add Supplier</div><button class="modal-close" onclick="closeSupplierModal()">x</button></div>
-    <div class="section-label">Company Details</div>
+    <div class="section-label">Account Details</div>
     <div class="field"><label>Company Name *</label><input id="sfName" placeholder="e.g. Cyklop"></div>
     <div class="field-row">
       <div class="field"><label>Contact Name</label><input id="sfContact" placeholder="e.g. Brenton Emery"></div>
@@ -1368,6 +1417,7 @@ function hideAllViews() {
   var hs = document.getElementById('homeSection'); if(hs) hs.style.display = 'none';
   var ct = document.getElementById('custToolbar'); if(ct) ct.style.display = 'none';
   var cs = document.getElementById('custSection'); if(cs) cs.style.display = 'none';
+  var cas = document.getElementById('custAccountSection'); if(cas) cas.style.display = 'none';
 }
 
 function switchToJobs() {
@@ -1855,7 +1905,7 @@ function renderTabs() {
   html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
   html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
   html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
-  html2 += '<button class="tab cust-tab'  + (v==='customers'?' active':'') + '" onclick="' + (v==='customers'?'':'switchToCustomers()') + '">Customers</button>';
+  html2 += '<button class="tab cust-tab'  + (v==='customers'?' active':'') + '" onclick="' + (v==='customers'?'':'switchToCustomers()') + '">Accounts</button>';
   if (!window._adminMode) {
     html2 += '<div class="tab-divider"></div>';
     html2 += '<span class="tab-group-label">Technical</span>';
@@ -2513,6 +2563,8 @@ async function saveJob() {
       }
     }
     await loadAllParts();
+    // Auto-update customer machines owned
+    try { await updateCustomerMachines(customer, jobToolsLocal); } catch(e) {}
     showToast(editingJob ? 'Service case updated' : 'Service case created');
     await loadJobs();
     if (!editingJob) closeJobModal();
@@ -3992,7 +4044,10 @@ function switchToCustomers() {
   currentView = 'customers'; hideAllViews(); renderTabs();
   document.getElementById('custToolbar').style.display = 'flex';
   document.getElementById('custSection').style.display = 'block';
-  document.getElementById('hSub').textContent = 'Customers';
+  document.getElementById('custGrid').style.display = 'grid';
+  document.getElementById('custAccountSection').style.display = 'none';
+  _viewingCustId = null;
+  document.getElementById('hSub').textContent = 'Accounts';
   document.getElementById('lowBadge').innerHTML = '';
   loadCustomers();
 }
@@ -4018,6 +4073,266 @@ function setCustFilter(f) {
   renderCustomers(_custCache || []);
 }
 
+// ── MACHINES OWNED HELPERS ───────────────────────────────────────────────────
+function parseMachines(str) {
+  if (!str) return [];
+  try { var arr = JSON.parse(str); if (Array.isArray(arr)) return arr; } catch(e) {}
+  return str.split(',').map(function(s){ return { name: s.trim(), serial: '' }; }).filter(function(m){ return m.name; });
+}
+function formatMachinesJson(arr) { return arr.length ? JSON.stringify(arr) : null; }
+
+// ── MACHINE ROWS (edit modal) ─────────────────────────────────────────────────
+var _machineRows = [], _machineRowIdx = 0;
+function addMachineRow(m) {
+  var idx = _machineRowIdx++;
+  _machineRows.push({ _idx: idx, name: m ? (m.name||'') : '', serial: m ? (m.serial||'') : '' });
+  renderMachineRows();
+}
+function removeMachineRow(idx) { _machineRows = _machineRows.filter(function(r){ return r._idx !== idx; }); renderMachineRows(); }
+function setMachineField(idx, field, val) { var r = _machineRows.find(function(x){ return x._idx === idx; }); if (r) r[field] = val; }
+function renderMachineRows() {
+  var el = document.getElementById('machineRowsContainer'); if (!el) return;
+  if (!_machineRows.length) { el.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:4px 0">No machines yet — added automatically from jobs.</div>'; return; }
+  el.innerHTML = _machineRows.map(function(r) {
+    return '<div class="machine-edit-row">' +
+      '<input style="flex:2;min-width:80px" placeholder="Machine model e.g. CHT 460" value="' + r.name + '" oninput="setMachineField(' + r._idx + ','name',this.value)">' +
+      '<input style="flex:1;min-width:70px" placeholder="Serial No." value="' + r.serial + '" oninput="setMachineField(' + r._idx + ','serial',this.value)">' +
+      '<button class="sv-remove-btn" onclick="removeMachineRow(' + r._idx + ')">×</button>' +
+    '</div>';
+  }).join('');
+}
+
+// ── AUTO-UPDATE CUSTOMER MACHINES FROM JOBS ───────────────────────────────────
+async function updateCustomerMachines(customerName, toolsList) {
+  if (!customerName || !toolsList || !toolsList.length) return;
+  try {
+    var c = (_custCache||[]).find(function(x){ return x.company_name && x.company_name.toLowerCase() === customerName.toLowerCase(); });
+    if (!c) return;
+    var existing = parseMachines(c.machines_owned);
+    var changed = false;
+    toolsList.forEach(function(t) {
+      if (!t.machine_id) return;
+      var mName = (window.machines||[]).find(function(m){ return m.id === t.machine_id; });
+      if (!mName) return;
+      var name = mName.name;
+      var serial = (t.serial_number||'').trim();
+      var alreadyHas = existing.some(function(m){
+        return m.name === name && (!serial || m.serial === serial);
+      });
+      if (!alreadyHas) { existing.push({ name: name, serial: serial }); changed = true; }
+    });
+    if (changed) {
+      await db('PATCH', 'customers?id=eq.' + c.id, { machines_owned: formatMachinesJson(existing) });
+      _custCache = null;
+    }
+  } catch(e) {}
+}
+
+// ── CUSTOMER TYPEAHEAD ────────────────────────────────────────────────────────
+function custTypeahead(val) {
+  var dd = document.getElementById('custDropdown'); if (!dd) return;
+  val = (val||'').toLowerCase().trim();
+  var pool = _custCache || [];
+  if (!val || !pool.length) { dd.classList.remove('show'); return; }
+  var matches = pool.filter(function(c){ return c.company_name.toLowerCase().includes(val); }).slice(0,8);
+  if (!matches.length) { dd.classList.remove('show'); return; }
+  dd.innerHTML = matches.map(function(c) {
+    var primary = c._contacts && c._contacts.find(function(x){ return x.is_primary; });
+    var sub = [c.industry, primary ? primary.name : c.contact_name].filter(Boolean).join(' · ');
+    return '<div class="cust-dd-item" onmousedown="selectCustFromDropdown('' + c.id + '')">' +
+      '<div class="cust-dd-name">' + c.company_name + '</div>' +
+      (sub ? '<div class="cust-dd-sub">' + sub + '</div>' : '') +
+    '</div>';
+  }).join('');
+  dd.classList.add('show');
+}
+function hideCustDropdown() { var dd = document.getElementById('custDropdown'); if (dd) dd.classList.remove('show'); }
+function selectCustFromDropdown(custId) {
+  var c = (_custCache||[]).find(function(x){ return x.id === custId; }); if (!c) return;
+  document.getElementById('jCustomer').value = c.company_name;
+  hideCustDropdown();
+  // Auto-fill contact details from primary contact or customer record
+  var primary = c._contacts && c._contacts.find(function(x){ return x.is_primary; });
+  var contact = primary || (c._contacts && c._contacts[0]);
+  if (contact) {
+    document.getElementById('jContact').value = contact.name || '';
+    if (contact.phone) document.getElementById('jPhone').value = contact.phone;
+    if (contact.email) document.getElementById('jEmail').value = contact.email;
+  } else {
+    if (c.contact_name) document.getElementById('jContact').value = c.contact_name;
+    if (c.phone) document.getElementById('jPhone').value = c.phone;
+  }
+  if (c.address) document.getElementById('jShipping').value = c.address;
+}
+
+// ── CUSTOMER ACCOUNT VIEW ─────────────────────────────────────────────────────
+var _viewingCustId = null;
+
+async function openCustomerAccount(id) {
+  var c = customers.find(function(x){ return x.id === id; }); if (!c) return;
+  _viewingCustId = id;
+  document.getElementById('custGrid').style.display = 'none';
+  document.getElementById('custAccountSection').style.display = 'block';
+  document.getElementById('acctBreadcrumb').textContent = c.company_name;
+  document.getElementById('acctLayout').innerHTML = '<div class="center"><span class="spinner"></span></div>';
+  // Load fresh data in parallel
+  var cJobs = [], cLoans = [], cActs = [];
+  try {
+    var encoded = encodeURIComponent(c.company_name);
+    [cJobs, cLoans, cActs] = await Promise.all([
+      db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; }),
+      db('GET', 'loans?customer=ilike.*' + c.company_name.replace(/[^a-zA-Z0-9]/g,' ').trim().split(' ')[0] + '*&select=*&order=loan_number.desc').catch(function(){ return []; }),
+      db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc&limit=8').catch(function(){ return []; })
+    ]);
+    // Filter loans more precisely
+    cLoans = cLoans.filter(function(l){ return l.customer && l.customer.toLowerCase().includes(c.company_name.toLowerCase().substring(0,8)); });
+  } catch(e) {}
+  renderAccountView(c, cJobs, cLoans, cActs);
+}
+
+function closeCustAccount() {
+  document.getElementById('custAccountSection').style.display = 'none';
+  document.getElementById('custGrid').style.display = 'grid';
+  _viewingCustId = null;
+}
+
+function editCustFromAccount() {
+  if (!_viewingCustId) return;
+  openEditCust(_viewingCustId);
+}
+
+function renderAccountView(c, cJobs, cLoans, cActs) {
+  var today = new Date(); today.setHours(0,0,0,0);
+  var machineList = parseMachines(c.machines_owned);
+
+  // ── LEFT COLUMN: details ──
+  var detRows = '';
+  if (c.phone)    detRows += '<div class="acct-field"><div class="acct-field-lbl">Phone</div><div class="acct-field-val">' + c.phone + '</div></div>';
+  if (c.address)  detRows += '<div class="acct-field"><div class="acct-field-lbl">Address</div><div class="acct-field-val">' + c.address + '</div></div>';
+  if (c.website)  detRows += '<div class="acct-field"><div class="acct-field-lbl">Website</div><div class="acct-field-val"><a href="https://' + c.website.replace(/^https?:\/\//,'') + '" target="_blank" style="color:#00c8e0">' + c.website + '</a></div></div>';
+  if (c.industry) detRows += '<div class="acct-field"><div class="acct-field-lbl">Industry</div><div class="acct-field-val">' + c.industry + '</div></div>';
+  if (c.notes)    detRows += '<div class="acct-field"><div class="acct-field-lbl">Notes</div><div class="acct-field-val" style="font-size:11pt;font-weight:400;color:#8aa8c0">' + c.notes + '</div></div>';
+
+  // Follow up
+  var followupHtml = '';
+  if (c.follow_up_date) {
+    var fd = new Date(c.follow_up_date); fd.setHours(0,0,0,0);
+    var diff = Math.round((fd - today) / 86400000);
+    var fcls = diff < 0 ? 'overdue' : diff <= 7 ? 'soon' : 'ok';
+    followupHtml = '<div class="cust-followup ' + fcls + '" style="margin-top:8px">📅 ' + (diff<0?'Overdue: ':diff===0?'Today: ':diff<=7?'Due soon: ':'Follow up: ') + fd.toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + (c.follow_up_notes?' — '+c.follow_up_notes:'') + '</div>';
+  }
+
+  // Contacts
+  var contactsHtml = '';
+  if (c._contacts && c._contacts.length) {
+    contactsHtml = '<div class="section-label" style="margin-top:10px">Contacts</div>' +
+      c._contacts.map(function(ct){
+        return '<div class="contact-item">' +
+          '<div class="contact-name">' + ct.name + (ct.role?'<span class="contact-role">— '+ct.role+'</span>':'') + (ct.is_primary?'<span class="contact-primary">Primary</span>':'') + '</div>' +
+          '<div class="contact-detail">' + (ct.phone?'📞 '+ct.phone:'') + (ct.phone&&ct.email?' · ':'') + (ct.email?'<a href="mailto:'+ct.email+'" style="color:#00c8e0">✉️ '+ct.email+'</a>':'') + '</div>' +
+        '</div>';
+      }).join('');
+  }
+
+  var typeClass = (c.type||'Prospect').toLowerCase();
+  var leftHtml =
+    '<div class="acct-detail-card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
+        '<div>' +
+          '<div class="acct-name">' + c.company_name + '</div>' +
+          '<span class="cust-type ' + typeClass + '" style="margin-top:4px;display:inline-block">' + (c.type||'Prospect') + '</span>' +
+        '</div>' +
+        '<button onclick="editCustFromAccount()" style="background:#1e3048;border:1px solid #e879f960;color:#e879f9;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">✏️ Edit</button>' +
+      '</div>' +
+      detRows + contactsHtml + followupHtml +
+      '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #2a4060">' +
+        '<button class="add-contact-btn" style="width:auto;padding:4px 12px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,'' + c.id + '')">+ Log Activity</button>' +
+      '</div>' +
+    '</div>';
+
+  // ── RIGHT COLUMN: panels ──
+
+  // JOBS panel
+  var jobsHtml = '<div class="acct-panel">' +
+    '<div class="acct-panel-hdr"><span class="acct-panel-title">⚙ Jobs</span><span class="acct-panel-count">' + cJobs.length + '</span></div>';
+  if (cJobs.length) {
+    jobsHtml += cJobs.slice(0,10).map(function(j) {
+      var col = SC[j.status] || '#3a5070';
+      var mName = '';
+      if (j.machine_id) { var m2 = (window.machines||[]).find(function(x){ return x.id===j.machine_id; }); if(m2) mName=m2.name; }
+      return '<div class="acct-panel-item" onclick="switchToJobs();setTimeout(function(){openEditJobModal('' + j.id + '')},300)">' +
+        '<span class="acct-item-ref">' + xpsNum(j.job_number) + '</span>' +
+        '<div class="acct-item-main"><div class="acct-item-title">' + (mName||j.fault_type||'Service') + '</div><div class="acct-item-sub">' + fmtDate(j.created_at) + '</div></div>' +
+        '<span class="acct-item-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + j.status + '</span>' +
+      '</div>';
+    }).join('');
+    if (cJobs.length > 10) jobsHtml += '<div style="padding:6px 14px;font-size:10px;color:#3a5070">+ ' + (cJobs.length-10) + ' more — view in Jobs tab</div>';
+  } else {
+    jobsHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No jobs yet.</div>';
+  }
+  jobsHtml += '</div>';
+
+  // LOANS panel
+  var loansHtml = '<div class="acct-panel">' +
+    '<div class="acct-panel-hdr"><span class="acct-panel-title" style="color:#a78bfa">🔄 Loans</span><span class="acct-panel-count">' + cLoans.length + '</span></div>';
+  if (cLoans.length) {
+    loansHtml += cLoans.slice(0,8).map(function(l) {
+      var lt = (loanTools||[]).find(function(t){ return t.id===l.loan_tool_id; });
+      var toolName = lt ? lt.name + (lt.serial_number?' ('+lt.serial_number+')':'') : 'Unknown';
+      var col = l.status==='RETURNED' ? '#4a6080' : '#a78bfa';
+      return '<div class="acct-panel-item" onclick="switchToLoans();setTimeout(function(){openEditLoanModal('' + l.id + '')},300)">' +
+        '<span class="acct-item-ref" style="color:#a78bfa">' + xplNum(l.loan_number) + '</span>' +
+        '<div class="acct-item-main"><div class="acct-item-title">' + toolName + '</div><div class="acct-item-sub">' + fmtDate(l.loaned_date) + (l.returned_date?' → returned '+fmtDate(l.returned_date):'') + '</div></div>' +
+        '<span class="acct-item-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + (l.status||'ACTIVE') + '</span>' +
+      '</div>';
+    }).join('');
+  } else {
+    loansHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No loans on record.</div>';
+  }
+  loansHtml += '</div>';
+
+  // MACHINES panel
+  var machinesHtml = '<div class="acct-panel">' +
+    '<div class="acct-panel-hdr" style="justify-content:space-between">' +
+      '<span class="acct-panel-title" style="color:#00c8e0">🔧 Machines Owned</span>' +
+      '<span class="acct-panel-count">' + machineList.length + '</span>' +
+    '</div>';
+  if (machineList.length) {
+    machinesHtml += '<div style="padding:8px 14px">' + machineList.map(function(m) {
+      return '<div class="acct-machine-row" onclick="' + (m.serial?'openToolSearch();setTimeout(function(){document.getElementById('toolSearchInput').value='' + m.serial + '';runToolSearch('' + m.serial + '')},200)':'''') + '">' +
+        '<div style="flex:1"><div class="acct-machine-name">' + m.name + '</div>' + (m.serial?'<div class="acct-machine-sn">S/N: ' + m.serial + '</div>':'') + '</div>' +
+        (m.serial ? '<span style="font-size:10px;color:#3a5070">🔍 history</span>' : '') +
+      '</div>';
+    }).join('') + '</div>';
+  } else {
+    machinesHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No machines on record — populated from jobs automatically.</div>';
+  }
+  machinesHtml += '</div>';
+
+  // RECENT ACTIVITY panel
+  var actHtml = '<div class="acct-panel">' +
+    '<div class="acct-panel-hdr"><span class="acct-panel-title" style="color:#64b5c8">📋 Recent Activity</span>' +
+      '<button class="add-contact-btn" style="width:auto;padding:2px 8px;border-color:#00c8e060;color:#00c8e0;font-size:10px" onclick="openActModal(null,'' + c.id + '')">+ Log</button>' +
+    '</div>';
+  if (cActs.length) {
+    actHtml += cActs.map(function(a) {
+      var cls = a.type==='Phone Call'?'phone':a.type==='Email'?'email':a.type==='Site Visit'?'visit':'note';
+      var col = {phone:'#10b981',email:'#00c8e0',visit:'#f59e0b',note:'#8b5cf6'}[cls]||'#5a8090';
+      return '<div class="acct-panel-item">' +
+        '<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:' + col + '20;color:' + col + ';flex-shrink:0">' + a.type + '</span>' +
+        '<div class="acct-item-main"><div class="acct-item-title">' + (a.subject||'') + '</div><div class="acct-item-sub">' + fmtDate(a.activity_date) + (a.created_by?' · '+a.created_by:'') + '</div></div>' +
+      '</div>';
+    }).join('');
+  } else {
+    actHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No activity logged yet.</div>';
+  }
+  actHtml += '</div>';
+
+  document.getElementById('acctLayout').innerHTML =
+    '<div>' + leftHtml + '</div>' +
+    '<div>' + jobsHtml + loansHtml + machinesHtml + actHtml + '</div>';
+}
+
 function renderCustomers(list) {
   customers = list || [];
   var q = (document.getElementById('custSearch').value || '').toLowerCase();
@@ -4028,46 +4343,39 @@ function renderCustomers(list) {
     return true;
   });
   if (!filtered.length) {
-    document.getElementById('custGrid').innerHTML = '<div class="center"><div style="color:#8aa8c0">' + (customers.length ? 'No matches.' : 'No customers yet. Click + Add.') + '</div></div>';
+    document.getElementById('custGrid').innerHTML = '<div class="center"><div style="color:#8aa8c0">' + (customers.length ? 'No matches.' : 'No accounts yet. Click + Add.') + '</div></div>';
     return;
   }
   var today = new Date(); today.setHours(0,0,0,0);
   var html = filtered.map(function(c) {
-    var rows = '';
-    if (c.contact_name) rows += '<div class="cust-row"><span class="ico">👤</span><span class="val">' + c.contact_name + '</span></div>';
-    if (c.phone)        rows += '<div class="cust-row"><span class="ico">📞</span><span class="val">' + c.phone + '</span></div>';
-    if (c.email)        rows += '<div class="cust-row"><span class="ico">✉️</span><a href="mailto:' + c.email + '" class="val" onclick="event.stopPropagation()">' + c.email + '</a></div>';
-    if (c.address)      rows += '<div class="cust-row"><span class="ico">📍</span><span class="val">' + c.address + '</span></div>';
-    if (c.industry)     rows += '<div class="cust-row"><span class="ico">🏭</span><span class="val">' + c.industry + '</span></div>';
-    if (c.machines_owned) rows += '<div class="cust-row"><span class="ico">⚙️</span><span class="val">' + c.machines_owned + '</span></div>';
+    var primary = c._contacts && c._contacts.find(function(x){ return x.is_primary; });
+    var mList = parseMachines(c.machines_owned);
+    var typeClass = (c.type||'Prospect').toLowerCase();
+    var jobCount = jobs.filter(function(j){ return j.customer && j.customer.toLowerCase()===c.company_name.toLowerCase(); }).length;
+    var loanCount = (loans||[]).filter(function(l){ return l.customer && l.customer.toLowerCase().includes(c.company_name.toLowerCase().substring(0,6)); }).length;
     var followupHtml = '';
     if (c.follow_up_date) {
       var fd = new Date(c.follow_up_date); fd.setHours(0,0,0,0);
       var diff = Math.round((fd - today) / 86400000);
-      var cls = diff < 0 ? 'overdue' : diff <= 7 ? 'soon' : 'ok';
-      var label = diff < 0 ? 'Overdue: ' : diff === 0 ? 'Today: ' : diff <= 7 ? 'Due soon: ' : 'Follow up: ';
-      followupHtml = '<div class="cust-followup ' + cls + '">📅 ' + label + fd.toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"numeric"}) + (c.follow_up_notes ? ' — ' + c.follow_up_notes : '') + '</div>';
+      var fcls = diff < 0 ? 'overdue' : diff <= 7 ? 'soon' : 'ok';
+      followupHtml = '<div class="cust-followup ' + fcls + '">📅 ' + (diff<0?'Overdue':diff===0?'Today':diff<=7?'Due soon':'Follow up') + ': ' + fd.toLocaleDateString('en-AU',{day:'2-digit',month:'short'}) + (c.follow_up_notes?' — '+c.follow_up_notes:'') + '</div>';
     }
-    var typeClass = (c.type||'Prospect').toLowerCase();
-    return '<div class="cust-card" onclick="openEditCust(\'' + c.id + '\')">' +
-      '<div class="cust-card-top"><div class="cust-name">' + c.company_name + '</div><span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span></div>' +
-      rows +
-      (c.notes ? '<div class="cust-notes">' + c.notes + '</div>' : '') +
-      '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #2a4060;display:flex;justify-content:space-between;align-items:center">' +
-        '<button class="add-contact-btn" style="width:auto;padding:3px 10px;border-color:#00c8e060;color:#00c8e0" onclick="event.stopPropagation();openActModal(null,\'' + c.id + '\')">+ Log Activity</button>' +
-        (c._activities && c._activities.length ? '<span style="font-size:10px;color:#3a5070">' + c._activities.length + ' activit' + (c._activities.length===1?'y':'ies') + '</span>' : '') +
+    return '<div class="cust-card" onclick="openCustomerAccount('' + c.id + '')">' +
+      '<div class="cust-card-top">' +
+        '<div class="cust-name">' + c.company_name + '</div>' +
+        '<span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span>' +
       '</div>' +
-      (c._contacts && c._contacts.length ? '<div class="contact-list">' + c._contacts.map(function(ct){
-        return '<div class="contact-item"><div class="contact-name">' + ct.name +
-          (ct.role ? '<span class="contact-role">— ' + ct.role + '</span>' : '') +
-          (ct.is_primary ? '<span class="contact-primary">Primary</span>' : '') + '</div>' +
-          '<div class="contact-detail">' +
-          (ct.phone ? '📞 ' + ct.phone : '') +
-          (ct.phone && ct.email ? ' · ' : '') +
-          (ct.email ? '<a href="mailto:' + ct.email + '" onclick="event.stopPropagation()">✉️ ' + ct.email + '</a>' : '') +
-          '</div></div>';
-      }).join('') + '</div>' : '') +
+      (c.industry ? '<div class="cust-row"><span class="ico">🏭</span><span class="val" style="color:#5a8090">' + c.industry + '</span></div>' : '') +
+      (primary ? '<div class="cust-row"><span class="ico">👤</span><span class="val">' + primary.name + (primary.phone?' · '+primary.phone:'') + '</span></div>' : (c.contact_name?'<div class="cust-row"><span class="ico">👤</span><span class="val">'+c.contact_name+'</span></div>':'')) +
+      (c.phone ? '<div class="cust-row"><span class="ico">📞</span><span class="val">' + c.phone + '</span></div>' : '') +
+      (mList.length ? '<div class="cust-row"><span class="ico">⚙️</span><span class="val">' + mList.map(function(m){ return m.name; }).join(', ') + '</span></div>' : '') +
       followupHtml +
+      '<div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid #2a4060">' +
+        (jobCount ? '<span style="font-size:10px;color:#3b82f6;background:#3b82f620;border:1px solid #3b82f640;border-radius:8px;padding:2px 7px">' + jobCount + ' job' + (jobCount!==1?'s':'') + '</span>' : '') +
+        (loanCount ? '<span style="font-size:10px;color:#a78bfa;background:#a78bfa20;border:1px solid #a78bfa40;border-radius:8px;padding:2px 7px">' + loanCount + ' loan' + (loanCount!==1?'s':'') + '</span>' : '') +
+        (mList.length ? '<span style="font-size:10px;color:#00c8e0;background:#00c8e020;border:1px solid #00c8e040;border-radius:8px;padding:2px 7px">' + mList.length + ' machine' + (mList.length!==1?'s':'') + '</span>' : '') +
+        '<span style="margin-left:auto;font-size:10px;color:#3a5070">View account ›</span>' +
+      '</div>' +
     '</div>';
   }).join('');
   document.getElementById('custGrid').innerHTML = html;
@@ -4075,9 +4383,10 @@ function renderCustomers(list) {
 
 function openCustModal() {
   editingCustId = null;
-  document.getElementById('custModalTitle').textContent = 'Add Customer';
-  ['cfCompany','cfPhone','cfAddress','cfMachines','cfFollowup','cfNotes'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('custModalTitle').textContent = 'Add Account';
+  ['cfCompany','cfPhone','cfAddress','cfFollowup','cfNotes','cfWebsite'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('cfType').value = 'Existing';
+  document.getElementById('cfIndustry').value = '';
   document.getElementById('btnDeleteCust').style.display = 'none';
   document.getElementById('custOverlay').classList.add('show');
 }
@@ -4085,14 +4394,15 @@ function openCustModal() {
 function openEditCust(id) {
   var c = customers.find(function(x){ return x.id === id; }); if (!c) return;
   editingCustId = id;
-  document.getElementById('custModalTitle').textContent = 'Edit Customer';
+  document.getElementById('custModalTitle').textContent = 'Edit Account';
   document.getElementById('cfCompany').value = c.company_name || '';
   document.getElementById('cfType').value = c.type || 'Existing';
   document.getElementById('cfIndustry').value = c.industry || '';
   document.getElementById('cfPhone').value = c.phone || '';
   document.getElementById('cfAddress').value = c.address || '';
-  document.getElementById('cfMachines').value = c.machines_owned || '';
+  document.getElementById('cfWebsite').value = c.website || '';
   document.getElementById('cfFollowup').value = c.follow_up_date || '';
+  var fnEl = document.getElementById('cfFollowupNotes'); if(fnEl) fnEl.value = c.follow_up_notes || '';
   document.getElementById('cfNotes').value = c.notes || '';
   document.getElementById('btnDeleteCust').style.display = 'block';
   document.getElementById('custOverlay').classList.add('show');
@@ -4131,7 +4441,7 @@ async function deleteCustomer() {
   try {
     await db('DELETE', 'customers?id=eq.' + editingCustId);
     _custCache = null; closeCustModal(); await loadCustomers();
-    showToast('Customer deleted');
+    showToast('Account deleted');
   } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
 }
 
@@ -4149,7 +4459,7 @@ async function importCustomersFromJobs() {
   if (!toImport.length) { showToast('No new customers to import'); return; }
   for (var i = 0; i < toImport.length; i++) { await db('POST', 'customers', toImport[i]); }
   _custCache = null; await loadCustomers();
-  showToast(toImport.length + ' customers imported!');
+  showToast(toImport.length + ' accounts imported!');
 }
 
 
@@ -4199,22 +4509,32 @@ function renderContactRows() {
   document.getElementById('contactRowsContainer').innerHTML = html || '<div style="font-size:12px;color:#3a5070;padding:4px 0">No contacts yet.</div>';
 }
 
-// Override openCustModal to reset contacts
+// Override openCustModal to reset contacts + machines
 var _origOpenCustModal = openCustModal;
 openCustModal = function() {
   _contactRows = []; _contactRowIdx = 0;
+  _machineRows = []; _machineRowIdx = 0;
   _origOpenCustModal();
   renderContactRows();
+  renderMachineRows();
+  document.getElementById('cfWebsite').value = '';
+  document.getElementById('activityLogSection').style.display = 'none';
 };
 
-// Override openEditCust to load contacts
+// Override openEditCust to load contacts + machines + website
 var _origOpenEditCust = openEditCust;
 openEditCust = async function(id) {
   _contactRows = []; _contactRowIdx = 0;
+  _machineRows = []; _machineRowIdx = 0;
   _origOpenEditCust(id);
   var c = customers.find(function(x){ return x.id === id; });
-  if (c && c._contacts) { c._contacts.forEach(function(ct){ addContactRow(ct); }); }
-  else renderContactRows();
+  if (c) {
+    if (c._contacts) { c._contacts.forEach(function(ct){ addContactRow(ct); }); }
+    // Load structured machines
+    var mList = parseMachines(c.machines_owned);
+    mList.forEach(function(m){ addMachineRow(m); });
+    document.getElementById('cfWebsite').value = c.website || '';
+  } else { renderContactRows(); renderMachineRows(); }
   // Load activity history
   try {
     var acts = await db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc,created_at.desc');
@@ -4230,25 +4550,26 @@ openEditCust = async function(id) {
   } catch(e) {}
 };
 
-// Override saveCustomer to also save contacts
+// Override saveCustomer to also save contacts + machines + website
 var _origSaveCustomer = saveCustomer;
 saveCustomer = async function() {
   var name = document.getElementById('cfCompany').value.trim();
-  if (!name) { showToast('Company name required', 'error'); return; }
+  if (!name) { showToast('Account name required', 'error'); return; }
   document.getElementById('btnSaveCust').disabled = true;
   try {
+    var mData = _machineRows.filter(function(r){ return r.name && r.name.trim(); }).map(function(r){ return { name: r.name.trim(), serial: r.serial.trim() }; });
     var payload = { company_name: name,
       type: document.getElementById('cfType').value,
       contact_name: null,
       industry: document.getElementById('cfIndustry').value || null,
       phone: document.getElementById('cfPhone').value.trim() || null,
       email: null,
+      website: document.getElementById('cfWebsite').value.trim() || null,
       address: document.getElementById('cfAddress').value.trim() || null,
-      machines_owned: document.getElementById('cfMachines').value.trim() || null,
+      machines_owned: formatMachinesJson(mData),
       follow_up_date: document.getElementById('cfFollowup').value || null,
       follow_up_notes: document.getElementById('cfFollowupNotes') ? document.getElementById('cfFollowupNotes').value.trim() || null : null,
       notes: document.getElementById('cfNotes').value.trim() || null };
-    // Remove undefined keys
     Object.keys(payload).forEach(function(k){ if(payload[k]===undefined) delete payload[k]; });
     var cid;
     if (editingCustId) {
@@ -4263,7 +4584,9 @@ saveCustomer = async function() {
       await db('POST', 'customer_contacts', { customer_id: cid, name: r.name.trim(), role: (r.role||'').trim()||null, phone: (r.phone||'').trim()||null, email: (r.email||'').trim()||null, is_primary: r.is_primary||false, notes: (r.notes||'').trim()||null });
     }
     _custCache = null; closeCustModal(); await loadCustomers();
-    showToast(editingCustId ? 'Customer updated' : 'Customer added');
+    showToast(editingCustId ? 'Account updated' : 'Account added');
+    // Refresh account view if open
+    if (_viewingCustId === (editingCustId || cid)) { await openCustomerAccount(_viewingCustId); }
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   document.getElementById('btnSaveCust').disabled = false;
 };
