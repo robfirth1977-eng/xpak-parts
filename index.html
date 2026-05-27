@@ -1578,54 +1578,59 @@ function closeLoanToolModal(){document.getElementById('loanToolOverlay').classLi
 
 function printToolIdLabel() {
   var t = editingLoanTool; if (!t) return;
-  var qrData = [t.name, t.serial_number ? 'S/N: ' + t.serial_number : '', t.xpak_name || '', 'X-Pak Service Loan Tool'].filter(Boolean).join(' | ');
+  // QR encodes just the serial number — scanning opens tool search in the app
+  var qrData = t.serial_number || t.name;
   var w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ID Label ' + t.name + '</title>');
+  if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Labels — ' + t.name + '</title>');
   w.document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
   w.document.write('<style>');
-  w.document.write('@page { size: 101mm 54mm; margin: 3mm 3.5mm; }');
+  w.document.write('@page { size: 89mm 36mm; margin: 2mm 2mm; }');
   w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
-  w.document.write('body { font-family: Arial, sans-serif; width: 94mm; height: 48mm; overflow: hidden; }');
-  w.document.write('.label { width: 94mm; height: 48mm; border: 0.4mm solid #000; border-radius: 1.5mm; display: flex; flex-direction: column; justify-content: space-between; padding: 3mm 4mm; overflow: hidden; }');
-  w.document.write('.top { display: flex; justify-content: space-between; align-items: flex-start; }');
-  w.document.write('.xpl { font-size: 11pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; letter-spacing: 1px; }');
-  w.document.write('.brand { text-align: right; }');
-  w.document.write('.brand-top { font-size: 7pt; font-weight: 900; color: #000; letter-spacing: 2px; text-transform: uppercase; }');
-  w.document.write('.brand-sub { font-size: 6pt; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 1px; }');
-  w.document.write('.mid { flex: 1; display: flex; align-items: center; gap: 3mm; padding: 1.5mm 0; }');
-  w.document.write('.mid-text { flex: 1; min-width: 0; }');
-  w.document.write('.tool-name { font-size: 18pt; font-weight: 900; color: #000; line-height: 1; letter-spacing: -0.5px; }');
-  w.document.write('.tool-type { font-size: 8pt; color: #444; margin-top: 1mm; }');
-  w.document.write('.qr-box { flex-shrink: 0; width: 18mm; height: 18mm; display: flex; align-items: center; justify-content: center; }');
-  w.document.write('.qr-box img, .qr-box canvas { width: 18mm !important; height: 18mm !important; }');
-  w.document.write('.bot { display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.3mm solid #ccc; padding-top: 2mm; }');
-  w.document.write('.sn-label { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }');
-  w.document.write('.sn-val { font-size: 18pt; font-weight: 900; color: #000; font-family: "Courier New", monospace; line-height: 1; letter-spacing: -0.5px; }');
-  w.document.write('.cyc { text-align: right; }');
-  w.document.write('.cyc-label { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }');
-  w.document.write('.cyc-val { font-size: 8pt; font-weight: 700; color: #000; margin-top: 0.5mm; }');
+  w.document.write('body { font-family: Arial, sans-serif; }');
+  // Each label fits 89×36mm page
+  w.document.write('.label { width: 85mm; height: 32mm; display: flex; align-items: stretch; overflow: hidden; page-break-after: always; border: 0.3mm solid #000; border-radius: 1mm; }');
+  // Left text block
+  w.document.write('.lbl-text { flex: 1; padding: 2.5mm 3mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border-right: 0.3mm solid #ccc; }');
+  w.document.write('.property { font-size: 5.5pt; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: 1px; }');
+  w.document.write('.tool-name { font-size: 17pt; font-weight: 900; color: #000; line-height: 1; letter-spacing: -0.5px; margin: 1mm 0 0.5mm; word-break: break-word; }');
+  w.document.write('.battery-sub { font-size: 9pt; font-weight: 700; color: #555; letter-spacing: 1px; text-transform: uppercase; margin: 0.5mm 0; }');
+  w.document.write('.sn-row { display: flex; align-items: baseline; gap: 2mm; }');
+  w.document.write('.sn-lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }');
+  w.document.write('.sn-val { font-size: 13pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; line-height: 1; }');
+  // Right QR block
+  w.document.write('.lbl-qr { flex-shrink: 0; width: 28mm; display: flex; align-items: center; justify-content: center; padding: 2mm; background: #fafafa; }');
+  w.document.write('.lbl-qr canvas, .lbl-qr img { width: 24mm !important; height: 24mm !important; }');
   w.document.write('</style></head><body>');
+
+  // ── TOOL LABEL ──
   w.document.write('<div class="label">');
-  w.document.write('<div class="top">');
-  w.document.write('<div class="xpl">LOAN TOOL</div>');
-  w.document.write('<div class="brand"><div class="brand-top">X-PAK</div><div class="brand-sub">SERVICE</div></div>');
-  w.document.write('</div>');
-  w.document.write('<div class="mid">');
-  w.document.write('<div class="mid-text"><div class="tool-name">' + t.name + '</div></div>');
-  w.document.write('<div class="qr-box" id="qrLabel"></div>');
-  w.document.write('</div>');
-  w.document.write('<div class="bot">');
+  w.document.write('<div class="lbl-text">');
+  w.document.write('<div class="property">Property of X-Pak Service</div>');
+  w.document.write('<div class="tool-name">' + t.name + '</div>');
   if (t.serial_number) {
-    w.document.write('<div><div class="sn-label">Serial No.</div><div class="sn-val">' + t.serial_number + '</div></div>');
-  } else {
-    w.document.write('<div></div>');
-  }
-  if (t.current_cycle_count != null) {
-    w.document.write('<div class="cyc"><div class="cyc-label">Last Cycle Reading</div><div class="cyc-val">' + t.current_cycle_count.toLocaleString() + '</div></div>');
+    w.document.write('<div class="sn-row"><span class="sn-lbl">S/N</span><span class="sn-val">' + t.serial_number + '</span></div>');
   }
   w.document.write('</div>');
+  w.document.write('<div class="lbl-qr" id="qrTool"></div>');
   w.document.write('</div>');
-  w.document.write('<script>new QRCode(document.getElementById("qrLabel"),{text:' + JSON.stringify(qrData) + ',width:68,height:68,correctLevel:QRCode.CorrectLevel.M});setTimeout(function(){window.print();},600);<\/script>');
+
+  // ── BATTERY LABEL ──
+  w.document.write('<div class="label">');
+  w.document.write('<div class="lbl-text">');
+  w.document.write('<div class="property">Property of X-Pak Service</div>');
+  w.document.write('<div class="tool-name">' + t.name + '</div>');
+  w.document.write('<div class="battery-sub">Battery</div>');
+  w.document.write('</div>');
+  w.document.write('<div class="lbl-qr" id="qrBatt"></div>');
+  w.document.write('</div>');
+
+  w.document.write('<script>');
+  w.document.write('var qrOpts = { text:' + JSON.stringify(qrData) + ', width:91, height:91, correctLevel:QRCode.CorrectLevel.M };');
+  w.document.write('new QRCode(document.getElementById("qrTool"), qrOpts);');
+  w.document.write('new QRCode(document.getElementById("qrBatt"), qrOpts);');
+  w.document.write('setTimeout(function(){ window.print(); }, 700);');
+  w.document.write('<\/script>');
   w.document.write('</body></html>');
   w.document.close();
 }
@@ -3247,9 +3252,6 @@ function renderAssessmentReport(j, tools, jparts) {
       (t.customer_issue ? '<div class="field-block"><div class="field-label">Customer Description</div><div class="field-val">' + t.customer_issue.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.diagnosis ? '<div class="field-block"><div class="field-label">Assessment / Findings</div><div class="field-val">' + t.diagnosis.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.recommendation ? '<div class="field-block"><div class="field-label">Recommendation</div><div class="field-val">' + t.recommendation.replace(/\n/g,'<br>') + '</div></div>' : '') +
-      
-      (t.workshop_notes ? '<div class="field-block"><div class="field-label">Workshop Notes</div><div class="field-val">' + t.workshop_notes.replace(/\n/g,'<br>') + '</div></div>' : '') +
-      (t.cycle_count_in != null ? '<div class="field-block"><div class="field-label">Cycle Count (Return)</div><div class="field-val">' + parseInt(t.cycle_count_in).toLocaleString() + ' cycles</div></div>' : '') +
       '<div class="field-block"><div class="field-label">Parts Required</div>' + partsTable + '</div>' +
       (t.service_fee ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Service Fee</div><div class="field-val" style="color:#f97316;font-weight:700">$' + parseFloat(t.service_fee).toFixed(2) + '</div></div>' : '') +
       '</div>';
