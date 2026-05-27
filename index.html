@@ -4095,8 +4095,8 @@ function renderMachineRows() {
   if (!_machineRows.length) { el.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:4px 0">No machines yet — added automatically from jobs.</div>'; return; }
   el.innerHTML = _machineRows.map(function(r) {
     return '<div class="machine-edit-row">' +
-      '<input style="flex:2;min-width:80px" placeholder="Machine model e.g. CHT 460" value="' + r.name + '" oninput="setMachineField(' + r._idx + ','name',this.value)">' +
-      '<input style="flex:1;min-width:70px" placeholder="Serial No." value="' + r.serial + '" oninput="setMachineField(' + r._idx + ','serial',this.value)">' +
+      '<input style="flex:2;min-width:80px" placeholder="Machine model e.g. CHT 460" value="' + r.name + '" oninput="setMachineField(' + r._idx + ',\'name\',this.value)">' +
+      '<input style="flex:1;min-width:70px" placeholder="Serial No." value="' + r.serial + '" oninput="setMachineField(' + r._idx + ',\'serial\',this.value)">' +
       '<button class="sv-remove-btn" onclick="removeMachineRow(' + r._idx + ')">×</button>' +
     '</div>';
   }).join('');
