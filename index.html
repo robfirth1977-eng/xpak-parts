@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+/<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -3247,7 +3247,7 @@ function renderAssessmentReport(j, tools, jparts) {
       (t.customer_issue ? '<div class="field-block"><div class="field-label">Customer Description</div><div class="field-val">' + t.customer_issue.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.diagnosis ? '<div class="field-block"><div class="field-label">Assessment / Findings</div><div class="field-val">' + t.diagnosis.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.recommendation ? '<div class="field-block"><div class="field-label">Recommendation</div><div class="field-val">' + t.recommendation.replace(/\n/g,'<br>') + '</div></div>' : '') +
-      (t.work_completed ? '<div class="field-block"><div class="field-label">Work Completed</div><div class="field-val">' + t.work_completed.replace(/\n/g,'<br>') + '</div></div>' : '') +
+      
       (t.workshop_notes ? '<div class="field-block"><div class="field-label">Workshop Notes</div><div class="field-val">' + t.workshop_notes.replace(/\n/g,'<br>') + '</div></div>' : '') +
       (t.cycle_count_in != null ? '<div class="field-block"><div class="field-label">Cycle Count (Return)</div><div class="field-val">' + parseInt(t.cycle_count_in).toLocaleString() + ' cycles</div></div>' : '') +
       '<div class="field-block"><div class="field-label">Parts Required</div>' + partsTable + '</div>' +
