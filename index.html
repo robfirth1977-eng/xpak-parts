@@ -4108,11 +4108,27 @@ async function deleteMachineFromAccount(custId, machineIndex) {
   var c = (_custCache||[]).find(function(x){ return x.id === custId; }); if (!c) return;
   var mList = parseMachines(c.machines_owned);
   var removed = mList.splice(machineIndex, 1);
+  var newVal = formatMachinesJson(mList);
   try {
-    await db('PATCH', 'customers?id=eq.' + custId, { machines_owned: formatMachinesJson(mList) });
-    _custCache = null;
+    await db('PATCH', 'customers?id=eq.' + custId, { machines_owned: newVal });
+    // Update local data directly so re-render sees the change immediately
+    c.machines_owned = newVal;
+    if (_custCache) {
+      var idx = _custCache.findIndex(function(x){ return x.id === custId; });
+      if (idx > -1) _custCache[idx].machines_owned = newVal;
+    }
+    var cidx = customers.findIndex(function(x){ return x.id === custId; });
+    if (cidx > -1) customers[cidx].machines_owned = newVal;
     showToast((removed[0] ? removed[0].name : 'Machine') + ' removed');
-    await openCustomerAccount(custId);
+    // Re-render account view with updated data — no full reload needed
+    var cJobs = [], cLoans = [], cActs = [];
+    try {
+      var encoded = encodeURIComponent(c.company_name);
+      cJobs = await db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; });
+      cLoans = await db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; });
+      cActs = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc&limit=8').catch(function(){ return []; });
+    } catch(e2) {}
+    renderAccountView(c, cJobs, cLoans, cActs);
   } catch(e) { showToast('Remove failed: ' + e.message, 'error'); }
 }
 
