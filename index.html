@@ -4103,6 +4103,45 @@ function renderMachineRows() {
 }
 
 // ── AUTO-UPDATE CUSTOMER MACHINES FROM JOBS ───────────────────────────────────
+async function syncMachinesFromJobs(custId) {
+  var custObj = (_custCache||[]).find(function(x){ return x.id === custId; });
+  var customerName = custObj ? custObj.company_name : '';
+  if (!customerName) { showToast('Account not found', 'error'); return; }
+  showToast('Syncing from job history...');
+  try {
+    // Load all job_tools for jobs belonging to this customer
+    var custJobs = await db('GET', 'jobs?customer=eq.' + encodeURIComponent(customerName) + '&select=id');
+    if (!custJobs.length) { showToast('No jobs found for this account'); return; }
+    var jobIds = custJobs.map(function(j){ return j.id; });
+    // Fetch job_tools for all those jobs
+    var allTools = [];
+    for (var i = 0; i < jobIds.length; i++) {
+      var jt = await db('GET', 'job_tools?job_id=eq.' + jobIds[i] + '&select=machine_id,serial_number');
+      allTools = allTools.concat(jt);
+    }
+    // Get current machines on customer record
+    var c = (_custCache||[]).find(function(x){ return x.id === custId; });
+    var existing = c ? parseMachines(c.machines_owned) : [];
+    var added = 0;
+    allTools.forEach(function(t) {
+      if (!t.machine_id) return;
+      var m = (window.machines||[]).find(function(x){ return x.id === t.machine_id; });
+      if (!m) return;
+      var serial = (t.serial_number||'').trim();
+      var alreadyHas = existing.some(function(e){
+        return e.name === m.name && (!serial || e.serial === serial);
+      });
+      if (!alreadyHas) { existing.push({ name: m.name, serial: serial }); added++; }
+    });
+    // Save back
+    await db('PATCH', 'customers?id=eq.' + custId, { machines_owned: formatMachinesJson(existing) });
+    _custCache = null;
+    showToast(added > 0 ? added + ' machine' + (added!==1?'s':'') + ' added from job history' : 'Already up to date');
+    // Refresh account view
+    await openCustomerAccount(custId);
+  } catch(e) { showToast('Sync failed: ' + e.message, 'error'); }
+}
+
 async function updateCustomerMachines(customerName, toolsList) {
   if (!customerName || !toolsList || !toolsList.length) return;
   try {
@@ -4295,7 +4334,10 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
   var machinesHtml = '<div class="acct-panel">' +
     '<div class="acct-panel-hdr" style="justify-content:space-between">' +
       '<span class="acct-panel-title" style="color:#00c8e0">🔧 Machines Owned</span>' +
-      '<span class="acct-panel-count">' + machineList.length + '</span>' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span class="acct-panel-count">' + machineList.length + '</span>' +
+        '<button onclick="syncMachinesFromJobs(\'' + c.id + '\')" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid #00c8e060;background:transparent;color:#00c8e0;cursor:pointer">⟳ Sync from Jobs</button>' +
+      '</div>' +
     '</div>';
   if (machineList.length) {
     machinesHtml += '<div style="padding:8px 14px">' + machineList.map(function(m) {
@@ -4306,7 +4348,7 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
       '</div>';
     }).join('') + '</div>';
   } else {
-    machinesHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No machines on record — populated from jobs automatically.</div>';
+    machinesHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No machines yet — click ⟳ Sync from Jobs to load from history.</div>';
   }
   machinesHtml += '</div>';
 
