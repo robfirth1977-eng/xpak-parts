@@ -2207,6 +2207,7 @@ function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsL
 // ── JOBS ──────────────────────────────────────────────────────────
 
 function xpsNum(n) { return 'XPS-' + String(n).padStart(3, '0'); }
+function xsaNum(n) { return 'XSA-' + String(n).padStart(3, '0'); }
 function xsvNum(n) { return 'XSV-' + String(n).padStart(3, '0'); }
 
 async function loadJobs() {
@@ -4212,7 +4213,7 @@ async function openCustomerAccount(id) {
   _viewingCustId = id;
   document.getElementById('custGrid').style.display = 'none';
   document.getElementById('custAccountSection').style.display = 'block';
-  document.getElementById('acctBreadcrumb').textContent = c.company_name;
+  document.getElementById('acctBreadcrumb').textContent = (c.account_number ? xsaNum(c.account_number) + ' — ' : '') + c.company_name;
   document.getElementById('acctLayout').innerHTML = '<div class="center"><span class="spinner"></span></div>';
   // Load fresh data in parallel
   var cJobs = [], cLoans = [], cActs = [];
@@ -4220,11 +4221,10 @@ async function openCustomerAccount(id) {
     var encoded = encodeURIComponent(c.company_name);
     [cJobs, cLoans, cActs] = await Promise.all([
       db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; }),
-      db('GET', 'loans?customer=ilike.*' + c.company_name.replace(/[^a-zA-Z0-9]/g,' ').trim().split(' ')[0] + '*&select=*&order=loan_number.desc').catch(function(){ return []; }),
+      db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; }),
       db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc&limit=8').catch(function(){ return []; })
     ]);
-    // Filter loans more precisely
-    cLoans = cLoans.filter(function(l){ return l.customer && l.customer.toLowerCase().includes(c.company_name.toLowerCase().substring(0,8)); });
+    // Exact match already enforced by eq. query - no further filtering needed
   } catch(e) {}
   renderAccountView(c, cJobs, cLoans, cActs);
 }
@@ -4278,6 +4278,7 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
     '<div class="acct-detail-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
         '<div>' +
+          (c.account_number ? '<div style="font-size:10px;font-weight:700;color:#e879f9;font-family:\'Courier New\',monospace;margin-bottom:3px;letter-spacing:1px">' + xsaNum(c.account_number) + '</div>' : '') +
           '<div class="acct-name">' + c.company_name + '</div>' +
           '<span class="cust-type ' + typeClass + '" style="margin-top:4px;display:inline-block">' + (c.type||'Prospect') + '</span>' +
         '</div>' +
@@ -4395,7 +4396,7 @@ function renderCustomers(list) {
     var mList = parseMachines(c.machines_owned);
     var typeClass = (c.type||'Prospect').toLowerCase();
     var jobCount = jobs.filter(function(j){ return j.customer && j.customer.toLowerCase()===c.company_name.toLowerCase(); }).length;
-    var loanCount = (loans||[]).filter(function(l){ return l.customer && l.customer.toLowerCase().includes(c.company_name.toLowerCase().substring(0,6)); }).length;
+    var loanCount = (loans||[]).filter(function(l){ return l.customer && l.customer.toLowerCase() === c.company_name.toLowerCase(); }).length;
     var followupHtml = '';
     if (c.follow_up_date) {
       var fd = new Date(c.follow_up_date); fd.setHours(0,0,0,0);
@@ -4405,7 +4406,10 @@ function renderCustomers(list) {
     }
     return '<div class="cust-card" onclick="openCustomerAccount(\'' + c.id + '\')">' +
       '<div class="cust-card-top">' +
-        '<div class="cust-name">' + c.company_name + '</div>' +
+        '<div>' +
+          '<div style="font-size:9px;font-weight:700;color:#3a5070;font-family:\'Courier New\',monospace;margin-bottom:2px">' + (c.account_number ? xsaNum(c.account_number) : '') + '</div>' +
+          '<div class="cust-name">' + c.company_name + '</div>' +
+        '</div>' +
         '<span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span>' +
       '</div>' +
       (c.industry ? '<div class="cust-row"><span class="ico">🏭</span><span class="val" style="color:#5a8090">' + c.industry + '</span></div>' : '') +
@@ -4619,6 +4623,10 @@ saveCustomer = async function() {
       await db('PATCH', 'customers?id=eq.' + editingCustId, payload); cid = editingCustId;
       await db('DELETE', 'customer_contacts?customer_id=eq.' + cid);
     } else {
+      // Auto-assign next XSA number
+      var allAccts = await db('GET', 'customers?select=account_number&order=account_number.desc&limit=1');
+      var nextNum = (allAccts.length && allAccts[0].account_number) ? allAccts[0].account_number + 1 : 1;
+      payload.account_number = nextNum;
       var res = await db('POST', 'customers', payload); cid = res[0].id;
     }
     for (var i = 0; i < _contactRows.length; i++) {
