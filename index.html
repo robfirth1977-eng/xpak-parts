@@ -2186,12 +2186,18 @@ function renderToolPartsList(toolTempId) {
   var el = document.getElementById('tpl_'+toolTempId); if(!el) return;
   var parts = jobPartsLocal.filter(function(x){return x._toolTempId===toolTempId;});
   if(!parts.length){el.innerHTML='<div style="font-size:11px;color:#3a5070;padding:6px 0">No parts added yet</div>';return;}
+  var partsTotal = 0;
   el.innerHTML = parts.map(function(jp) {
     var sc = STATUS_COLOURS[jp.status]||'#4a6080';
+    var pt = jp.part_id ? allParts.find(function(x){ return x.id === jp.part_id; }) : null;
+    var sell = pt && pt.sell_price ? parseFloat(pt.sell_price) : 0;
+    var lineTotal = sell * (jp.quantity || 1);
+    partsTotal += lineTotal;
     return '<div class="job-part-row '+jp.status+'">' +
       '<span class="jpr-keyno">'+jp.part_key_no+'</span>' +
       '<span class="jpr-desc">'+jp.part_description+'</span>' +
       '<input type="number" min="1" value="'+jp.quantity+'" onchange="setJobPartQty(\''+jp._tempId+'\',this.value)" style="width:48px;padding:4px 6px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;text-align:center">' +
+      (sell > 0 ? '<span style="font-size:11px;font-weight:700;color:#10b981;flex-shrink:0;min-width:60px;text-align:right">$'+lineTotal.toFixed(2)+'</span>' : '<span style="font-size:10px;color:#3a5070;flex-shrink:0;min-width:60px;text-align:right">No price</span>') +
       '<select onchange="setJobPartStatus(\''+jp._tempId+'\',this.value)" style="padding:4px 7px;border-radius:5px;border:1px solid '+sc+';background:#0f1923;color:'+sc+';font-size:11px;font-weight:700">' +
         '<option value="use_stock"'+(jp.status==='use_stock'?' selected':'')+'>Use Stock</option>' +
         '<option value="to_order"'+(jp.status==='to_order'?' selected':'')+'>To Order</option>' +
@@ -2200,7 +2206,7 @@ function renderToolPartsList(toolTempId) {
       '</select>' +
       '<button class="jpr-remove" onclick="removeJobPart(\''+jp._tempId+'\')">x</button>' +
     '</div>';
-  }).join('');
+  }).join('') + (partsTotal > 0 ? '<div style="text-align:right;padding:6px 4px 2px;font-size:12px;font-weight:700;color:#10b981;border-top:1px solid #1e3048;margin-top:4px">Parts subtotal: $'+partsTotal.toFixed(2)+'</div>' : '');
 }
 function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsList(t._tempId);}); recalcPartsTotal();}
 
@@ -4132,6 +4138,101 @@ async function deleteMachineFromAccount(custId, machineIndex) {
   } catch(e) { showToast('Remove failed: ' + e.message, 'error'); }
 }
 
+async function printAccountReport(custId) {
+  var c = (_custCache||[]).find(function(x){ return x.id === custId; });
+  if (!c) return;
+  var customerName = c.company_name;
+  var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+  var fmt = function(n){ return n ? '$'+parseFloat(n).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'; };
+  var mList = parseMachines(c.machines_owned);
+  var primary = c._contacts && c._contacts.find(function(x){ return x.is_primary; });
+
+  // Load jobs + tools for each machine
+  var custJobs = [];
+  var jobToolsMap = {};
+  try {
+    custJobs = await db('GET', 'jobs?customer=eq.' + encodeURIComponent(customerName) + '&select=*&order=created_at.desc');
+    for (var i = 0; i < custJobs.length; i++) {
+      var jt = await db('GET', 'job_tools?job_id=eq.' + custJobs[i].id + '&select=*');
+      jobToolsMap[custJobs[i].id] = jt;
+    }
+  } catch(e) {}
+
+  // Build machine sections
+  var machineSections = mList.map(function(m) {
+    // Find all jobs that had this machine (by name match or serial)
+    var relatedJobs = custJobs.filter(function(j) {
+      var tools = jobToolsMap[j.id] || [];
+      return tools.some(function(t) {
+        var mn = (window.machines||[]).find(function(x){ return x.id === t.machine_id; });
+        var nameMatch = mn && mn.name === m.name;
+        var serialMatch = m.serial && t.serial_number && t.serial_number.trim() === m.serial.trim();
+        return nameMatch || serialMatch;
+      });
+    });
+
+    var jobRows = relatedJobs.length ? relatedJobs.map(function(j) {
+      var tools = (jobToolsMap[j.id]||[]).filter(function(t){
+        var mn = (window.machines||[]).find(function(x){ return x.id === t.machine_id; });
+        return (mn && mn.name === m.name) || (m.serial && t.serial_number && t.serial_number.trim() === m.serial.trim());
+      });
+      var tool = tools[0] || {};
+      return '<tr style="border-bottom:1px solid #eee">' +
+        '<td style="padding:4px 8px;font-family:monospace;font-size:9pt;color:#1e3799">' + xpsNum(j.job_number) + '</td>' +
+        '<td style="padding:4px 8px;font-size:9pt">' + new Date(j.created_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + '</td>' +
+        '<td style="padding:4px 8px;font-size:9pt">' + (tool.fault_type||'—') + '</td>' +
+        '<td style="padding:4px 8px;font-size:9pt">' + (tool.work_completed ? tool.work_completed.substring(0,80)+(tool.work_completed.length>80?'…':'') : '—') + '</td>' +
+        '<td style="padding:4px 8px;font-size:9pt;text-align:center">' + j.status + '</td>' +
+      '</tr>';
+    }).join('') : '<tr><td colspan="5" style="padding:6px 8px;font-size:9pt;color:#888;font-style:italic">No service history found</td></tr>';
+
+    return '<div style="margin-bottom:18px;page-break-inside:avoid">' +
+      '<div style="background:#1e3799;color:white;padding:7px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:12pt;font-weight:700">' + m.name + '</span>' +
+        (m.serial ? '<span style="font-size:10pt;opacity:0.85">S/N: ' + m.serial + '</span>' : '') +
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;border:1px solid #dde3f0;border-top:none">' +
+        '<tr style="background:#f4f7ff"><th style="padding:5px 8px;font-size:8.5pt;text-align:left">Job</th><th style="padding:5px 8px;font-size:8.5pt;text-align:left">Date</th><th style="padding:5px 8px;font-size:8.5pt;text-align:left">Fault</th><th style="padding:5px 8px;font-size:8.5pt;text-align:left">Work Done</th><th style="padding:5px 8px;font-size:8.5pt;text-align:center">Status</th></tr>' +
+        jobRows +
+      '</table>' +
+    '</div>';
+  }).join('');
+
+  var w = window.open('','_blank');
+  if (!w) { showToast('Allow pop-ups to print','error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
+  w.document.write('<title>Account Report — ' + customerName + '</title>');
+  w.document.write('<style>');
+  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:24px;font-size:11pt}');
+  w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #f59e0b}');
+  w.document.write('.co{font-size:20px;font-weight:900;color:#0f1923}.co-sub{font-size:10pt;color:#666;margin-top:2px}');
+  w.document.write('.rhs{text-align:right}.rhs-title{font-size:17px;font-weight:800;color:#f59e0b}.rhs-sub{font-size:10pt;color:#555;margin-top:2px}');
+  w.document.write('.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}');
+  w.document.write('.mb{background:#f8fafc;padding:8px 12px;border-radius:6px}.ml{font-size:8pt;color:#888;text-transform:uppercase;letter-spacing:.3px}.mv{font-size:11pt;font-weight:600;margin-top:2px}');
+  w.document.write('.section-title{font-size:10pt;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#f59e0b;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #f59e0b40}');
+  w.document.write('.footer{margin-top:24px;font-size:9pt;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}');
+  w.document.write('@media print{body{padding:10mm}@page{size:A4;margin:10mm}}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="hdr"><div><div class="co">X-PAK GLOBAL</div><div class="co-sub">Service Division</div></div><div class="rhs"><div class="rhs-title">ACCOUNT REPORT</div><div class="rhs-sub">' + (c.account_number ? 'Service ID: ' + xsaNum(c.account_number) + '<br>' : '') + today + '</div></div></div>');
+  w.document.write('<div class="meta">');
+  w.document.write('<div class="mb"><div class="ml">Account</div><div class="mv">' + customerName + '</div></div>');
+  w.document.write('<div class="mb"><div class="ml">Type</div><div class="mv">' + (c.type||'—') + (c.industry?' · '+c.industry:'') + '</div></div>');
+  if (primary || c.contact_name) w.document.write('<div class="mb"><div class="ml">Primary Contact</div><div class="mv">' + (primary?primary.name:c.contact_name) + (primary&&primary.phone?' · '+primary.phone:'') + '</div></div>');
+  if (c.phone) w.document.write('<div class="mb"><div class="ml">Phone</div><div class="mv">' + c.phone + '</div></div>');
+  if (c.address) w.document.write('<div class="mb" style="grid-column:1/-1"><div class="ml">Address</div><div class="mv">' + c.address + '</div></div>');
+  w.document.write('</div>');
+  w.document.write('<div class="section-title">Equipment & Service History (' + mList.length + ' machine' + (mList.length!==1?'s':'') + ')</div>');
+  if (mList.length) {
+    w.document.write(machineSections);
+  } else {
+    w.document.write('<p style="color:#888;font-style:italic">No machines on record. Use ⟳ Sync from Jobs in the account view.</p>');
+  }
+  w.document.write('<div class="footer">X-Pak Global Service Division · rob.firth@xpak.com.au · Generated by MainFlow · ' + today + '</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 600);
+}
+
 async function syncMachinesFromJobs(custId) {
   var custObj = (_custCache||[]).find(function(x){ return x.id === custId; });
   var customerName = custObj ? custObj.company_name : '';
@@ -4319,7 +4420,7 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
   var leftHtml =
     '<div class="acct-detail-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
-        (c.account_number ? '<div style="font-size:10px;font-weight:700;color:#e879f9;font-family:\'Courier New\',monospace;letter-spacing:1px">' + xsaNum(c.account_number) + '</div>' : '<div></div>') +
+        (c.account_number ? '<div style="font-size:10px;font-weight:700;color:#e879f9;font-family:\'Courier New\',monospace;letter-spacing:1px">Service ID: ' + xsaNum(c.account_number) + '</div>' : '<div></div>') +
         '<button onclick="editCustFromAccount()" style="background:#1e3048;border:1px solid #e879f960;color:#e879f9;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">✏️ Edit</button>' +
       '</div>' +
       '<div style="margin-bottom:8px">' +
@@ -4327,8 +4428,9 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
         '<span class="cust-type ' + typeClass + '" style="margin-top:4px;display:inline-block">' + (c.type||'Prospect') + '</span>' +
       '</div>' +
       detRows + contactsHtml + followupHtml +
-      '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #2a4060">' +
+      '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #2a4060;display:flex;gap:8px;flex-wrap:wrap">' +
         '<button class="add-contact-btn" style="width:auto;padding:4px 12px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,\'' + c.id + '\')" >+ Log Activity</button>' +
+        '<button class="add-contact-btn" style="width:auto;padding:4px 12px;border-color:#f59e0b60;color:#f59e0b" onclick="printAccountReport(\'' + c.id + '\')" >&#128196; Account Report</button>' +
       '</div>' +
     '</div>';
 
@@ -4453,7 +4555,7 @@ function renderCustomers(list) {
     return '<div class="cust-card" onclick="openCustomerAccount(\'' + c.id + '\')">' +
       '<div class="cust-card-top">' +
         '<div>' +
-          '<div style="font-size:9px;font-weight:700;color:#3a5070;font-family:\'Courier New\',monospace;margin-bottom:2px">' + (c.account_number ? xsaNum(c.account_number) : '') + '</div>' +
+          '<div style="font-size:9px;font-weight:700;color:#3a5070;font-family:\'Courier New\',monospace;margin-bottom:2px">Service ID: ' + (c.account_number ? xsaNum(c.account_number) : '') + '</div>' +
           '<div class="cust-name">' + c.company_name + '</div>' +
         '</div>' +
         '<span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span>' +
