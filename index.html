@@ -353,6 +353,21 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   @page{size:89mm 36mm;margin:5mm 1mm 0mm}
 }
 #printArea{display:none}
+.so-row{background:#141f2d;border-radius:8px;padding:9px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;border-left:3px solid #2a4060;transition:border-color .1s}
+.so-row.selected{border-left-color:#10b981;background:#0d1f14}
+.so-row.low{border-left-color:#f59e0b}
+.so-row.zero{border-left-color:#ef4444}
+.so-check{width:18px;height:18px;cursor:pointer;accent-color:#10b981;flex-shrink:0}
+.so-keyno{font-size:12px;font-weight:700;color:#00c8e0;font-family:'Courier New',monospace;min-width:100px}
+.so-desc{font-size:12px;color:#c8d8e8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.so-stock{font-size:11px;font-weight:700;min-width:50px;text-align:center}
+.so-qty{width:52px;padding:4px 6px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;text-align:center;outline:none}
+.so-qty:focus{border-color:#10b981}
+.so-supplier{font-size:10px;color:#5a8090;min-width:80px;text-align:right}
+.so-group-hdr{font-size:11px;font-weight:700;color:#10b981;padding:10px 0 6px;border-bottom:1px solid #1e3048;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.so-group-hdr .so-select-all{font-size:10px;color:#5a8090;cursor:pointer;padding:2px 8px;border:1px solid #2a4060;border-radius:5px;background:transparent}
+.so-group-hdr .so-select-all:hover{border-color:#10b981;color:#10b981}
+.so-summary{background:#0d1a28;border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .tab.cust-tab{border-color:#e879f9;color:#e879f9}
 .tab.cust-tab:hover,.tab.cust-tab.active{background:#e879f9;border-color:#e879f9;color:#0f1923}
 .cust-section{padding:14px;display:none}
@@ -394,6 +409,21 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .cust-search:focus{border-color:#e879f9}
 .cust-filter-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #2a4060;background:transparent;color:#8aa8c0}
 .cust-filter-btn.active{background:#e879f9;border-color:#e879f9;color:#0f1923}
+.stock-order-row{background:#141f2d;border-radius:8px;padding:9px 12px;margin-bottom:5px;display:flex;align-items:center;gap:8px;border-left:3px solid #2a4060;transition:border-color .15s}
+.stock-order-row.selected{border-left-color:#10b981;background:#0d1f12}
+.stock-order-row.low{border-left-color:#f59e0b}
+.stock-order-row.zero{border-left-color:#ef4444}
+.so-check{width:18px;height:18px;cursor:pointer;accent-color:#10b981;flex-shrink:0}
+.so-keyno{font-size:12px;font-weight:700;color:#00c8e0;font-family:'Courier New',monospace;min-width:90px;flex-shrink:0}
+.so-desc{font-size:12px;color:#c8d8e8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.so-machine{font-size:10px;color:#5a8090;min-width:80px;flex-shrink:0}
+.so-stock{font-size:11px;font-weight:700;min-width:40px;text-align:center;flex-shrink:0}
+.so-qty-input{width:52px;padding:4px 6px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;text-align:center;flex-shrink:0}
+.so-star{font-size:14px;cursor:pointer;flex-shrink:0;color:#3a5070;transition:color .1s}
+.so-star.active{color:#f59e0b}
+.so-group-header{font-size:11px;font-weight:700;color:#64b5c8;padding:8px 12px;background:#0d1a28;border-radius:8px;margin:10px 0 5px;display:flex;justify-content:space-between;align-items:center}
+.so-summary{background:#0d1a28;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:12px}
+.so-summary-val{font-weight:700;color:#10b981}
 .acct-back{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:#5a8090;cursor:pointer;border-bottom:1px solid #1e3048;margin-bottom:14px}
 .acct-back:hover{color:#e2e8f0}
 .acct-layout{display:grid;grid-template-columns:280px 1fr;gap:16px}
@@ -576,7 +606,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 </div>
 
 <div class="header">
-  <div><div class="header-title" onclick="showLanding()" style="cursor:pointer" title="Back to menu">MAINFLOW</div><div class="header-sub" id="hSub">Connecting...</div></div>
+  <div><div class="header-title" onclick="showLanding()" style="cursor:pointer" title="Back to menu">MAINFLOW <span style="font-size:9px;color:#3a5070;font-weight:400;letter-spacing:1px">v1.3</span></div><div class="header-sub" id="hSub">Connecting...</div></div>
   <div id="lowBadge"></div><button class="auth-user" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;margin-right:6px" onclick="openToolSearch()">🔍 Find Tool</button><button class="auth-user" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
 </div>
 <div class="machine-tabs" id="machineTabs"></div>
@@ -619,12 +649,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 
 <!-- Order list toolbar -->
 <div class="toolbar" id="orderToolbar" style="display:none">
-  <div style="flex:1;font-size:14px;font-weight:700;color:#10b981">Parts to Order</div>
-  <button class="btn-add green" onclick="openDirectOrderModal()" style="margin-right:4px">+ Add to Order</button>
-  <button class="btn-sm amber" onclick="printOrderList()" style="padding:9px 14px;font-size:13px">Print / Export List</button>
+  <div style="display:flex;gap:6px;flex-shrink:0">
+    <button class="btn-sm" id="btnOrderTabJobs" onclick="setOrderTab('jobs')" style="padding:7px 14px;font-size:12px;border-color:#10b981;color:#10b981">Job Orders</button>
+    <button class="btn-sm" id="btnOrderTabStock" onclick="setOrderTab('stock')" style="padding:7px 14px;font-size:12px">Stock Order</button>
+  </div>
+  <button class="btn-add green" onclick="openDirectOrderModal()" style="margin-right:4px;margin-left:8px">+ Add to Order</button>
+  <button class="btn-sm amber" onclick="printOrderList()" style="padding:9px 14px;font-size:13px">Print / Export</button>
 </div>
 <div class="order-section" id="orderSection" style="display:none">
-  <div id="orderList"></div>
+  <div id="jobOrderSection">
+    <div id="orderList"></div>
+  </div>
+  <div id="stockOrderSection" style="display:none;padding:0 14px 20px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+      <select id="stockOrderMachine" onchange="renderStockOrderBuilder()" style="padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none;flex:1;max-width:280px">
+        <option value="">All Machines</option>
+      </select>
+      <select id="stockOrderSupplier" onchange="renderStockOrderBuilder()" style="padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none;flex:1;max-width:220px">
+        <option value="">All Suppliers</option>
+      </select>
+      <div style="display:flex;gap:6px">
+        <button class="filter-btn" id="soChipAll"  onclick="setStockOrderFilter('all',this)"  style="border-color:#10b981;color:#10b981">All</button>
+        <button class="filter-btn" id="soChipLow"  onclick="setStockOrderFilter('low',this)"  >Low / Zero</button>
+        <button class="filter-btn" id="soChipStar" onclick="setStockOrderFilter('star',this)" >★ Stock Items</button>
+      </div>
+      <button class="btn-add green" onclick="exportStockOrder()" style="margin-left:auto">⬇ Export Excel</button>
+    </div>
+    <div id="stockOrderList"></div>
+  </div>
 </div>
 
 <!-- Loans toolbar -->
@@ -856,6 +908,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <select id="fUom"><option value="">-- Select --</option><option value="EA">Each (EA)</option><option value="PR">Pair (PR)</option><option value="SET">Set (SET)</option><option value="PKT">Packet (PKT)</option><option value="M">Metre (M)</option></select>
     </div>
     <div class="field"><label>Diagram Refs</label><input id="fDiagramRefs" placeholder="e.g. C2:1/p27, C10:1/p35"></div>
+    <div class="field-check"><input type="checkbox" id="fStockItem" style="width:18px;height:18px;cursor:pointer;accent-color:#10b981"><label for="fStockItem" style="font-size:13px;color:#e2e8f0;cursor:pointer">Stock Item <span style="font-size:11px;color:#5a8090">(include in stock order builder)</span></label></div>
     <div class="field"><label>Notes</label><input id="fNotes" placeholder="Common faults, tips..."></div>
     <div class="section-label">Stock and Location</div>
     <div class="field"><label>Storage Location</label><input id="fLoc" placeholder="e.g. Drawer 1, Left section"></div>
@@ -1434,7 +1487,235 @@ function switchToOrder() {
   document.getElementById('orderSection').style.display = 'block';
   document.getElementById('hSub').textContent = 'Parts to Order';
   document.getElementById('lowBadge').innerHTML = '';
-  loadOrderList();
+  setOrderTab('jobs');
+}
+
+// ── ORDER TABS ────────────────────────────────────────────────────
+var _currentOrderTab = 'jobs';
+var _stockOrderFilter = 'low';
+var _stockOrderMachine = '';
+var _stockOrderSupplier = '';
+var _stockOrderSelections = {}; // partId -> qty
+
+function setOrderTab(tab) {
+  _currentOrderTab = tab;
+  var jobSec   = document.getElementById('jobOrderSection');
+  var stockSec = document.getElementById('stockOrderSection');
+  var btnJobs  = document.getElementById('btnOrderTabJobs');
+  var btnStock = document.getElementById('btnOrderTabStock');
+  if (!jobSec || !stockSec) { loadOrderList(); return; }
+  if (tab === 'jobs') {
+    jobSec.style.display = 'block';
+    stockSec.style.display = 'none';
+    if (btnJobs)  { btnJobs.style.borderColor  = '#10b981'; btnJobs.style.color  = '#10b981'; btnJobs.style.background  = '#0d1f12'; }
+    if (btnStock) { btnStock.style.borderColor = '#2a4060'; btnStock.style.color = '#8aa8c0'; btnStock.style.background = 'transparent'; }
+    loadOrderList();
+  } else {
+    jobSec.style.display = 'none';
+    stockSec.style.display = 'block';
+    if (btnStock) { btnStock.style.borderColor = '#10b981'; btnStock.style.color = '#10b981'; btnStock.style.background = '#0d1f12'; }
+    if (btnJobs)  { btnJobs.style.borderColor  = '#2a4060'; btnJobs.style.color  = '#8aa8c0'; btnJobs.style.background  = 'transparent'; }
+    initStockOrderBuilder();
+  }
+}
+
+function setStockOrderFilter(f, btn) {
+  _stockOrderFilter = f;
+  document.querySelectorAll('#soChipAll,#soChipLow,#soChipStar').forEach(function(b){
+    b.classList.remove('active'); b.style.background='transparent';
+    b.style.borderColor='#2a4060'; b.style.color='#8aa8c0';
+  });
+  if (btn) { btn.classList.add('active'); btn.style.borderColor='#10b981'; btn.style.color='#10b981'; btn.style.background='#0d1f12'; }
+  renderStockOrderBuilder();
+}
+
+async function initStockOrderBuilder() {
+  if (!allParts.length) await loadAllParts();
+  // Populate machine filter
+  var mSel = document.getElementById('stockOrderMachine');
+  if (mSel && mSel.options.length <= 1) {
+    machines.forEach(function(m) {
+      var o = document.createElement('option'); o.value = m.id; o.textContent = m.name; mSel.appendChild(o);
+    });
+  }
+  // Populate supplier filter
+  var sSel = document.getElementById('stockOrderSupplier');
+  if (sSel && sSel.options.length <= 1) {
+    var suppNames = [];
+    allParts.forEach(function(p) {
+      if (!p.suppliers) return;
+      var sups = Array.isArray(p.suppliers) ? p.suppliers : [];
+      try { sups = typeof p.suppliers === 'string' ? JSON.parse(p.suppliers) : p.suppliers; } catch(e){}
+      sups.forEach(function(s){ if (s.name && !suppNames.includes(s.name)) suppNames.push(s.name); });
+    });
+    suppNames.sort().forEach(function(n) {
+      var o = document.createElement('option'); o.value = n; o.textContent = n; sSel.appendChild(o);
+    });
+  }
+  // Default chip
+  var chip = document.getElementById('soChipLow');
+  if (chip) setStockOrderFilter('low', chip);
+  else renderStockOrderBuilder();
+}
+
+function renderStockOrderBuilder() {
+  _stockOrderMachine  = (document.getElementById('stockOrderMachine')  || {}).value || '';
+  _stockOrderSupplier = (document.getElementById('stockOrderSupplier') || {}).value || '';
+  var el = document.getElementById('stockOrderList'); if (!el) return;
+
+  var pool = allParts.filter(function(p) {
+    if (_stockOrderMachine && p.machine_id !== _stockOrderMachine) return false;
+    var s = p.stock && p.stock[0];
+    var qty = s ? s.quantity : null;
+    if (_stockOrderFilter === 'low')  return qty !== null && qty <= (s.reorder_threshold || 1);
+    if (_stockOrderFilter === 'star') return !!p.is_stock_item;
+    return true; // 'all'
+  });
+
+  // Filter by supplier
+  if (_stockOrderSupplier) {
+    pool = pool.filter(function(p) {
+      var sups = [];
+      try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e){}
+      return sups.some(function(s){ return s.name === _stockOrderSupplier; });
+    });
+  }
+
+  if (!pool.length) {
+    el.innerHTML = '<div class="center" style="padding:30px;color:#3a5070">No parts match — try changing the filter or machine.</div>';
+    return;
+  }
+
+  // Group by machine
+  var byMachine = {}, machineOrder = [];
+  pool.forEach(function(p) {
+    var mn = p.machineName || 'Unknown'; if (!byMachine[mn]) { byMachine[mn] = []; machineOrder.push(mn); }
+    byMachine[mn].push(p);
+  });
+
+  var selectedCount = Object.keys(_stockOrderSelections).length;
+  var html = '<div class="so-summary">' +
+    '<span style="color:#5a8090">Select parts to order, set quantities, then export.</span>' +
+    '<span class="so-summary-val" style="margin-left:auto">' + selectedCount + ' selected</span>' +
+    (selectedCount > 0 ? '<button class="btn-add green" onclick="exportStockOrder()" style="padding:6px 14px;font-size:12px">⬇ Export Excel</button>' : '') +
+  '</div>';
+
+  machineOrder.forEach(function(mn) {
+    var grpParts = byMachine[mn];
+    var grpSelected = grpParts.filter(function(p){ return _stockOrderSelections[p.id]; }).length;
+    html += '<div class="so-group-header"><span>' + mn + ' <span style="color:#3a5070;font-weight:400">(' + grpParts.length + ' parts)</span></span>' +
+      (grpSelected > 0 ? '<span style="color:#10b981">' + grpSelected + ' selected</span>' : '') + '</div>';
+    grpParts.forEach(function(p) {
+      var s = p.stock && p.stock[0];
+      var qty = s ? s.quantity : null;
+      var st = qty === null ? '' : qty === 0 ? 'zero' : qty <= (s.reorder_threshold||1) ? 'low' : '';
+      var stCol = qty === 0 ? '#ef4444' : qty !== null && qty <= (s.reorder_threshold||1) ? '#f59e0b' : '#10b981';
+      var isSelected = !!_stockOrderSelections[p.id];
+      var orderQty = _stockOrderSelections[p.id] || 1;
+      var isStar = !!p.is_stock_item;
+      // Preferred supplier
+      var sups = [];
+      try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e){}
+      var pref = sups.find(function(s){ return s.preferred; }) || sups[0];
+      html += '<div class="stock-order-row ' + st + (isSelected?' selected':'') + '" id="sorow_' + p.id + '">' +
+        '<input type="checkbox" class="so-check" ' + (isSelected?'checked':'') + ' onchange="toggleStockSel(\'' + p.id + '\',this.checked)">' +
+        '<span class="so-keyno">' + p.key_no + '</span>' +
+        '<span class="so-desc" title="' + p.description + '">' + p.description + '</span>' +
+        '<span class="so-stock" style="color:' + stCol + '">' + (qty !== null ? qty : '—') + '</span>' +
+        '<input type="number" min="1" value="' + orderQty + '" class="so-qty-input" onchange="setStockSelQty(\'' + p.id + '\',this.value)" ' + (isSelected?'':'style="opacity:0.4"') + '>' +
+        (pref ? '<span style="font-size:10px;color:#5a8090;min-width:70px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + pref.name + '">' + pref.name + '</span>' : '<span style="min-width:70px;flex-shrink:0"></span>') +
+        '<span class="so-star' + (isStar?' active':'') + '" onclick="toggleStockItem(\'' + p.id + '\')" title="' + (isStar?'Remove from stock items':'Mark as stock item') + '">\u2605</span>' +
+      '</div>';
+    });
+  });
+  el.innerHTML = html;
+}
+
+function toggleStockSel(partId, checked) {
+  if (checked) { _stockOrderSelections[partId] = _stockOrderSelections[partId] || 1; }
+  else { delete _stockOrderSelections[partId]; }
+  renderStockOrderBuilder();
+}
+
+function setStockSelQty(partId, val) {
+  var q = Math.max(1, parseInt(val)||1);
+  if (_stockOrderSelections[partId] !== undefined) _stockOrderSelections[partId] = q;
+}
+
+async function toggleStockItem(partId) {
+  var p = allParts.find(function(x){ return x.id === partId; }); if (!p) return;
+  var newVal = !p.is_stock_item;
+  try {
+    await db('PATCH', 'parts?id=eq.' + partId, { is_stock_item: newVal });
+    p.is_stock_item = newVal;
+    showToast(newVal ? '★ Marked as stock item' : 'Removed from stock items');
+    renderStockOrderBuilder();
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+}
+
+async function exportStockOrder() {
+  var selected = Object.keys(_stockOrderSelections);
+  if (!selected.length) { showToast('Select at least one part', 'error'); return; }
+  if (typeof XLSX === 'undefined') { showToast('Excel library not loaded','error'); return; }
+
+  var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
+
+  // Group by supplier
+  var bySupplier = { 'No Supplier': [] };
+  selected.forEach(function(pid) {
+    var p = allParts.find(function(x){ return x.id === pid; }); if (!p) return;
+    var sups = [];
+    try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e){}
+    var pref = sups.find(function(s){ return s.preferred; }) || sups[0];
+    var suppName = pref ? pref.name : 'No Supplier';
+    if (!bySupplier[suppName]) bySupplier[suppName] = [];
+    bySupplier[suppName].push({ part: p, qty: _stockOrderSelections[pid], suppPartNo: pref ? pref.part_no : '' });
+  });
+
+  var wb = XLSX.utils.book_new();
+
+  // One sheet per supplier
+  Object.keys(bySupplier).forEach(function(suppName) {
+    var items = bySupplier[suppName];
+    if (!items.length) return;
+    var rows = [
+      ['STOCK ORDER — ' + suppName.toUpperCase()],
+      [],
+      ['Reference', 'Stock Order — X-Pak Service'],
+      ['Date', today],
+      ['Generated by', 'Rob Firth'],
+      [],
+      ['Please supply the following parts:'],
+      [],
+      ['Machine', 'Our Part No.', "Supplier's Part No.", 'Description', 'Qty', 'Unit Price', 'Notes']
+    ];
+    items.forEach(function(item) {
+      var p = item.part;
+      rows.push([p.machineName||'', p.key_no, item.suppPartNo||'', p.description, item.qty, '', '']);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:18},{wch:14},{wch:16},{wch:38},{wch:5},{wch:14},{wch:20}];
+    // Safe sheet name
+    var sheetName = suppName.replace(/[\\/\?\*\[\]]/g,'').substring(0,31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  // Summary sheet
+  var summaryRows = [['STOCK ORDER SUMMARY'], [], ['Date', today], [], ['Supplier', 'Our Part No.', 'Description', 'Machine', 'Qty']];
+  selected.forEach(function(pid) {
+    var p = allParts.find(function(x){ return x.id === pid; }); if (!p) return;
+    var sups = [];
+    try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e){}
+    var pref = sups.find(function(s){ return s.preferred; }) || sups[0];
+    summaryRows.push([pref?pref.name:'', p.key_no, p.description, p.machineName||'', _stockOrderSelections[pid]]);
+  });
+  var wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols'] = [{wch:20},{wch:14},{wch:38},{wch:18},{wch:5}];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  var fname = 'StockOrder_' + today.replace(/ /g,'-') + '.xlsx';
+  XLSX.writeFile(wb, fname);
+  showToast('Exported: ' + fname);
 }
 
 // switchToParts is defined later in the nav section
@@ -2054,9 +2335,12 @@ function renderOrderList(rows) {
 }
 
 async function markOrdered(id) {
+  var scrollPos = document.getElementById('orderSection').scrollTop;
   try {
     await db('PATCH', 'job_parts?id=eq.' + id, { status: 'ordered', updated_at: new Date().toISOString() });
-    showToast('Marked as ordered'); loadOrderList();
+    showToast('Marked as ordered');
+    await loadOrderList();
+    document.getElementById('orderSection').scrollTop = scrollPos;
   } catch(e) { showToast('Failed', 'error'); }
 }
 
@@ -2779,6 +3063,7 @@ function renderParts() {
           (p.assembly_section ? '<span class="part-ref" style="background:#1a2a3a;color:#64b5c8">' + p.assembly_section + '</span>' : '') +
           refs + '<span class="part-loc">@ ' + ((s && s.location) || 'No location set') + '</span>' +
           (p.notes ? '<span class="part-loc"><em>' + p.notes + '</em></span>' : '') +
+          (p.is_stock_item ? '<span class="part-ref" style="background:#10b98120;color:#10b981;border:1px solid #10b98140">★ Stock Item</span>' : '') +
           (p.sell_price ? '<span class="part-ref" style="background:#0a2a1a;color:#10b981">Sell $' + parseFloat(p.sell_price).toFixed(2) + '</span>' : '') +
           (p.cost_price ? '<span class="part-ref" style="background:#1a1a2a;color:#6080c0">Cost $' + parseFloat(p.cost_price).toFixed(2) + '</span>' : '') +
         '</div></div>' +
@@ -2811,7 +3096,7 @@ function openAddModal() {
   document.getElementById('fGP').value = '50';
   document.getElementById('fCategory').value = ''; document.getElementById('fMaterial').value = ''; document.getElementById('fUom').value = '';
   document.getElementById('fQty').value = '0'; document.getElementById('fThreshold').value = '1';
-  document.getElementById('btnDeletePart').style.display = 'none'; document.getElementById('autoGenBtn').style.display = 'block';
+  document.getElementById('btnDeletePart').style.display = 'none'; document.getElementById('autoGenBtn').style.display = 'block'; document.getElementById('fStockItem').checked = false;
   // Populate supplier name dropdown
   populatePartSupplierDrop();
   partSuppliers = [];
@@ -2857,6 +3142,7 @@ function openEditModal(partId) {
   document.getElementById('fAltPartNo').value = p.alt_part_no || ''; document.getElementById('fCategory').value = p.category || '';
   document.getElementById('fMaterial').value = p.material || ''; document.getElementById('fUom').value = p.uom || '';
   document.getElementById('autoGenBtn').style.display = 'block';
+  document.getElementById('fStockItem').checked = !!p.is_stock_item;
   document.getElementById('fSection').value = p.assembly_section || ''; document.getElementById('fDiagramRefs').value = p.diagram_refs || '';
   document.getElementById('fCost').value = p.cost_price || '';
   document.getElementById('fSell').value = p.sell_price || '';
@@ -2913,7 +3199,7 @@ async function savePart() {
   if (!keyno || !desc) { showToast('Part number and description required', 'error'); return; }
   var btn = document.getElementById('btnSave'); btn.disabled = true; btn.textContent = 'Saving...';
   var stock = { location: document.getElementById('fLoc').value.trim(), quantity: parseInt(document.getElementById('fQty').value) || 0, reorder_threshold: parseInt(document.getElementById('fThreshold').value) || 1, updated_at: new Date().toISOString() };
-  var pd = { key_no: keyno, description: desc, diagram_ref: document.getElementById('fRef').value||null, assembly_section: document.getElementById('fSection').value||null, diagram_refs: document.getElementById('fDiagramRefs').value||null, notes: document.getElementById('fNotes').value||null, spec: document.getElementById('fSpec').value||null, alt_part_no: document.getElementById('fAltPartNo').value||null, category: document.getElementById('fCategory').value||null, material: document.getElementById('fMaterial').value||null, uom: document.getElementById('fUom').value||null, cost_price: parseFloat(document.getElementById('fCost').value)||null, sell_price: parseFloat(document.getElementById('fSell').value)||null, myob_account_income: document.getElementById('fMyobIncome').value||null, myob_account_asset: document.getElementById('fMyobAsset').value||null, myob_account_cogs: document.getElementById('fMyobCogs').value||null, suppliers: partSuppliers.length ? partSuppliers : null };
+  var pd = { key_no: keyno, description: desc, diagram_ref: document.getElementById('fRef').value||null, assembly_section: document.getElementById('fSection').value||null, diagram_refs: document.getElementById('fDiagramRefs').value||null, notes: document.getElementById('fNotes').value||null, spec: document.getElementById('fSpec').value||null, alt_part_no: document.getElementById('fAltPartNo').value||null, category: document.getElementById('fCategory').value||null, material: document.getElementById('fMaterial').value||null, uom: document.getElementById('fUom').value||null, cost_price: parseFloat(document.getElementById('fCost').value)||null, sell_price: parseFloat(document.getElementById('fSell').value)||null, myob_account_income: document.getElementById('fMyobIncome').value||null, myob_account_asset: document.getElementById('fMyobAsset').value||null, myob_account_cogs: document.getElementById('fMyobCogs').value||null, suppliers: partSuppliers.length ? partSuppliers : null, is_stock_item: document.getElementById('fStockItem').checked };
   try {
     if (editingPart) {
       await db('PATCH', 'parts?id=eq.' + editingPart.id, pd);
