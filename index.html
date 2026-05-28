@@ -4104,6 +4104,18 @@ function renderMachineRows() {
 }
 
 // ── AUTO-UPDATE CUSTOMER MACHINES FROM JOBS ───────────────────────────────────
+async function deleteMachineFromAccount(custId, machineIndex) {
+  var c = (_custCache||[]).find(function(x){ return x.id === custId; }); if (!c) return;
+  var mList = parseMachines(c.machines_owned);
+  var removed = mList.splice(machineIndex, 1);
+  try {
+    await db('PATCH', 'customers?id=eq.' + custId, { machines_owned: formatMachinesJson(mList) });
+    _custCache = null;
+    showToast((removed[0] ? removed[0].name : 'Machine') + ' removed');
+    await openCustomerAccount(custId);
+  } catch(e) { showToast('Remove failed: ' + e.message, 'error'); }
+}
+
 async function syncMachinesFromJobs(custId) {
   var custObj = (_custCache||[]).find(function(x){ return x.id === custId; });
   var customerName = custObj ? custObj.company_name : '';
@@ -4341,11 +4353,15 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
       '</div>' +
     '</div>';
   if (machineList.length) {
-    machinesHtml += '<div style="padding:8px 14px">' + machineList.map(function(m) {
+    machinesHtml += '<div style="padding:8px 14px">' + machineList.map(function(m, mi) {
       var clickFn = m.serial ? 'openToolSearch();setTimeout(function(){var i=document.getElementById(\'toolSearchInput\');i.value=\''+m.serial+'\';runToolSearch(\''+m.serial+'\')},200)' : '';
-      return '<div class="acct-machine-row" onclick="' + clickFn + '">' +
-        '<div style="flex:1"><div class="acct-machine-name">' + m.name + '</div>' + (m.serial ? '<div class="acct-machine-sn">S/N: ' + m.serial + '</div>' : '') + '</div>' +
-        (m.serial ? '<span style="font-size:10px;color:#3a5070">&#128269; history</span>' : '') +
+      return '<div class="acct-machine-row">' +
+        '<div style="flex:1;cursor:pointer" onclick="' + clickFn + '">' +
+          '<div class="acct-machine-name">' + m.name + '</div>' +
+          (m.serial ? '<div class="acct-machine-sn">S/N: ' + m.serial + '</div>' : '') +
+        '</div>' +
+        (m.serial ? '<span style="font-size:10px;color:#3a5070;flex-shrink:0">&#128269;</span>' : '') +
+        '<button onclick="deleteMachineFromAccount(\'' + c.id + '\',' + mi + ')" style="background:none;border:none;color:#4a6080;cursor:pointer;font-size:16px;padding:0 2px;flex-shrink:0;line-height:1" title="Remove">×</button>' +
       '</div>';
     }).join('') + '</div>';
   } else {
