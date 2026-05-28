@@ -4139,7 +4139,7 @@ function custTypeahead(val) {
   dd.innerHTML = matches.map(function(c) {
     var primary = c._contacts && c._contacts.find(function(x){ return x.is_primary; });
     var sub = [c.industry, primary ? primary.name : c.contact_name].filter(Boolean).join(' · ');
-    return '<div class="cust-dd-item" onmousedown="selectCustFromDropdown('' + c.id + '')">' +
+    return '<div class="cust-dd-item" onmousedown="selectCustFromDropdown(\'' + c.id + '\')">' +
       '<div class="cust-dd-name">' + c.company_name + '</div>' +
       (sub ? '<div class="cust-dd-sub">' + sub + '</div>' : '') +
     '</div>';
@@ -4246,7 +4246,7 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
       '</div>' +
       detRows + contactsHtml + followupHtml +
       '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #2a4060">' +
-        '<button class="add-contact-btn" style="width:auto;padding:4px 12px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,'' + c.id + '')">+ Log Activity</button>' +
+        '<button class="add-contact-btn" style="width:auto;padding:4px 12px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(null,\'' + c.id + '\')" >+ Log Activity</button>' +
       '</div>' +
     '</div>';
 
@@ -4260,7 +4260,7 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
       var col = SC[j.status] || '#3a5070';
       var mName = '';
       if (j.machine_id) { var m2 = (window.machines||[]).find(function(x){ return x.id===j.machine_id; }); if(m2) mName=m2.name; }
-      return '<div class="acct-panel-item" onclick="switchToJobs();setTimeout(function(){openEditJobModal('' + j.id + '')},300)">' +
+      return '<div class="acct-panel-item" onclick="switchToJobs();setTimeout(function(){openEditJobModal(\'' + j.id + '\')},300)">' +
         '<span class="acct-item-ref">' + xpsNum(j.job_number) + '</span>' +
         '<div class="acct-item-main"><div class="acct-item-title">' + (mName||j.fault_type||'Service') + '</div><div class="acct-item-sub">' + fmtDate(j.created_at) + '</div></div>' +
         '<span class="acct-item-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + j.status + '</span>' +
@@ -4280,7 +4280,7 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
       var lt = (loanTools||[]).find(function(t){ return t.id===l.loan_tool_id; });
       var toolName = lt ? lt.name + (lt.serial_number?' ('+lt.serial_number+')':'') : 'Unknown';
       var col = l.status==='RETURNED' ? '#4a6080' : '#a78bfa';
-      return '<div class="acct-panel-item" onclick="switchToLoans();setTimeout(function(){openEditLoanModal('' + l.id + '')},300)">' +
+      return '<div class="acct-panel-item" onclick="switchToLoans();setTimeout(function(){openEditLoanModal(\'' + l.id + '\')},300)">' +
         '<span class="acct-item-ref" style="color:#a78bfa">' + xplNum(l.loan_number) + '</span>' +
         '<div class="acct-item-main"><div class="acct-item-title">' + toolName + '</div><div class="acct-item-sub">' + fmtDate(l.loaned_date) + (l.returned_date?' → returned '+fmtDate(l.returned_date):'') + '</div></div>' +
         '<span class="acct-item-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + (l.status||'ACTIVE') + '</span>' +
@@ -4299,9 +4299,10 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
     '</div>';
   if (machineList.length) {
     machinesHtml += '<div style="padding:8px 14px">' + machineList.map(function(m) {
-      return '<div class="acct-machine-row" onclick="' + (m.serial?'openToolSearch();setTimeout(function(){document.getElementById('toolSearchInput').value='' + m.serial + '';runToolSearch('' + m.serial + '')},200)':'''') + '">' +
-        '<div style="flex:1"><div class="acct-machine-name">' + m.name + '</div>' + (m.serial?'<div class="acct-machine-sn">S/N: ' + m.serial + '</div>':'') + '</div>' +
-        (m.serial ? '<span style="font-size:10px;color:#3a5070">🔍 history</span>' : '') +
+      var clickFn = m.serial ? 'openToolSearch();setTimeout(function(){var i=document.getElementById(\'toolSearchInput\');i.value=\''+m.serial+'\';runToolSearch(\''+m.serial+'\')},200)' : '';
+      return '<div class="acct-machine-row" onclick="' + clickFn + '">' +
+        '<div style="flex:1"><div class="acct-machine-name">' + m.name + '</div>' + (m.serial ? '<div class="acct-machine-sn">S/N: ' + m.serial + '</div>' : '') + '</div>' +
+        (m.serial ? '<span style="font-size:10px;color:#3a5070">&#128269; history</span>' : '') +
       '</div>';
     }).join('') + '</div>';
   } else {
@@ -4312,7 +4313,7 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
   // RECENT ACTIVITY panel
   var actHtml = '<div class="acct-panel">' +
     '<div class="acct-panel-hdr"><span class="acct-panel-title" style="color:#64b5c8">📋 Recent Activity</span>' +
-      '<button class="add-contact-btn" style="width:auto;padding:2px 8px;border-color:#00c8e060;color:#00c8e0;font-size:10px" onclick="openActModal(null,'' + c.id + '')">+ Log</button>' +
+      '<button class="add-contact-btn" style="width:auto;padding:2px 8px;border-color:#00c8e060;color:#00c8e0;font-size:10px" onclick="openActModal(null,\'' + c.id + '\')">+ Log</button>' +
     '</div>';
   if (cActs.length) {
     actHtml += cActs.map(function(a) {
@@ -4360,7 +4361,7 @@ function renderCustomers(list) {
       var fcls = diff < 0 ? 'overdue' : diff <= 7 ? 'soon' : 'ok';
       followupHtml = '<div class="cust-followup ' + fcls + '">📅 ' + (diff<0?'Overdue':diff===0?'Today':diff<=7?'Due soon':'Follow up') + ': ' + fd.toLocaleDateString('en-AU',{day:'2-digit',month:'short'}) + (c.follow_up_notes?' — '+c.follow_up_notes:'') + '</div>';
     }
-    return '<div class="cust-card" onclick="openCustomerAccount('' + c.id + '')">' +
+    return '<div class="cust-card" onclick="openCustomerAccount(\'' + c.id + '\')">' +
       '<div class="cust-card-top">' +
         '<div class="cust-name">' + c.company_name + '</div>' +
         '<span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span>' +
