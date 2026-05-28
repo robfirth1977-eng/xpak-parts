@@ -4318,13 +4318,13 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
   var typeClass = (c.type||'Prospect').toLowerCase();
   var leftHtml =
     '<div class="acct-detail-card">' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
-        '<div>' +
-          (c.account_number ? '<div style="font-size:10px;font-weight:700;color:#e879f9;font-family:\'Courier New\',monospace;margin-bottom:3px;letter-spacing:1px">' + xsaNum(c.account_number) + '</div>' : '') +
-          '<div class="acct-name">' + c.company_name + '</div>' +
-          '<span class="cust-type ' + typeClass + '" style="margin-top:4px;display:inline-block">' + (c.type||'Prospect') + '</span>' +
-        '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+        (c.account_number ? '<div style="font-size:10px;font-weight:700;color:#e879f9;font-family:\'Courier New\',monospace;letter-spacing:1px">' + xsaNum(c.account_number) + '</div>' : '<div></div>') +
         '<button onclick="editCustFromAccount()" style="background:#1e3048;border:1px solid #e879f960;color:#e879f9;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">✏️ Edit</button>' +
+      '</div>' +
+      '<div style="margin-bottom:8px">' +
+        '<div class="acct-name">' + c.company_name + '</div>' +
+        '<span class="cust-type ' + typeClass + '" style="margin-top:4px;display:inline-block">' + (c.type||'Prospect') + '</span>' +
       '</div>' +
       detRows + contactsHtml + followupHtml +
       '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #2a4060">' +
