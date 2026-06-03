@@ -1416,6 +1416,7 @@ async function init() {
     renderTabs(); await loadAllParts();
     // Pre-load data for home page stats
     try { await loadJobs(); } catch(e) {}
+    try { await loadCustomers(); } catch(e) {}
     try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) {}
     try { var visits = await db('GET','site_visits?select=*&order=visit_date.desc'); var svM = await db('GET','site_visit_machines?select=*'); var svP = await db('GET','site_visit_parts?select=*'); svM.forEach(function(m){m.site_visit_parts=svP.filter(function(p){return p.site_visit_id===m.site_visit_id;});}); visits.forEach(function(v){v.site_visit_machines=svM.filter(function(m){return m.site_visit_id===v.id;});}); siteVisits=visits; } catch(e) {}
     try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
@@ -3425,7 +3426,7 @@ function printCaseLabel(jobId) {
 
 // ── MULTI-TOOL MANAGEMENT ─────────────────────────────────────────
 
-var FAULT_OPTIONS = ['Feeding Issue','Tensioning Issue','Welding Issue','Cutting Issue','Battery / Power Issue','Error Code Showing','Jammed / Seized','Motor / Gearbox Issue','Physical Damage','Routine Service'];
+var FAULT_OPTIONS = ['Feeding Issue','Tensioning Issue','Welding Issue','Cutting Issue','Battery / Power Issue','Error Code Showing','Jammed / Seized','Motor / Gearbox Issue','Physical Damage','Misuse','Routine Service'];
 
 function addTool() {
   var num = jobToolsLocal.length + 1;
