@@ -1497,6 +1497,17 @@ var _stockOrderFilter = 'low';
 var _stockOrderMachine = '';
 var _stockOrderSupplier = '';
 var _stockOrderSelections = {}; // partId -> qty
+function saveStockOrderDraft() {
+  try { localStorage.setItem('xpak_stockorder_draft', JSON.stringify({sel:_stockOrderSelections,sup:_stockOrderSupplier,mac:_stockOrderMachine,flt:_stockOrderFilter})); } catch(e) {}
+}
+function clearStockOrderDraft() {
+  _stockOrderSelections = {}; _stockOrderSupplier = ''; _stockOrderMachine = '';
+  try { localStorage.removeItem('xpak_stockorder_draft'); } catch(e) {}
+  var mS=document.getElementById('stockOrderMachine'); if(mS) mS.value='';
+  var sS=document.getElementById('stockOrderSupplier'); if(sS) sS.value='';
+  renderStockOrderBuilder();
+  showToast('Draft order cleared');
+}
 
 function setOrderTab(tab) {
   _currentOrderTab = tab;
@@ -1553,9 +1564,22 @@ async function initStockOrderBuilder() {
       var o = document.createElement('option'); o.value = n; o.textContent = n; sSel.appendChild(o);
     });
   }
-  // Default chip
-  var chip = document.getElementById('soChipLow');
-  if (chip) setStockOrderFilter('low', chip);
+  // Restore saved draft if selections are empty (first load or after refresh)
+  if (!Object.keys(_stockOrderSelections).length) {
+    try {
+      var sd = localStorage.getItem('xpak_stockorder_draft');
+      if (sd) { var dr = JSON.parse(sd); if (dr.sel && Object.keys(dr.sel).length) {
+        _stockOrderSelections = dr.sel;
+        if (dr.flt) _stockOrderFilter = dr.flt;
+        if (dr.sup) { _stockOrderSupplier = dr.sup; var sS2=document.getElementById('stockOrderSupplier'); if(sS2) sS2.value=dr.sup; }
+        if (dr.mac) { _stockOrderMachine = dr.mac; var mS2=document.getElementById('stockOrderMachine'); if(mS2) mS2.value=dr.mac; }
+        showToast('💾 Draft restored — ' + Object.keys(dr.sel).length + ' parts selected');
+      }}
+    } catch(e) {}
+  }
+  var chipMap = {all:'soChipAll',low:'soChipLow',star:'soChipStar'};
+  var chip = document.getElementById(chipMap[_stockOrderFilter] || 'soChipLow');
+  if (chip) setStockOrderFilter(_stockOrderFilter || 'low', chip);
   else renderStockOrderBuilder();
 }
 
@@ -1597,7 +1621,8 @@ function renderStockOrderBuilder() {
   var selectedCount = Object.keys(_stockOrderSelections).length;
   var html = '<div class="so-summary">' +
     '<span style="color:#5a8090">Select parts to order, set quantities, then export.</span>' +
-    '<span class="so-summary-val" style="margin-left:auto">' + selectedCount + ' selected</span>' +
+    '<span class="so-summary-val" style="margin-left:auto">' + (selectedCount>0?'💾 ':'') + selectedCount + ' selected</span>' +
+    (selectedCount > 0 ? '<button onclick="clearStockOrderDraft()" style="padding:5px 10px;font-size:11px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:6px;cursor:pointer;font-weight:600">✕ Clear</button>' : '') +
     (selectedCount > 0 ? '<button class="btn-add green" onclick="exportStockOrder()" style="padding:6px 14px;font-size:12px">⬇ Export Excel</button>' : '') +
   '</div>';
 
@@ -1635,12 +1660,13 @@ function renderStockOrderBuilder() {
 function toggleStockSel(partId, checked) {
   if (checked) { _stockOrderSelections[partId] = _stockOrderSelections[partId] || 1; }
   else { delete _stockOrderSelections[partId]; }
+  saveStockOrderDraft();
   renderStockOrderBuilder();
 }
 
 function setStockSelQty(partId, val) {
   var q = Math.max(1, parseInt(val)||1);
-  if (_stockOrderSelections[partId] !== undefined) _stockOrderSelections[partId] = q;
+  if (_stockOrderSelections[partId] !== undefined) { _stockOrderSelections[partId] = q; saveStockOrderDraft(); }
 }
 
 async function toggleStockItem(partId) {
@@ -1692,7 +1718,7 @@ async function exportStockOrder() {
     ];
     items.forEach(function(item) {
       var p = item.part;
-      rows.push([p.machineName||'', p.key_no, item.suppPartNo||'', p.description, item.qty, '', '']);
+      rows.push([p.machineName||'', p.key_no, item.suppPartNo||'', p.description, item.qty, parseFloat(p.cost_price)||0, '']);
     });
     var ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{wch:18},{wch:14},{wch:16},{wch:38},{wch:5},{wch:14},{wch:20}];
