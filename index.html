@@ -41,6 +41,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .loan-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #a78bfa;cursor:pointer;transition:background 0.1s}
 .loan-card:hover{background:#1a2a3d}
 .loan-card.overdue{border-left-color:#ef4444}
+.loan-card.trial{border-left-color:#f59e0b}
+.trial-badge{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
 .loan-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px}
 .loan-number{font-size:11px;font-weight:700;color:#a78bfa;font-family:"Courier New",monospace}
 .loan-status-badge{font-size:10px;font-weight:700;border-radius:10px;padding:2px 9px;white-space:nowrap;flex-shrink:0}
@@ -683,8 +685,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 <div class="loan-toolbar" id="loanToolbar" style="display:none">
   <div class="loan-view-toggle">
     <button class="loan-view-btn active" id="btnLoanActive" onclick="setLoanView('active')">Active / Overdue</button>
+    <button class="loan-view-btn" id="btnLoanTrials" onclick="setLoanView('trials')">🏷️ Trials</button>
     <button class="loan-view-btn" id="btnLoanRegister" onclick="setLoanView('register')">Tool Register</button>
   </div>
+  <button class="btn-add" style="background:#1e3048;border:1px solid #5a8090;color:#8aa8c0;font-size:12px" onclick="generateStockTakeReport()">📋 Stock Take</button>
   <button class="btn-add" style="background:#a78bfa;margin-left:auto" onclick="openNewLoanModal()">+ New Loan</button>
   <button class="btn-add" style="background:#1e3048;border:1px solid #a78bfa;color:#a78bfa" onclick="openLoanToolModal()">+ Add Loan Tool</button>
 </div>
@@ -1059,6 +1063,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <div class="modal-header"><div class="modal-title" id="loanModalTitle">New Loan</div><button class="modal-close" onclick="closeLoanModal()">x</button></div>
     <div class="section-label">Tool</div>
     <div class="field"><label>Loan Tool *</label><select id="lToolId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select tool --</option></select></div>
+    <div class="field" style="padding:6px 0 2px">
+      <label style="margin:0;font-size:12px;color:#8aa8c0;cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none">
+        <input type="checkbox" id="lIsTrial" onchange="toggleTrialMode(this.checked)" style="width:15px;height:15px;accent-color:#f59e0b;cursor:pointer">
+        <span style="font-weight:700">🏷️ Trial Tool</span>
+        <span style="font-size:10px;color:#5a8090">New machine on trial — not regular loan stock</span>
+      </label>
+    </div>
     <div class="g2">
       <div class="field"><label>Condition Out</label><select id="lConditionOut" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
       <div class="field"><label>Cycle Count Out</label><input id="lCycleCountOut" type="number" min="0" placeholder="e.g. 12500"></div>
@@ -1088,6 +1099,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
         <div class="field"><label>Condition In</label><select id="lConditionIn" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
         <div class="field"><label>Cycle Count In</label><input id="lCycleCountIn" type="number" min="0" placeholder="e.g. 13200"></div>
         <div class="field"><label>Photo In (SharePoint link)</label><input id="lPhotoIn" placeholder="Paste link"></div>
+      </div>
+      <div class="field" id="lTrialOutcomeField" style="display:none">
+        <label>Trial Outcome *</label>
+        <select id="lTrialOutcome" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #f59e0b;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <option value="">-- Select outcome --</option>
+          <option value="Returned to Stock">Returned to Stock</option>
+          <option value="Converted to Sale">Converted to Sale</option>
+          <option value="Written Off">Written Off</option>
+        </select>
       </div>
     </div>
     <div style="display:flex;gap:8px">
@@ -1767,8 +1787,14 @@ function switchToAgreements() {
 function setLoanView(v){
   loanView=v;
   document.getElementById('btnLoanActive').classList.toggle('active',v==='active');
+  document.getElementById('btnLoanTrials').classList.toggle('active',v==='trials');
   document.getElementById('btnLoanRegister').classList.toggle('active',v==='register');
   renderLoanView();
+}
+function toggleTrialMode(checked){
+  var modal=document.querySelector('#loanOverlay .modal');
+  if(modal) modal.style.borderTopColor=checked?'#f59e0b':'#a78bfa';
+  document.getElementById('lReason').placeholder=checked?'e.g. Trial for potential purchase':'e.g. Customer tool in for service';
 }
 function xplNum(n){return 'XPL-'+String(n).padStart(3,'0');}
 function fmtMonth(d){ var dt=new Date(d+'T12:00:00'); return dt.toLocaleString('default',{month:'long',year:'numeric'}); }
@@ -1781,25 +1807,29 @@ async function loadLoans(){
 function renderLoanView(){if(loanView==='register')renderToolRegister();else renderActiveLoans();}
 function renderActiveLoans(){
   var today=new Date(); today.setHours(0,0,0,0);
-  var active=loans.filter(function(l){return l.status!=='RETURNED';});
-  var overdue=active.filter(function(l){return l.expected_return&&new Date(l.expected_return)<today;});
-  document.getElementById('hSub').textContent='Loan Tools — '+active.length+' active';
+  var allActive=loans.filter(function(l){return l.status!=='RETURNED';});
+  var active=loanView==='trials'?allActive.filter(function(l){return !!l.is_trial;}):allActive;
+  var overdue=allActive.filter(function(l){return l.expected_return&&new Date(l.expected_return)<today;});
+  var trials=allActive.filter(function(l){return !!l.is_trial;});
+  document.getElementById('hSub').textContent='Loan Tools — '+allActive.length+' active'+(trials.length?' · '+trials.length+' trial':'');
   document.getElementById('lowBadge').innerHTML=overdue.length?'<div class="badge-low">'+overdue.length+' OVERDUE</div>':'';
-  if(!active.length){document.getElementById('loanList').innerHTML='<div class="center"><div class="icon">✓</div><div style="color:#10b981">No active loans</div></div>';return;}
+  if(!active.length){document.getElementById('loanList').innerHTML='<div class="center"><div class="icon">'+(loanView==='trials'?'🏷️':'✓')+'</div><div style="color:'+(loanView==='trials'?'#f59e0b':'#10b981')+'">'+(loanView==='trials'?'No trial tools out':'No active loans')+'</div></div>';return;}
   document.getElementById('loanList').innerHTML=active.map(function(l){
     var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;});
     var toolName=tool?tool.name+(tool.serial_number?' S/N:'+tool.serial_number:''):'Unknown Tool';
     var isOverdue=l.expected_return&&new Date(l.expected_return)<today;
+    var isTrial=!!l.is_trial;
     var daysOut=l.loaned_date?Math.floor((today-new Date(l.loaned_date))/86400000):0;
-    var col=isOverdue?'#ef4444':'#a78bfa';
-    return '<div class="loan-card'+(isOverdue?' overdue':'')+'" onclick="openEditLoanModal(\'' + l.id + '\')">'+
+    var col=isOverdue?'#ef4444':isTrial?'#f59e0b':'#a78bfa';
+    var statusLabel=isOverdue?'OVERDUE':isTrial?'TRIAL':'ACTIVE';
+    return '<div class="loan-card'+(isOverdue?' overdue':'')+(isTrial?' trial':'')+'" onclick="openEditLoanModal(\'' + l.id + '\')">'+
       '<div class="loan-card-top"><div><div class="loan-number">'+xplNum(l.loan_number)+'</div><div class="loan-customer">'+(l.customer||'No customer')+'</div></div>'+
-      '<span class="loan-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+(isOverdue?'OVERDUE':'ACTIVE')+'</span></div>'+
+      '<span class="loan-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+statusLabel+'</span></div>'+
       '<div class="loan-meta"><span>'+toolName+'</span>'+(l.contact_name?'<span>'+l.contact_name+(l.mobile?' '+l.mobile:'')+'</span>':'')+
       '<span>Out: '+fmtDate(l.loaned_date)+(daysOut>0?' ('+daysOut+'d)':'')+'</span>'+
       (l.expected_return?'<span'+(isOverdue?' class="loan-overdue-flag"':'')+'>Due '+fmtDate(l.expected_return)+'</span>':'')+
       (l.loaned_by?'<span>By: '+l.loaned_by+'</span>':'')+
-      (l.reason_for_loan?'<span style="color:#a78bfa">'+l.reason_for_loan+'</span>':'')+
+      (l.reason_for_loan?'<span style="color:'+(isTrial?'#f59e0b':'#a78bfa')+'">'+l.reason_for_loan+'</span>':'')+
       '</div></div>';
   }).join('');
 }
@@ -1823,6 +1853,8 @@ function clearLoanForm(){
   ['lCycleCountOut','lCycleCountIn'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('lLoanedDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('lExpectedReturn').value=''; document.getElementById('lReturnedDate').value='';
+  document.getElementById('lIsTrial').checked=false; document.getElementById('lTrialOutcome').value=''; document.getElementById('lTrialOutcomeField').style.display='none';
+  toggleTrialMode(false);
 }
 function openNewLoanModal(){
   editingLoan=null; document.getElementById('loanModalTitle').textContent='New Loan'; clearLoanForm();
@@ -1844,6 +1876,8 @@ function openEditLoanModal(loanId){
   editingLoan=l; document.getElementById('loanModalTitle').textContent=xplNum(l.loan_number)+' — '+(l.customer||'');
   var sel=document.getElementById('lToolId');
   sel.innerHTML='<option value="">-- Select tool --</option>'+loanTools.map(function(t){return '<option value="'+t.id+'"'+(t.id===l.loan_tool_id?' selected':'')+'>'+t.name+(t.serial_number?' ('+t.serial_number+')':'')+'</option>';}).join('');
+  var isTrial=!!l.is_trial; document.getElementById('lIsTrial').checked=isTrial; toggleTrialMode(isTrial);
+  if(l.trial_outcome){document.getElementById('lTrialOutcome').value=l.trial_outcome;}
   ['lCustomer','lContact','lPhone','lMobile','lEmail','lReason','lPhotoOut','lPhotoIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id){
     var key={lCustomer:'customer',lContact:'contact_name',lPhone:'phone',lMobile:'mobile',lEmail:'email',lReason:'reason_for_loan',lPhotoOut:'photo_out',lPhotoIn:'photo_in',lLoanedBy:'loaned_by',lLinkedJob:'linked_job',lNotes:'notes'}[id];
     document.getElementById(id).value=l[key]||'';
@@ -1864,7 +1898,7 @@ async function saveLoan(){
   var toolId=document.getElementById('lToolId').value, customer=document.getElementById('lCustomer').value.trim();
   if(!toolId){showToast('Select a tool','error');return;} if(!customer){showToast('Customer required','error');return;}
   var btn=document.getElementById('btnSaveLoan'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={loan_tool_id:toolId,customer:customer,contact_name:document.getElementById('lContact').value||null,phone:document.getElementById('lPhone').value||null,mobile:document.getElementById('lMobile').value||null,email:document.getElementById('lEmail').value||null,condition_out:document.getElementById('lConditionOut').value||null,condition_in:document.getElementById('lConditionIn').value||null,cycle_count_out:parseInt(document.getElementById('lCycleCountOut').value)||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_out:document.getElementById('lPhotoOut').value||null,photo_in:document.getElementById('lPhotoIn').value||null,reason_for_loan:document.getElementById('lReason').value||null,loaned_date:document.getElementById('lLoanedDate').value||null,expected_return:document.getElementById('lExpectedReturn').value||null,returned_date:document.getElementById('lReturnedDate').value||null,loaned_by:document.getElementById('lLoanedBy').value||null,linked_job:document.getElementById('lLinkedJob').value||null,notes:document.getElementById('lNotes').value||null,status:'ACTIVE',updated_at:new Date().toISOString()};
+  var payload={loan_tool_id:toolId,customer:customer,contact_name:document.getElementById('lContact').value||null,phone:document.getElementById('lPhone').value||null,mobile:document.getElementById('lMobile').value||null,email:document.getElementById('lEmail').value||null,condition_out:document.getElementById('lConditionOut').value||null,condition_in:document.getElementById('lConditionIn').value||null,cycle_count_out:parseInt(document.getElementById('lCycleCountOut').value)||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_out:document.getElementById('lPhotoOut').value||null,photo_in:document.getElementById('lPhotoIn').value||null,reason_for_loan:document.getElementById('lReason').value||null,loaned_date:document.getElementById('lLoanedDate').value||null,expected_return:document.getElementById('lExpectedReturn').value||null,returned_date:document.getElementById('lReturnedDate').value||null,loaned_by:document.getElementById('lLoanedBy').value||null,linked_job:document.getElementById('lLinkedJob').value||null,notes:document.getElementById('lNotes').value||null,is_trial:document.getElementById('lIsTrial').checked,trial_outcome:document.getElementById('lTrialOutcome').value||null,status:'ACTIVE',updated_at:new Date().toISOString()};
   try{
     if(editingLoan) await db('PATCH','loans?id=eq.'+editingLoan.id,payload);
     else{
@@ -1893,13 +1927,21 @@ async function markLoanReturned(){
   document.getElementById('lReturnSection').style.display='block';
   document.getElementById('lReturnedDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('btnMarkReturned').style.display='none';
+  var isTrial=editingLoan.is_trial;
+  if(isTrial) document.getElementById('lTrialOutcomeField').style.display='block';
   var btn=document.getElementById('btnSaveLoan'); btn.textContent='Save & Mark Returned'; btn.style.background='#10b981';
   btn.onclick=async function(){
     var toolId=editingLoan.loan_tool_id; btn.disabled=true;
+    var trialOutcome=document.getElementById('lTrialOutcome').value||null;
+    if(isTrial&&!trialOutcome){showToast('Select a trial outcome first','error');btn.disabled=false;return;}
     try{
-      await db('PATCH','loans?id=eq.'+editingLoan.id,{status:'RETURNED',returned_date:document.getElementById('lReturnedDate').value||new Date().toISOString().split('T')[0],condition_in:document.getElementById('lConditionIn').value||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_in:document.getElementById('lPhotoIn').value||null,updated_at:new Date().toISOString()});
-      var retPatch={is_available:true,updated_at:new Date().toISOString()}; var cin=parseInt(document.getElementById('lCycleCountIn').value); if(!isNaN(cin)) retPatch.current_cycle_count=cin; await db('PATCH','loan_tools?id=eq.'+toolId,retPatch); var tidx=loanTools.findIndex(function(x){return x.id===toolId;}); if(tidx>-1&&!isNaN(cin)) loanTools[tidx].current_cycle_count=cin;
-      showToast('Returned'); closeLoanModal(); await loadLoans();
+      await db('PATCH','loans?id=eq.'+editingLoan.id,{status:'RETURNED',returned_date:document.getElementById('lReturnedDate').value||new Date().toISOString().split('T')[0],condition_in:document.getElementById('lConditionIn').value||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_in:document.getElementById('lPhotoIn').value||null,trial_outcome:trialOutcome,updated_at:new Date().toISOString()});
+      // Only mark tool available if loan (not trial) OR trial returned to stock
+      if(!isTrial||trialOutcome==='Returned to Stock'){
+        var retPatch={is_available:true,updated_at:new Date().toISOString()}; var cin=parseInt(document.getElementById('lCycleCountIn').value); if(!isNaN(cin)) retPatch.current_cycle_count=cin; await db('PATCH','loan_tools?id=eq.'+toolId,retPatch); var tidx=loanTools.findIndex(function(x){return x.id===toolId;}); if(tidx>-1&&!isNaN(cin)) loanTools[tidx].current_cycle_count=cin;
+      }
+      var toastMsg=isTrial?'Trial closed — '+trialOutcome:'Returned';
+      showToast(toastMsg); closeLoanModal(); await loadLoans();
     }catch(e){showToast('Failed: '+e.message,'error');}
     finally{btn.disabled=false;}
   };
@@ -1918,6 +1960,95 @@ function printLoanTag(){
   if(l.expected_return) w.document.write('<div class="row"><span class="lbl">Return By</span><span class="val">'+fmtDate(l.expected_return)+'</span></div>');
   if(l.loaned_by) w.document.write('<div class="row"><span class="lbl">Loaned By</span><span class="val">'+l.loaned_by+'</span></div>');
   w.document.write('</div></body></html>'); w.document.close(); setTimeout(function(){w.print();},300);
+}
+
+function generateStockTakeReport(){
+  var today = new Date(); today.setHours(0,0,0,0);
+  var active = loans.filter(function(l){return l.status!=='RETURNED';});
+  var loanOnly = active.filter(function(l){return !l.is_trial;});
+  var trials   = active.filter(function(l){return !!l.is_trial;});
+  var overdue  = active.filter(function(l){return l.expected_return&&new Date(l.expected_return)<today;});
+  var dateStr  = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+
+  function row(l, type){
+    var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;});
+    var toolName=tool?tool.name:'Unknown';
+    var sn=tool&&tool.serial_number?tool.serial_number:'—';
+    var daysOut=l.loaned_date?Math.floor((today-new Date(l.loaned_date))/86400000):0;
+    var isOD=l.expected_return&&new Date(l.expected_return)<today;
+    var odStyle=isOD?'color:#c0392b;font-weight:700':'';
+    var typeBadge=type==='trial'?'<span style="background:#fff3cd;color:#856404;border:1px solid #ffc107;font-size:9pt;padding:1px 6px;border-radius:3px;font-weight:700">TRIAL</span>':'';
+    return '<tr>'
+      +'<td>'+xplNum(l.loan_number)+' '+typeBadge+'</td>'
+      +'<td>'+toolName+'</td>'
+      +'<td>'+sn+'</td>'
+      +'<td>'+(l.customer||'—')+'</td>'
+      +'<td>'+(l.contact_name||'—')+(l.mobile?'<br><span style="font-size:8pt;color:#555">'+l.mobile+'</span>':'')+'</td>'
+      +'<td>'+fmtDate(l.loaned_date)+'<br><span style="font-size:8pt;color:#555">'+daysOut+' days</span></td>'
+      +'<td style="'+odStyle+'">'+(l.expected_return?fmtDate(l.expected_return):'—')+(isOD?' ⚠':'')+'</td>'
+      +'<td>'+(l.loaned_by||'—')+'</td>'
+      +'</tr>';
+  }
+
+  var tHead='<tr style="background:#1e3a5f;color:#fff"><th>Loan No.</th><th>Tool</th><th>Serial No.</th><th>Customer</th><th>Contact</th><th>Date Out</th><th>Due Back</th><th>Issued By</th></tr>';
+  var tableStyle='width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:20px';
+  var tdStyle='padding:5px 7px;border:1px solid #dee2e6;vertical-align:top';
+
+  var sections='';
+  // All active (loans + trials combined)
+  sections+='<h3 style="color:#1e3a5f;margin:18px 0 6px;font-size:11pt">All Active — Loans &amp; Trials ('+active.length+')</h3>';
+  sections+='<table style="'+tableStyle+'"><thead>'+tHead+'</thead><tbody>';
+  active.forEach(function(l){sections+=row(l,l.is_trial?'trial':'loan');});
+  sections+='</tbody></table>';
+
+  // Summary
+  var summary='<div style="display:flex;gap:24px;margin:10px 0 20px;flex-wrap:wrap">'
+    +'<div style="background:#e8f4fd;border:1px solid #bee3f8;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#1e3a5f">'+active.length+'</div><div style="font-size:8pt;color:#555">TOTAL OUT</div></div>'
+    +'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#166534">'+loanOnly.length+'</div><div style="font-size:8pt;color:#555">LOAN TOOLS</div></div>'
+    +'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#92400e">'+trials.length+'</div><div style="font-size:8pt;color:#555">TRIAL TOOLS</div></div>'
+    +'<div style="background:'+(overdue.length?'#fef2f2':'#f8fafc')+';border:1px solid '+(overdue.length?'#fecaca':'#e2e8f0')+';border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:'+(overdue.length?'#991b1b':'#475569')+'">'+overdue.length+'</div><div style="font-size:8pt;color:#555">OVERDUE</div></div>'
+    +'</div>';
+
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Loan &amp; Trial Tool Stock Take</title>'
+    +'<style>@media print{@page{size:A4 landscape;margin:12mm} .no-print{display:none}}'
+    +'body{font-family:Arial,sans-serif;color:#222;padding:16px;font-size:10pt}'
+    +'table td,table th{'+tdStyle+'}'
+    +'th{font-size:8.5pt;font-weight:700;text-align:left}'
+    +'tr:nth-child(even){background:#f9fafb}'
+    +'</style></head><body>');
+  w.document.write('<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
+    +'<div><div style="font-size:16pt;font-weight:900;color:#1e3a5f">X-PAK GLOBAL — SERVICE</div>'
+    +'<div style="font-size:11pt;font-weight:700;color:#555">Loan &amp; Trial Tool Stock Take</div></div>'
+    +'<div style="text-align:right;font-size:9pt;color:#555">Generated: '+dateStr+'<br>By: '+(_currentUser?_currentUser.email.split('@')[0]:'')+'</div></div>');
+  w.document.write('<hr style="border:none;border-top:2px solid #1e3a5f;margin:8px 0 14px">');
+  w.document.write(summary);
+  w.document.write(sections);
+  w.document.write('<div class="no-print" style="margin-top:20px;display:flex;gap:10px">'
+    +'<button onclick="window.print()" style="padding:9px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;font-size:10pt;cursor:pointer;font-weight:700">🖨 Print / Save PDF</button>'
+    +'<button onclick="exportStockTakeXL()" style="padding:9px 20px;background:#217346;color:#fff;border:none;border-radius:6px;font-size:10pt;cursor:pointer;font-weight:700">⬇ Export Excel</button>'
+    +'</div>');
+
+  // Inline Excel export using SheetJS (loaded from parent window)
+  w.document.write('<script>function exportStockTakeXL(){'
+    +'var rows=[["Loan No.","Type","Tool","Serial No.","Customer","Contact","Mobile","Date Out","Days Out","Due Back","Overdue","Issued By","Notes"]];'
+    +'var data='+JSON.stringify(active.map(function(l){
+        var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;});
+        var daysOut=l.loaned_date?Math.floor((today-new Date(l.loaned_date))/86400000):0;
+        var isOD=!!(l.expected_return&&new Date(l.expected_return)<today);
+        return [xplNum(l.loan_number),l.is_trial?'Trial':'Loan',tool?tool.name:'Unknown',tool&&tool.serial_number?tool.serial_number:'',l.customer||'',l.contact_name||'',l.mobile||'',l.loaned_date?fmtDate(l.loaned_date):'',daysOut,l.expected_return?fmtDate(l.expected_return):'',isOD?'YES':'',l.loaned_by||'',l.notes||''];
+      }))+';'
+    +'data.forEach(function(r){rows.push(r);});'
+    +'var wb=XLSX.utils.book_new();var ws=XLSX.utils.aoa_to_sheet(rows);'
+    +'ws["!cols"]=[{wch:10},{wch:7},{wch:28},{wch:14},{wch:28},{wch:20},{wch:14},{wch:12},{wch:9},{wch:12},{wch:8},{wch:14},{wch:30}];'
+    +'XLSX.utils.book_append_sheet(wb,ws,"Stock Take");'
+    +'XLSX.writeFile(wb,"XPak_StockTake_'+new Date().toISOString().split('T')[0]+'.xlsx");'
+    +'}<\/script>');
+
+  // Load SheetJS into the popup from CDN
+  w.document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+  w.document.write('</body></html>');
+  w.document.close();
 }
 async function deleteLoan(){
   if(!editingLoan||!confirm('Delete this loan record?')) return;
