@@ -2063,7 +2063,7 @@ function generateStockTakeReport(){
     +'data.forEach(function(r){rows.push(r);});'
     +'var wb=XLSX.utils.book_new();var ws=XLSX.utils.aoa_to_sheet(rows);'
     +'ws["!cols"]=[{wch:10},{wch:7},{wch:28},{wch:14},{wch:28},{wch:20},{wch:14},{wch:12},{wch:9},{wch:12},{wch:8},{wch:14},{wch:30}];'
-    +'XLSX.utils.book_append_sheet(wb,ws,"Out on Loan-Trial");'+"\n"+'var avRows=[["Tool","X-Pak Name","X-Pak Code","Serial No.","Condition","Cycle Count","Location","Notes"]];'+"\n"+'var avData='+JSON.stringify(available.map(function(t){return [t.name||"",t.xpak_name||"",t.xpak_code||"",t.serial_number||"",t.condition||"",t.current_cycle_count!=null?t.current_cycle_count:"",t.location||"",t.notes||""];}))+';'+"\n"+'avData.forEach(function(r){avRows.push(r);});'+"\n"+'var ws2=XLSX.utils.aoa_to_sheet(avRows);'+"\n"+'ws2["!cols"]=[{wch:28},{wch:16},{wch:12},{wch:14},{wch:12},{wch:12},{wch:18},{wch:30}];'+"\n"+'XLSX.utils.book_append_sheet(wb,ws2,"Available in Workshop");''
+    +'XLSX.utils.book_append_sheet(wb,ws,"Out on Loan-Trial");'+"\n"+'var avRows=[["Tool","X-Pak Name","X-Pak Code","Serial No.","Condition","Cycle Count","Location","Notes"]];'+"\n"+'var avData='+JSON.stringify(available.map(function(t){return [t.name||"",t.xpak_name||"",t.xpak_code||"",t.serial_number||"",t.condition||"",t.current_cycle_count!=null?t.current_cycle_count:"",t.location||"",t.notes||""];}))+';'+"\n"+'avData.forEach(function(r){avRows.push(r);});'+"\n"+'var ws2=XLSX.utils.aoa_to_sheet(avRows);'+"\n"+'ws2["!cols"]=[{wch:28},{wch:16},{wch:12},{wch:14},{wch:12},{wch:12},{wch:18},{wch:30}];'+"\n"+'XLSX.utils.book_append_sheet(wb,ws2,"Available in Workshop");'
     +'XLSX.writeFile(wb,"XPak_StockTake_'+new Date().toISOString().split('T')[0]+'.xlsx");'
     +'}<\/script>');
 
