@@ -1964,11 +1964,12 @@ function printLoanTag(){
 
 function generateStockTakeReport(){
   var today = new Date(); today.setHours(0,0,0,0);
-  var active = loans.filter(function(l){return l.status!=='RETURNED';});
-  var loanOnly = active.filter(function(l){return !l.is_trial;});
-  var trials   = active.filter(function(l){return !!l.is_trial;});
-  var overdue  = active.filter(function(l){return l.expected_return&&new Date(l.expected_return)<today;});
-  var dateStr  = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+  var active    = loans.filter(function(l){return l.status!=='RETURNED';});
+  var loanOnly  = active.filter(function(l){return !l.is_trial;});
+  var trials    = active.filter(function(l){return !!l.is_trial;});
+  var overdue   = active.filter(function(l){return l.expected_return&&new Date(l.expected_return)<today;});
+  var available = loanTools.filter(function(t){return !!t.is_available;});
+  var dateStr   = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
 
   function row(l, type){
     var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;});
@@ -1990,22 +1991,43 @@ function generateStockTakeReport(){
       +'</tr>';
   }
 
+  function availRow(t){
+    return '<tr>'
+      +'<td><strong>'+t.name+'</strong>'+(t.xpak_name?'<br><span style="font-size:8pt;color:#1e7e9c">'+t.xpak_name+(t.xpak_code?' ['+t.xpak_code+']':'')+'</span>':'')+'</td>'
+      +'<td>'+(t.serial_number||'\u2014')+'</td>'
+      +'<td>'+(t.condition||'\u2014')+'</td>'
+      +'<td>'+(t.current_cycle_count!=null?t.current_cycle_count.toLocaleString():'\u2014')+'</td>'
+      +'<td>'+(t.location||'\u2014')+'</td>'
+      +'<td style="color:#555;font-size:8pt">'+(t.notes||'')+'</td>'
+      +'</tr>';
+  }
+
   var tHead='<tr style="background:#1e3a5f;color:#fff"><th>Loan No.</th><th>Tool</th><th>Serial No.</th><th>Customer</th><th>Contact</th><th>Date Out</th><th>Due Back</th><th>Issued By</th></tr>';
+  var avHead='<tr style="background:#166534;color:#fff"><th>Tool</th><th>Serial No.</th><th>Condition</th><th>Cycle Count</th><th>Location</th><th>Notes</th></tr>';
   var tableStyle='width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:20px';
   var tdStyle='padding:5px 7px;border:1px solid #dee2e6;vertical-align:top';
 
   var sections='';
-  // All active (loans + trials combined)
-  sections+='<h3 style="color:#1e3a5f;margin:18px 0 6px;font-size:11pt">All Active — Loans &amp; Trials ('+active.length+')</h3>';
+  // Out on loan/trial
+  sections+='<h3 style="color:#1e3a5f;margin:18px 0 6px;font-size:11pt">Out on Loan / Trial ('+active.length+')</h3>';
   sections+='<table style="'+tableStyle+'"><thead>'+tHead+'</thead><tbody>';
-  active.forEach(function(l){sections+=row(l,l.is_trial?'trial':'loan');});
+  if(active.length) active.forEach(function(l){sections+=row(l,l.is_trial?'trial':'loan');});
+  else sections+='<tr><td colspan="8" style="text-align:center;color:#555;padding:12px">No active loans or trials</td></tr>';
+  sections+='</tbody></table>';
+  // Available in workshop
+  sections+='<h3 style="color:#166534;margin:18px 0 6px;font-size:11pt">Available — In Workshop ('+available.length+')</h3>';
+  sections+='<table style="'+tableStyle+'"><thead>'+avHead+'</thead><tbody>';
+  if(available.length) available.forEach(function(t){sections+=availRow(t);});
+  else sections+='<tr><td colspan="6" style="text-align:center;color:#555;padding:12px">No tools currently in workshop</td></tr>';
   sections+='</tbody></table>';
 
   // Summary
-  var summary='<div style="display:flex;gap:24px;margin:10px 0 20px;flex-wrap:wrap">'
+  var summary='<div style="display:flex;gap:16px;margin:10px 0 20px;flex-wrap:wrap">'
+    +'<div style="background:#e8f4fd;border:1px solid #bee3f8;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#1e3a5f">'+loanTools.length+'</div><div style="font-size:8pt;color:#555">TOTAL TOOLS</div></div>'
     +'<div style="background:#e8f4fd;border:1px solid #bee3f8;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#1e3a5f">'+active.length+'</div><div style="font-size:8pt;color:#555">TOTAL OUT</div></div>'
-    +'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#166534">'+loanOnly.length+'</div><div style="font-size:8pt;color:#555">LOAN TOOLS</div></div>'
-    +'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#92400e">'+trials.length+'</div><div style="font-size:8pt;color:#555">TRIAL TOOLS</div></div>'
+    +'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#166534">'+loanOnly.length+'</div><div style="font-size:8pt;color:#555">ON LOAN</div></div>'
+    +'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#92400e">'+trials.length+'</div><div style="font-size:8pt;color:#555">ON TRIAL</div></div>'
+    +'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:#166534">'+available.length+'</div><div style="font-size:8pt;color:#555">IN WORKSHOP</div></div>'
     +'<div style="background:'+(overdue.length?'#fef2f2':'#f8fafc')+';border:1px solid '+(overdue.length?'#fecaca':'#e2e8f0')+';border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:20pt;font-weight:900;color:'+(overdue.length?'#991b1b':'#475569')+'">'+overdue.length+'</div><div style="font-size:8pt;color:#555">OVERDUE</div></div>'
     +'</div>';
 
@@ -2041,7 +2063,7 @@ function generateStockTakeReport(){
     +'data.forEach(function(r){rows.push(r);});'
     +'var wb=XLSX.utils.book_new();var ws=XLSX.utils.aoa_to_sheet(rows);'
     +'ws["!cols"]=[{wch:10},{wch:7},{wch:28},{wch:14},{wch:28},{wch:20},{wch:14},{wch:12},{wch:9},{wch:12},{wch:8},{wch:14},{wch:30}];'
-    +'XLSX.utils.book_append_sheet(wb,ws,"Stock Take");'
+    +'XLSX.utils.book_append_sheet(wb,ws,"Out on Loan-Trial");'+"\n"+'var avRows=[["Tool","X-Pak Name","X-Pak Code","Serial No.","Condition","Cycle Count","Location","Notes"]];'+"\n"+'var avData='+JSON.stringify(available.map(function(t){return [t.name||"",t.xpak_name||"",t.xpak_code||"",t.serial_number||"",t.condition||"",t.current_cycle_count!=null?t.current_cycle_count:"",t.location||"",t.notes||""];}))+';'+"\n"+'avData.forEach(function(r){avRows.push(r);});'+"\n"+'var ws2=XLSX.utils.aoa_to_sheet(avRows);'+"\n"+'ws2["!cols"]=[{wch:28},{wch:16},{wch:12},{wch:14},{wch:12},{wch:12},{wch:18},{wch:30}];'+"\n"+'XLSX.utils.book_append_sheet(wb,ws2,"Available in Workshop");''
     +'XLSX.writeFile(wb,"XPak_StockTake_'+new Date().toISOString().split('T')[0]+'.xlsx");'
     +'}<\/script>');
 
