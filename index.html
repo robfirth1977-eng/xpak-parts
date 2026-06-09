@@ -1144,6 +1144,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       </datalist>
     </div>
     <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
+    <div class="g2">
+      <div class="field"><label>Date of Manufacture</label><input id="ltManufDate" placeholder="e.g. 2022 or Jan 2022"></div>
+      <div class="field"><label>Warranty Period</label><input id="ltWarranty" list="ltWarrantyList" placeholder="e.g. 12 Months" autocomplete="off"><datalist id="ltWarrantyList"><option value="12 Months"><option value="24 Months"><option value="36 Months"><option value="5 Years"><option value="None"></datalist></div>
+    </div>
     <div style="display:flex;gap:8px">
     <button class="btn-save" style="background:#a78bfa;flex:1" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
     <button onclick="closeLoanToolModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
@@ -2082,8 +2086,8 @@ async function deleteLoan(){
   }catch(e){showToast('Delete failed','error');}
 }
 function openLoanToolModal(toolId){
-  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltCycleCount').value=t.current_cycle_count!=null?t.current_cycle_count:''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltXpakName').value=t.xpak_name||''; document.getElementById('ltXpakCode').value=t.xpak_code||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('btnDeleteLoanTool').style.display='block'; document.getElementById('btnPrintIdLabel').style.display='block';}
-  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation','ltXpakName','ltXpakCode','ltCycleCount'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
+  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltCycleCount').value=t.current_cycle_count!=null?t.current_cycle_count:''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltXpakName').value=t.xpak_name||''; document.getElementById('ltXpakCode').value=t.xpak_code||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('ltManufDate').value=t.date_of_manufacture||''; document.getElementById('ltWarranty').value=t.warranty_period||''; document.getElementById('btnDeleteLoanTool').style.display='block'; document.getElementById('btnPrintIdLabel').style.display='block';}
+  else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation','ltXpakName','ltXpakCode','ltCycleCount','ltManufDate','ltWarranty'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
   document.getElementById('loanToolOverlay').classList.add('show');
   setTimeout(function(){document.getElementById('ltName').focus();},100);
 }
@@ -2150,7 +2154,7 @@ function printToolIdLabel() {
 async function saveLoanTool(){
   var name=document.getElementById('ltName').value.trim(); if(!name){showToast('Tool name required','error');return;}
   var btn=document.getElementById('btnSaveLoanTool'); btn.disabled=true; btn.textContent='Saving...';
-  var cycleVal=document.getElementById('ltCycleCount').value; var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,current_cycle_count:cycleVal!==''?parseInt(cycleVal):null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,is_available:true,updated_at:new Date().toISOString()};
+  var cycleVal=document.getElementById('ltCycleCount').value; var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,current_cycle_count:cycleVal!==''?parseInt(cycleVal):null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,date_of_manufacture:document.getElementById('ltManufDate').value||null,warranty_period:document.getElementById('ltWarranty').value||null,is_available:true,updated_at:new Date().toISOString()};
   try{if(editingLoanTool){await db('PATCH','loan_tools?id=eq.'+editingLoanTool.id,payload);showToast('Tool updated');await loadLoans();var r2=loanTools.find(function(x){return x.id===editingLoanTool.id;});if(r2)editingLoanTool=r2;}else{await db('POST','loan_tools',payload);showToast('Tool added');closeLoanToolModal();await loadLoans();}}
   catch(e){showToast('Save failed: '+e.message,'error');}finally{btn.disabled=false;btn.textContent='Save Tool';}
 }
@@ -2873,7 +2877,7 @@ function clearJobForm() {
   document.getElementById('jHoursSpent').value = '';
   jobLinks = []; renderLinksList();
   jobPartsLocal = [];
-  jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' }];
+  jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', date_of_manufacture: '', warranty_period: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' }];
   renderToolsList();
 }
 
@@ -2919,7 +2923,7 @@ async function openEditJobModal(jobId) {
       });
     } else {
       // Migrate legacy single-tool job fields into Tool 1
-      jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(j.machine_id||''), service_fee: j.labour_cost || '' }];
+      jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', date_of_manufacture: j.date_of_manufacture || '', warranty_period: j.warranty_period || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(j.machine_id||''), service_fee: j.labour_cost || '' }];
     }
   } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: 'All components inspected for wear and damage. Motor and mechanisms checked for correct operation. Sealing and cutting assemblies inspected and adjusted. Electrical circuit tested. All fasteners checked and tightened. Unit fully cleaned and lubricated. Tool function tested under load and operation confirmed satisfactory.', service_fee: '' }]; }
   renderToolsList();
@@ -3006,7 +3010,7 @@ async function saveJob() {
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
+      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
     }
     // Save job parts
     for (var i = 0; i < jobPartsLocal.length; i++) {
@@ -3660,6 +3664,8 @@ function renderToolsList() {
       '<div class="g2">' +
         '<div class="field"><label>Machine Model</label><div class="machine-row"><select onchange="setToolField(\'' + t._tempId + '\',\'machine_id\',this.value);renderToolsList()" style="flex:1;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">' + mOpts + '</select><button class="btn-add-machine" onclick="openMachineModalFromJob(\'' + t._tempId + '\')">+ New</button></div></div>' +
         '<div class="field"><label>Serial Number</label><input value="' + (t.serial_number||'') + '" placeholder="e.g. 56096" oninput="setToolField(\'' + t._tempId + '\',\'serial_number\',this.value)" onblur="checkSerialHistory(this.value,\'' + t._tempId + '\')" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
+        '<div class="field"><label>Date of Manufacture</label><input value="' + (t.date_of_manufacture||'') + '" placeholder="e.g. 2022 or Jan 2022" oninput="setToolField(\'' + t._tempId + '\',\'date_of_manufacture\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
+        '<div class="field"><label>Warranty Period</label><input value="' + (t.warranty_period||'') + '" list="warOpts_' + t._tempId + '" placeholder="e.g. 12 Months" oninput="setToolField(\'' + t._tempId + '\',\'warranty_period\',this.value)" autocomplete="off" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><datalist id="warOpts_' + t._tempId + '"><option value="12 Months"><option value="24 Months"><option value="36 Months"><option value="5 Years"><option value="None"></datalist></div>' +
         '<div class="field"><label>Fault Type</label><input value="' + (t.fault_type||'') + '" list="fltOpts_' + t._tempId + '" placeholder="Select or type..." oninput="setToolField(\'' + t._tempId + '\',\'fault_type\',this.value)" autocomplete="off" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><datalist id="fltOpts_' + t._tempId + '">' + FAULT_OPTIONS.map(function(f){return'<option value="'+f+'">';}).join('') + '</datalist></div>' +
         '<div class="field"><label>Error Code</label><input value="' + (t.error_code||'') + '" placeholder="e.g. E.2" oninput="setToolField(\'' + t._tempId + '\',\'error_code\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field"><label>Cycle Count</label><input type="number" value="' + (t.cycle_count||'') + '" placeholder="e.g. 16835" min="0" oninput="setToolField(\'' + t._tempId + '\',\'cycle_count\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
