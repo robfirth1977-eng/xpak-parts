@@ -4537,12 +4537,11 @@ async function loadStockTools() {
 }
 
 function switchToStock() {
-  hideAllSections();
+  currentView = 'stock'; hideAllViews(); renderTabs();
   document.getElementById('stockToolbar').style.display = 'flex';
   document.getElementById('stockSection').style.display = 'block';
   document.getElementById('hTitle').textContent = 'Stock Register';
   document.getElementById('hSub').textContent = '';
-  setNavActive('stock');
   renderStockTools();
 }
 
