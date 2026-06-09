@@ -38,6 +38,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .loan-view-toggle{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .loan-view-btn{padding:5px 16px;border-radius:16px;border:1px solid #2a4060;background:transparent;color:#8aa8c0;cursor:pointer;font-size:11px;font-weight:700}
 .loan-view-btn.active{background:#1e3048;border-color:#a78bfa;color:#a78bfa}
+
+.stock-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #10b981;cursor:pointer;transition:background 0.1s}
+.stock-card:hover{background:#1a2a3d}
+.stock-card.sold{border-left-color:#60a5fa}
+.stock-card.written-off{border-left-color:#ef4444;opacity:0.65}
+.stock-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px}
+.stock-model{font-size:13px;font-weight:700;color:#e0f0ff}
+.stock-sn{font-size:11px;color:#8aa8c0;margin-top:2px}
+.stock-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:#5a8090;margin-top:5px}
+.stock-status-badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:5px;white-space:nowrap}
 .loan-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #a78bfa;cursor:pointer;transition:background 0.1s}
 .loan-card:hover{background:#1a2a3d}
 .loan-card.overdue{border-left-color:#ef4444}
@@ -693,6 +703,88 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   <button class="btn-add" style="background:#1e3048;border:1px solid #a78bfa;color:#a78bfa" onclick="openLoanToolModal()">+ Add Loan Tool</button>
 </div>
 <div class="loan-section" id="loanSection" style="display:none"><div id="loanList"></div></div>
+
+<!-- Stock toolbar -->
+<div class="loan-toolbar" id="stockToolbar" style="display:none">
+  <div class="loan-view-toggle">
+    <button class="loan-view-btn active" id="btnStockAll"       onclick="setStockFilter('All')">All</button>
+    <button class="loan-view-btn"        id="btnStockAvail"     onclick="setStockFilter('Available')">Available</button>
+    <button class="loan-view-btn"        id="btnStockSold"      onclick="setStockFilter('Sold')">Sold</button>
+    <button class="loan-view-btn"        id="btnStockWritten"   onclick="setStockFilter('Written Off')">Written Off</button>
+  </div>
+  <button class="btn-add" style="background:#10b981;margin-left:auto;color:#0f1923;font-weight:700" onclick="openStockModal()">+ Add Tool</button>
+</div>
+<div class="loan-section" id="stockSection" style="display:none"><div id="stockList"></div></div>
+
+<!-- Stock Tool Modal -->
+<div class="overlay" id="stockOverlay" onclick="if(event.target===this)closeStockModal()">
+  <div class="modal" style="border-top:3px solid #10b981">
+    <div class="modal-header">
+      <div class="modal-title" id="stockModalTitle">Add Stock Tool</div>
+      <button class="modal-close" onclick="closeStockModal()">x</button>
+    </div>
+    <div class="section-label">Tool Details</div>
+    <div class="g2">
+      <div class="field"><label>Model *</label>
+        <input id="stName" list="stNameList" placeholder="e.g. CHT 460" autocomplete="off">
+        <datalist id="stNameList">
+          <option value="CHT 460"><option value="CMT 270"><option value="H-46B">
+          <option value="CHT 450"><option value="CMT 260"><option value="OR-T 250">
+          <option value="OR-T 400"><option value="EP-1190">
+        </datalist>
+      </div>
+      <div class="field"><label>Serial Number</label><input id="stSerial" placeholder="e.g. 24080001"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Condition</label>
+        <select id="stCondition" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <option value="">-- Select --</option>
+          <option value="As New">As New</option>
+          <option value="Excellent">Excellent</option>
+          <option value="Good">Good</option>
+          <option value="Minor Wear">Minor Wear</option>
+        </select>
+      </div>
+      <div class="field"><label>Date Received</label><input id="stDateReceived" type="date"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Date of Manufacture</label><input id="stManufDate" placeholder="e.g. 2024 or Jan 2024"></div>
+      <div class="field"><label>Warranty Period</label>
+        <input id="stWarranty" list="stWarrantyList" placeholder="e.g. 12 Months" autocomplete="off">
+        <datalist id="stWarrantyList">
+          <option value="12 Months"><option value="24 Months"><option value="36 Months"><option value="5 Years"><option value="None">
+        </datalist>
+      </div>
+    </div>
+    <div class="field"><label>Location</label>
+      <input id="stLocation" list="stLocationList" placeholder="e.g. Tamworth Stock" autocomplete="off">
+      <datalist id="stLocationList">
+        <option value="Tamworth Stock"><option value="Rep Stock — Tom"><option value="Brent">
+      </datalist>
+    </div>
+    <div class="field"><label>Notes</label><input id="stNotes" placeholder="Any notes..."></div>
+    <div class="section-label">Status</div>
+    <div class="field">
+      <label>Status</label>
+      <select id="stStatus" onchange="toggleStockSoldFields(this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+        <option value="Available">Available</option>
+        <option value="Sold">Sold</option>
+        <option value="Written Off">Written Off</option>
+      </select>
+    </div>
+    <div id="stSoldFields" style="display:none">
+      <div class="g2">
+        <div class="field"><label>Sold To</label><input id="stSoldTo" placeholder="Customer or company name"></div>
+        <div class="field"><label>Sold Date</label><input id="stSoldDate" type="date"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-save green" id="btnSaveStock" onclick="saveStockTool()">Save Tool</button>
+      <button onclick="closeStockModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Cancel</button>
+    </div>
+    <button class="btn-delete" id="btnDeleteStock" onclick="deleteStockTool()" style="display:none">Remove from Register</button>
+  </div>
+</div>
 
 <!-- Agreements toolbar -->
 <div class="loan-toolbar" id="agrToolbar" style="display:none">
@@ -1441,6 +1533,7 @@ async function init() {
     // Pre-load data for home page stats
     try { await loadJobs(); } catch(e) {}
     try { await loadCustomers(); } catch(e) {}
+    try { await loadStockTools(); } catch(e) {}
     try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) {}
     try { var visits = await db('GET','site_visits?select=*&order=visit_date.desc'); var svM = await db('GET','site_visit_machines?select=*'); var svP = await db('GET','site_visit_parts?select=*'); svM.forEach(function(m){m.site_visit_parts=svP.filter(function(p){return p.site_visit_id===m.site_visit_id;});}); visits.forEach(function(v){v.site_visit_machines=svM.filter(function(m){return m.site_visit_id===v.id;});}); siteVisits=visits; } catch(e) {}
     try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
@@ -2371,6 +2464,7 @@ function renderTabs() {
   html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
   html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
   html2 += '<button class="tab cust-tab'  + (v==='customers'?' active':'') + '" onclick="' + (v==='customers'?'':'switchToCustomers()') + '">Accounts</button>';
+  html2 += '<button class="tab stock-tab' + (v==='stock'?' active':'') + '" onclick="' + (v==='stock'?'':'switchToStock()') + '">Stock</button>';
   if (!window._adminMode) {
     html2 += '<div class="tab-divider"></div>';
     html2 += '<span class="tab-group-label">Technical</span>';
@@ -4356,6 +4450,7 @@ async function renderHome() {
     '<div class="home-grid">' +
       '<div class="home-tile jobs"    onclick="switchToJobs()"><div class="home-tile-icon">🔧</div><div class="home-tile-label">Jobs</div><div class="home-tile-sub">Service cases</div></div>' +
       '<div class="home-tile loans"   onclick="switchToLoans()"><div class="home-tile-icon">🔄</div><div class="home-tile-label">Loans</div><div class="home-tile-sub">Tool register</div></div>' +
+      '<div class="home-tile" style="background:linear-gradient(135deg,#0a2a1a,#0d3322);border:1px solid #10b98140" onclick="switchToStock()"><div class="home-tile-icon">📦</div><div class="home-tile-label">Stock</div><div class="home-tile-sub">Serialised tools</div></div>' +
       '<div class="home-tile agr"     onclick="switchToAgreements()"><div class="home-tile-icon">📋</div><div class="home-tile-label">Agreements</div><div class="home-tile-sub">Service contracts</div></div>' +
       '<div class="home-tile sv"      onclick="switchToSiteVisits()"><div class="home-tile-icon">🚗</div><div class="home-tile-label">Site Visits</div><div class="home-tile-sub">Field service</div></div>' +
       (!window._adminMode ? '<div class="home-tile tools"   onclick="switchToTools()"><div class="home-tile-icon">⚙️</div><div class="home-tile-label">Tools & Parts</div><div class="home-tile-sub">Machine database</div></div>' : '') +
@@ -4430,6 +4525,135 @@ function goHome() {
   showLanding();
 }
 
+
+
+// ═══════════════════ STOCK REGISTER ═══════════════════
+var stockTools = [], editingStockTool = null, _stockFilter = 'Available';
+
+async function loadStockTools() {
+  stockTools = await db('GET', 'stock_tools?select=*&order=name.asc,date_received.desc');
+}
+
+function switchToStock() {
+  hideAllSections();
+  document.getElementById('stockToolbar').style.display = 'flex';
+  document.getElementById('stockSection').style.display = 'block';
+  document.getElementById('hTitle').textContent = 'Stock Register';
+  document.getElementById('hSub').textContent = '';
+  setNavActive('stock');
+  renderStockTools();
+}
+
+function setStockFilter(f) {
+  _stockFilter = f;
+  var map = {'All':'All','Available':'Avail','Sold':'Sold','Written Off':'Written'};
+  Object.keys(map).forEach(function(s) {
+    var el = document.getElementById('btnStock' + map[s]);
+    if (el) el.classList.toggle('active', s === f);
+  });
+  renderStockTools();
+}
+
+function renderStockTools() {
+  var list = _stockFilter === 'All' ? stockTools : stockTools.filter(function(t){ return t.status === _stockFilter; });
+  var avail = stockTools.filter(function(t){ return t.status === 'Available'; }).length;
+  document.getElementById('hSub').textContent = 'Stock — ' + avail + ' available · ' + stockTools.length + ' total';
+  if (!list.length) {
+    document.getElementById('stockList').innerHTML = '<div class="center"><div class="icon">📦</div><div style="color:#5a8090">No tools' + (_stockFilter !== 'All' ? ' with status "' + _stockFilter + '"' : '') + '</div></div>';
+    return;
+  }
+  document.getElementById('stockList').innerHTML = list.map(function(t) {
+    var col = t.status === 'Sold' ? '#60a5fa' : t.status === 'Written Off' ? '#ef4444' : '#10b981';
+    var cls = t.status === 'Sold' ? ' sold' : t.status === 'Written Off' ? ' written-off' : '';
+    return '<div class="stock-card' + cls + '" onclick="openStockModal(\'' + t.id + '\')">' +
+      '<div class="stock-card-top">' +
+        '<div><div class="stock-model">' + t.name + '</div>' +
+        (t.serial_number ? '<div class="stock-sn">S/N: ' + t.serial_number + '</div>' : '') + '</div>' +
+        '<span class="stock-status-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + t.status.toUpperCase() + '</span>' +
+      '</div>' +
+      '<div class="stock-meta">' +
+        (t.condition ? '<span>' + t.condition + '</span>' : '') +
+        (t.location ? '<span>\uD83D\uDCCD ' + t.location + '</span>' : '') +
+        (t.date_received ? '<span>Received: ' + fmtDate(t.date_received) + '</span>' : '') +
+        (t.date_of_manufacture ? '<span>Mfr: ' + t.date_of_manufacture + '</span>' : '') +
+        (t.warranty_period ? '<span>Warranty: ' + t.warranty_period + '</span>' : '') +
+        (t.status === 'Sold' && t.sold_to ? '<span style="color:#60a5fa">\u2192 ' + t.sold_to + (t.sold_date ? ' \u00B7 ' + fmtDate(t.sold_date) : '') + '</span>' : '') +
+        (t.notes ? '<span style="color:#5a8090;font-style:italic">' + t.notes + '</span>' : '') +
+      '</div></div>';
+  }).join('');
+}
+
+function openStockModal(id) {
+  editingStockTool = id ? (stockTools.find(function(t){ return t.id === id; }) || null) : null;
+  var t = editingStockTool;
+  document.getElementById('stockModalTitle').textContent = t ? 'Edit Stock Tool' : 'Add Stock Tool';
+  document.getElementById('stName').value         = t ? t.name || '' : '';
+  document.getElementById('stSerial').value       = t ? t.serial_number || '' : '';
+  document.getElementById('stCondition').value    = t ? t.condition || '' : '';
+  document.getElementById('stDateReceived').value = t ? t.date_received || '' : new Date().toISOString().split('T')[0];
+  document.getElementById('stManufDate').value    = t ? t.date_of_manufacture || '' : '';
+  document.getElementById('stWarranty').value     = t ? t.warranty_period || '' : '';
+  document.getElementById('stLocation').value     = t ? t.location || 'Tamworth Stock' : 'Tamworth Stock';
+  document.getElementById('stNotes').value        = t ? t.notes || '' : '';
+  document.getElementById('stStatus').value       = t ? t.status || 'Available' : 'Available';
+  document.getElementById('stSoldTo').value       = t ? t.sold_to || '' : '';
+  document.getElementById('stSoldDate').value     = t ? t.sold_date || '' : '';
+  toggleStockSoldFields(document.getElementById('stStatus').value);
+  document.getElementById('btnDeleteStock').style.display = t ? 'block' : 'none';
+  document.getElementById('stockOverlay').style.display = 'flex';
+}
+
+function closeStockModal() { document.getElementById('stockOverlay').style.display = 'none'; }
+
+function toggleStockSoldFields(val) {
+  document.getElementById('stSoldFields').style.display = val === 'Sold' ? 'block' : 'none';
+  document.getElementById('stStatus').style.borderColor = val === 'Sold' ? '#60a5fa' : val === 'Written Off' ? '#ef4444' : '#10b981';
+}
+
+async function saveStockTool() {
+  var name = document.getElementById('stName').value.trim();
+  if (!name) { showToast('Model name is required', 'error'); return; }
+  var btn = document.getElementById('btnSaveStock'); btn.disabled = true;
+  var status = document.getElementById('stStatus').value;
+  var payload = {
+    name: name,
+    serial_number: document.getElementById('stSerial').value || null,
+    condition: document.getElementById('stCondition').value || null,
+    date_received: document.getElementById('stDateReceived').value || null,
+    date_of_manufacture: document.getElementById('stManufDate').value || null,
+    warranty_period: document.getElementById('stWarranty').value || null,
+    location: document.getElementById('stLocation').value || null,
+    notes: document.getElementById('stNotes').value || null,
+    status: status,
+    sold_to: status === 'Sold' ? (document.getElementById('stSoldTo').value || null) : null,
+    sold_date: status === 'Sold' ? (document.getElementById('stSoldDate').value || null) : null,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    if (editingStockTool) {
+      await db('PATCH', 'stock_tools?id=eq.' + editingStockTool.id, payload);
+    } else {
+      await db('POST', 'stock_tools', payload);
+    }
+    showToast(editingStockTool ? 'Tool updated' : 'Tool added');
+    closeStockModal();
+    await loadStockTools();
+    renderStockTools();
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function deleteStockTool() {
+  if (!editingStockTool) return;
+  if (!confirm('Remove ' + editingStockTool.name + ' (S/N: ' + (editingStockTool.serial_number || 'none') + ') from the register?')) return;
+  try {
+    await db('DELETE', 'stock_tools?id=eq.' + editingStockTool.id);
+    showToast('Removed from register');
+    closeStockModal();
+    await loadStockTools();
+    renderStockTools();
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+}
 
 // ── AUTH ─────────────────────────────────────────────────────────────────────
 var SUPABASE_URL = 'https://hoahfuxxefvfgxcjyqhp.supabase.co';
