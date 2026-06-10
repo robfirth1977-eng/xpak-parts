@@ -2217,8 +2217,7 @@ function printAllLoanLabels() {
     var toolId  = 'qrT' + i;
     var battId  = 'qrB' + i;
     qrList.push({ id: toolId, data: qrData });
-    qrList.push({ id: battId, data: qrData });
-    // Tool label
+    // Tool label only
     w.document.write('<div class="label">');
     w.document.write('<div class="lbl-text">');
     w.document.write('<div class="property">Property of X-Pak Service</div>');
@@ -2228,15 +2227,6 @@ function printAllLoanLabels() {
     }
     w.document.write('</div>');
     w.document.write('<div class="lbl-qr" id="' + toolId + '"></div>');
-    w.document.write('</div>');
-    // Battery label
-    w.document.write('<div class="label">');
-    w.document.write('<div class="lbl-text">');
-    w.document.write('<div class="property">Property of X-Pak Service</div>');
-    w.document.write('<div class="tool-name">' + t.name + '</div>');
-    w.document.write('<div class="battery-sub">Battery</div>');
-    w.document.write('</div>');
-    w.document.write('<div class="lbl-qr" id="' + battId + '"></div>');
     w.document.write('</div>');
   });
 
