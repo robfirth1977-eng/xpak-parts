@@ -749,12 +749,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <div class="field"><label>Date Received</label><input id="stDateReceived" type="date"></div>
     </div>
     <div class="g2">
-      <div class="field"><label>Date of Manufacture</label><input id="stManufDate" placeholder="e.g. 2024 or Jan 2024"></div>
-      <div class="field"><label>Warranty Period</label>
-        <input id="stWarranty" list="stWarrantyList" placeholder="e.g. 12 Months" autocomplete="off">
-        <datalist id="stWarrantyList">
-          <option value="12 Months"><option value="24 Months"><option value="36 Months"><option value="5 Years"><option value="None">
-        </datalist>
+      <div class="field"><label>Date of Manufacture</label><input type="month" id="stManufDate" oninput="updateStWarrantyColor()" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>
+      <div class="field"><label>Warranty (months)</label>
+        <input type="number" id="stWarranty" min="1" max="360" placeholder="e.g. 12" oninput="updateStWarrantyColor()" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
       </div>
     </div>
     <div class="field"><label>Location</label>
@@ -1238,8 +1235,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     </div>
     <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
     <div class="g2">
-      <div class="field"><label>Date of Manufacture</label><input id="ltManufDate" placeholder="e.g. 2022 or Jan 2022"></div>
-      <div class="field"><label>Warranty Period</label><input id="ltWarranty" list="ltWarrantyList" placeholder="e.g. 12 Months" autocomplete="off"><datalist id="ltWarrantyList"><option value="12 Months"><option value="24 Months"><option value="36 Months"><option value="5 Years"><option value="None"></datalist></div>
+      <div class="field"><label>Date of Manufacture</label><input type="month" id="ltManufDate" oninput="updateLtWarrantyColor()" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>
+      <div class="field"><label>Warranty (months)</label><input type="number" id="ltWarranty" min="1" max="360" placeholder="e.g. 12" oninput="updateLtWarrantyColor()" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>
     </div>
     <div style="display:flex;gap:8px">
     <button class="btn-save" style="background:#a78bfa;flex:1" id="btnSaveLoanTool" onclick="saveLoanTool()">Save Tool</button>
@@ -2182,7 +2179,7 @@ async function deleteLoan(){
   }catch(e){showToast('Delete failed','error');}
 }
 function openLoanToolModal(toolId){
-  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltCycleCount').value=t.current_cycle_count!=null?t.current_cycle_count:''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltXpakName').value=t.xpak_name||''; document.getElementById('ltXpakCode').value=t.xpak_code||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('ltManufDate').value=t.date_of_manufacture||''; document.getElementById('ltWarranty').value=t.warranty_period||''; document.getElementById('btnDeleteLoanTool').style.display='block'; document.getElementById('btnPrintIdLabel').style.display='block';}
+  if(toolId){var t=loanTools.find(function(x){return x.id===toolId;}); if(!t) return; editingLoanTool=t; document.getElementById('loanToolModalTitle').textContent='Edit Loan Tool'; document.getElementById('ltName').value=t.name||''; document.getElementById('ltSerial').value=t.serial_number||''; document.getElementById('ltCondition').value=t.condition||''; document.getElementById('ltCycleCount').value=t.current_cycle_count!=null?t.current_cycle_count:''; document.getElementById('ltLocation').value=t.location||''; document.getElementById('ltXpakName').value=t.xpak_name||''; document.getElementById('ltXpakCode').value=t.xpak_code||''; document.getElementById('ltNotes').value=t.notes||''; document.getElementById('ltManufDate').value=t.date_of_manufacture||''; document.getElementById('ltWarranty').value=t.warranty_period||''; updateLtWarrantyColor(); document.getElementById('btnDeleteLoanTool').style.display='block'; document.getElementById('btnPrintIdLabel').style.display='block';}
   else{editingLoanTool=null; document.getElementById('loanToolModalTitle').textContent='Add Loan Tool'; ['ltName','ltSerial','ltNotes','ltLocation','ltXpakName','ltXpakCode','ltCycleCount','ltManufDate','ltWarranty'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('ltCondition').value=''; document.getElementById('btnDeleteLoanTool').style.display='none';}
   document.getElementById('loanToolOverlay').classList.add('show');
   setTimeout(function(){document.getElementById('ltName').focus();},100);
@@ -3812,8 +3809,8 @@ function renderToolsList() {
       '<div class="g2">' +
         '<div class="field"><label>Machine Model</label><div class="machine-row"><select onchange="setToolField(\'' + t._tempId + '\',\'machine_id\',this.value);renderToolsList()" style="flex:1;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">' + mOpts + '</select><button class="btn-add-machine" onclick="openMachineModalFromJob(\'' + t._tempId + '\')">+ New</button></div></div>' +
         '<div class="field"><label>Serial Number</label><input value="' + (t.serial_number||'') + '" placeholder="e.g. 56096" oninput="setToolField(\'' + t._tempId + '\',\'serial_number\',this.value)" onblur="checkSerialHistory(this.value,\'' + t._tempId + '\')" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
-        '<div class="field"><label>Date of Manufacture</label><input value="' + (t.date_of_manufacture||'') + '" placeholder="e.g. 2022 or Jan 2022" oninput="setToolField(\'' + t._tempId + '\',\'date_of_manufacture\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
-        '<div class="field"><label>Warranty Period</label><input value="' + (t.warranty_period||'') + '" list="warOpts_' + t._tempId + '" placeholder="e.g. 12 Months" oninput="setToolField(\'' + t._tempId + '\',\'warranty_period\',this.value)" autocomplete="off" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><datalist id="warOpts_' + t._tempId + '"><option value="12 Months"><option value="24 Months"><option value="36 Months"><option value="5 Years"><option value="None"></datalist></div>' +
+        '<div class="field"><label>Date of Manufacture</label><input type="month" value="' + (t.date_of_manufacture||'') + '" oninput="setToolField(\'' + t._tempId + '\',\'date_of_manufacture\',this.value);var wEl=document.getElementById(\'wp_'+t._tempId+'\'); if(wEl) wEl.style.borderColor=getWarrantyBorderColor(this.value,wEl.value)||\'#2a4060\';" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
+        '<div class="field"><label>Warranty (months)</label><input type="number" id="wp_' + t._tempId + '" min="1" max="360" value="' + (t.warranty_period||'') + '" placeholder="e.g. 12" oninput="setToolField(\'' + t._tempId + '\',\'warranty_period\',this.value);this.style.borderColor=getWarrantyBorderColor(jobToolsLocal.find(function(j){return j._tempId===\'' + t._tempId + '\';}).date_of_manufacture,this.value)||\'#2a4060\';" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field"><label>Fault Type</label><input value="' + (t.fault_type||'') + '" list="fltOpts_' + t._tempId + '" placeholder="Select or type..." oninput="setToolField(\'' + t._tempId + '\',\'fault_type\',this.value)" autocomplete="off" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><datalist id="fltOpts_' + t._tempId + '">' + FAULT_OPTIONS.map(function(f){return'<option value="'+f+'">';}).join('') + '</datalist></div>' +
         '<div class="field"><label>Error Code</label><input value="' + (t.error_code||'') + '" placeholder="e.g. E.2" oninput="setToolField(\'' + t._tempId + '\',\'error_code\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field"><label>Cycle Count</label><input type="number" value="' + (t.cycle_count||'') + '" placeholder="e.g. 16835" min="0" oninput="setToolField(\'' + t._tempId + '\',\'cycle_count\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
@@ -4646,6 +4643,7 @@ function openStockModal(id) {
   document.getElementById('stDateReceived').value = t ? t.date_received || '' : new Date().toISOString().split('T')[0];
   document.getElementById('stManufDate').value    = t ? t.date_of_manufacture || '' : '';
   document.getElementById('stWarranty').value     = t ? t.warranty_period || '' : '';
+  updateStWarrantyColor();
   document.getElementById('stLocation').value     = t ? t.location || 'Tamworth Stock' : 'Tamworth Stock';
   document.getElementById('stNotes').value        = t ? t.notes || '' : '';
   document.getElementById('stStatus').value       = t ? t.status || 'Available' : 'Available';
@@ -4658,6 +4656,33 @@ function openStockModal(id) {
 
 function closeStockModal() { document.getElementById('stockOverlay').style.display = 'none'; }
 
+
+function getWarrantyBorderColor(manufVal, periodVal) {
+  if (!manufVal || !periodVal) return '';
+  var months = parseInt(periodVal);
+  if (isNaN(months) || months <= 0) return '';
+  var parts = manufVal.split('-');
+  if (parts.length < 2) return '';
+  var yr = parseInt(parts[0]);
+  var mo = parseInt(parts[1]) - 1; // 0-indexed
+  // last day of the expiry month (manufacture month + N months)
+  var expiry = new Date(yr, mo + months + 1, 0);
+  return new Date() <= expiry ? '#10b981' : '#ef4444';
+}
+function updateLtWarrantyColor() {
+  var col = getWarrantyBorderColor(
+    document.getElementById('ltManufDate').value,
+    document.getElementById('ltWarranty').value
+  );
+  document.getElementById('ltWarranty').style.borderColor = col || '#2a4060';
+}
+function updateStWarrantyColor() {
+  var col = getWarrantyBorderColor(
+    document.getElementById('stManufDate').value,
+    document.getElementById('stWarranty').value
+  );
+  document.getElementById('stWarranty').style.borderColor = col || '#2a4060';
+}
 function toggleStockSoldFields(val) {
   document.getElementById('stSoldFields').style.display = val === 'Sold' ? 'block' : 'none';
   document.getElementById('stStatus').style.borderColor = val === 'Sold' ? '#60a5fa' : val === 'Written Off' ? '#ef4444' : '#10b981';
