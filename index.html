@@ -699,6 +699,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <button class="loan-view-btn" id="btnLoanRegister" onclick="setLoanView('register')">Tool Register</button>
   </div>
   <button class="btn-add" style="background:#1e3048;border:1px solid #5a8090;color:#8aa8c0;font-size:12px" onclick="generateStockTakeReport()">📋 Stock Take</button>
+  <button class="btn-add" style="background:#1e3048;border:1px solid #00c8e0;color:#00c8e0;font-size:12px" onclick="printAllLoanLabels()">🖨 Print All Labels</button>
   <button class="btn-add" style="background:#a78bfa;margin-left:auto" onclick="openNewLoanModal()">+ New Loan</button>
   <button class="btn-add" style="background:#1e3048;border:1px solid #a78bfa;color:#a78bfa" onclick="openLoanToolModal()">+ Add Loan Tool</button>
 </div>
@@ -2188,6 +2189,67 @@ function openLoanToolModal(toolId){
 }
 function closeLoanToolModal(){document.getElementById('loanToolOverlay').classList.remove('show');}
 
+function printAllLoanLabels() {
+  if (!loanTools || !loanTools.length) { showToast('No loan tools in register', 'error'); return; }
+  var w = window.open('', '_blank');
+  if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Loan Tool Labels</title>');
+  w.document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
+  w.document.write('<style>');
+  w.document.write('@page { size: 89mm 36mm; margin: 2mm 2mm; }');
+  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
+  w.document.write('body { font-family: Arial, sans-serif; }');
+  w.document.write('.label { width: 85mm; height: 32mm; display: flex; align-items: stretch; overflow: hidden; page-break-after: always; border: 0.3mm solid #000; border-radius: 1mm; }');
+  w.document.write('.lbl-text { flex: 1; padding: 2.5mm 3mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border-right: 0.3mm solid #ccc; }');
+  w.document.write('.property { font-size: 5.5pt; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: 1px; }');
+  w.document.write('.tool-name { font-size: 17pt; font-weight: 900; color: #000; line-height: 1; letter-spacing: -0.5px; margin: 1mm 0 0.5mm; word-break: break-word; }');
+  w.document.write('.battery-sub { font-size: 9pt; font-weight: 700; color: #555; letter-spacing: 1px; text-transform: uppercase; margin: 0.5mm 0; }');
+  w.document.write('.sn-row { display: flex; align-items: baseline; gap: 2mm; }');
+  w.document.write('.sn-lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }');
+  w.document.write('.sn-val { font-size: 13pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; line-height: 1; }');
+  w.document.write('.lbl-qr { flex-shrink: 0; width: 28mm; display: flex; align-items: center; justify-content: center; padding: 2mm; background: #fafafa; }');
+  w.document.write('.lbl-qr canvas, .lbl-qr img { width: 24mm !important; height: 24mm !important; }');
+  w.document.write('<\/style></head><body>');
+
+  var qrList = [];
+  loanTools.forEach(function(t, i) {
+    var qrData = t.serial_number || t.name;
+    var toolId  = 'qrT' + i;
+    var battId  = 'qrB' + i;
+    qrList.push({ id: toolId, data: qrData });
+    qrList.push({ id: battId, data: qrData });
+    // Tool label
+    w.document.write('<div class="label">');
+    w.document.write('<div class="lbl-text">');
+    w.document.write('<div class="property">Property of X-Pak Service</div>');
+    w.document.write('<div class="tool-name">' + t.name + '</div>');
+    if (t.serial_number) {
+      w.document.write('<div class="sn-row"><span class="sn-lbl">S/N</span><span class="sn-val">' + t.serial_number + '</span></div>');
+    }
+    w.document.write('</div>');
+    w.document.write('<div class="lbl-qr" id="' + toolId + '"></div>');
+    w.document.write('</div>');
+    // Battery label
+    w.document.write('<div class="label">');
+    w.document.write('<div class="lbl-text">');
+    w.document.write('<div class="property">Property of X-Pak Service</div>');
+    w.document.write('<div class="tool-name">' + t.name + '</div>');
+    w.document.write('<div class="battery-sub">Battery</div>');
+    w.document.write('</div>');
+    w.document.write('<div class="lbl-qr" id="' + battId + '"></div>');
+    w.document.write('</div>');
+  });
+
+  // Render all QR codes then print
+  w.document.write('<script>');
+  w.document.write('var qrList = ' + JSON.stringify(qrList) + ';');
+  w.document.write('var opts = { width:91, height:91, correctLevel:QRCode.CorrectLevel.M };');
+  w.document.write('qrList.forEach(function(q){ new QRCode(document.getElementById(q.id), Object.assign({}, opts, {text:q.data})); });');
+  w.document.write('setTimeout(function(){ window.print(); }, 900);');
+  w.document.write('<\/script>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
 function printToolIdLabel() {
   var t = editingLoanTool; if (!t) return;
   // QR encodes just the serial number — scanning opens tool search in the app
