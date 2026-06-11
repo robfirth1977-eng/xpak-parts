@@ -39,6 +39,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .loan-view-btn{padding:5px 16px;border-radius:16px;border:1px solid #2a4060;background:transparent;color:#8aa8c0;cursor:pointer;font-size:11px;font-weight:700}
 .loan-view-btn.active{background:#1e3048;border-color:#a78bfa;color:#a78bfa}
 
+
+.po-card{background:#141f2d;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid #60a5fa;cursor:pointer;transition:background 0.1s}
+.po-card:hover{background:#1a2a3d}
+.po-card.sent{border-left-color:#f59e0b}
+.po-card.partial{border-left-color:#a78bfa}
+.po-card.received{border-left-color:#10b981}
+.po-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px}
+.po-number{font-size:12px;font-weight:700;color:#60a5fa;letter-spacing:0.5px}
+.po-supplier{font-size:14px;font-weight:700;color:#e0f0ff;margin-top:2px}
+.po-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:#5a8090;margin-top:5px}
+.po-status-badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:5px;white-space:nowrap}
+.po-table{width:100%;border-collapse:collapse;font-size:12px}
+.po-table th{padding:8px;background:#0d1f30;color:#8aa8c0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;text-align:left;border-bottom:1px solid #2a4060}
+.po-table td{padding:7px 8px;border-bottom:1px solid #1e3048;vertical-align:middle}
 .stock-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #10b981;cursor:pointer;transition:background 0.1s}
 .stock-card:hover{background:#1a2a3d}
 .stock-card.sold{border-left-color:#60a5fa}
@@ -781,6 +795,56 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <button onclick="closeStockModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Cancel</button>
     </div>
     <button class="btn-delete" id="btnDeleteStock" onclick="deleteStockTool()" style="display:none">Remove from Register</button>
+  </div>
+</div>
+
+<!-- Purchasing toolbar -->
+<div class="loan-toolbar" id="poToolbar" style="display:none">
+  <div class="loan-view-toggle">
+    <button class="loan-view-btn active" id="poBtnDraft"    onclick="setPOFilter('Draft')">Draft</button>
+    <button class="loan-view-btn"        id="poBtnSent"     onclick="setPOFilter('Sent')">Sent</button>
+    <button class="loan-view-btn"        id="poBtnPartial"  onclick="setPOFilter('Partially Received')">Part Received</button>
+    <button class="loan-view-btn"        id="poBtnReceived" onclick="setPOFilter('Received')">Received</button>
+    <button class="loan-view-btn"        id="poBtnAll"      onclick="setPOFilter('All')">All</button>
+  </div>
+  <button class="btn-add" style="background:#60a5fa;margin-left:auto;color:#0f1923;font-weight:700" onclick="createManualPO()">+ New PO</button>
+</div>
+<div class="loan-section" id="poSection" style="display:none"><div id="poList"></div></div>
+
+<!-- PO Detail Modal -->
+<div class="overlay" id="poOverlay" onclick="if(event.target===this)closePOModal()">
+  <div class="modal" style="border-top:3px solid #60a5fa;max-width:920px;width:96%">
+    <div class="modal-header">
+      <div class="modal-title" id="poDetailTitle">Purchase Order</div>
+      <button class="modal-close" onclick="closePOModal()">x</button>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px">
+      <div style="flex:1;min-width:160px"><div style="font-size:10px;color:#5a8090;margin-bottom:3px">SUPPLIER</div><div id="poDetailSupplier" style="font-size:16px;font-weight:700;color:#e2e8f0"></div></div>
+      <div class="field" style="width:140px"><label>Sent Date</label><input type="date" id="poDetailSentDate"></div>
+      <div class="field" style="width:140px"><label>Expected</label><input type="date" id="poDetailExpDate"></div>
+      <div class="field" style="flex:1;min-width:180px"><label>Notes</label><input id="poDetailNotes" placeholder="e.g. Ref number, special instructions..."></div>
+    </div>
+    <table class="po-table">
+      <thead><tr>
+        <th>Job</th><th>Part No.</th><th>Description</th>
+        <th style="text-align:center">Qty</th>
+        <th style="text-align:right">Unit Cost</th>
+        <th style="text-align:right">Line Total</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:center">Action</th>
+      </tr></thead>
+      <tbody id="poItemsBody"></tbody>
+    </table>
+    <div style="text-align:right;padding:10px 4px 0;font-size:12px;color:#8aa8c0;line-height:1.9">
+      Subtotal (ex-GST): <strong id="poSubtotal" style="color:#e2e8f0;display:inline-block;width:90px;text-align:right">-</strong><br>
+      GST (10%): <strong id="poGST" style="color:#e2e8f0;display:inline-block;width:90px;text-align:right">-</strong><br>
+      <span style="font-size:14px">Total: <strong id="poTotal" style="color:#10b981;display:inline-block;width:90px;text-align:right">-</strong></span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button id="btnMarkPOSent" class="btn-save" style="background:#f59e0b;color:#0f1923" onclick="markPOSent()">Mark as Sent</button>
+      <button id="btnExportPO"   class="btn-save green" onclick="exportPOExcel()">⬇ Export Excel</button>
+      <button onclick="closePOModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+    </div>
   </div>
 </div>
 
@@ -1532,6 +1596,7 @@ async function init() {
     try { await loadJobs(); } catch(e) {}
     try { await loadCustomers(); } catch(e) {}
     try { await loadStockTools(); } catch(e) {}
+    try { await loadPurchaseOrders(); } catch(e) {}
     try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) {}
     try { var visits = await db('GET','site_visits?select=*&order=visit_date.desc'); var svM = await db('GET','site_visit_machines?select=*'); var svP = await db('GET','site_visit_parts?select=*'); svM.forEach(function(m){m.site_visit_parts=svP.filter(function(p){return p.site_visit_id===m.site_visit_id;});}); visits.forEach(function(v){v.site_visit_machines=svM.filter(function(m){return m.site_visit_id===v.id;});}); siteVisits=visits; } catch(e) {}
     try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
@@ -1589,6 +1654,8 @@ function hideAllViews() {
   var cas = document.getElementById('custAccountSection'); if(cas) cas.style.display = 'none';
   var skt = document.getElementById('stockToolbar'); if(skt) skt.style.display = 'none';
   var sks = document.getElementById('stockSection'); if(sks) sks.style.display = 'none';
+  var pot = document.getElementById('poToolbar'); if(pot) pot.style.display = 'none';
+  var pos = document.getElementById('poSection'); if(pos) pos.style.display = 'none';
 }
 
 function switchToJobs() {
@@ -2522,6 +2589,7 @@ function renderTabs() {
     html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
     html2 += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()')  + '">Orders</button>';
     html2 += '<button class="tab supplier-tab' + (v==='suppliers'?' active':'') + '" onclick="' + (v==='suppliers'?'':'switchToSuppliers()') + '">Suppliers</button>';
+    html2 += '<button class="tab po-tab' + (v==='purchasing'?' active':'') + '" onclick="' + (v==='purchasing'?'':'switchToPurchasing()') + '">Purchasing</button>';
   }
   document.getElementById('machineTabs').innerHTML = html2;
 }
@@ -3148,54 +3216,69 @@ function populateMachineDropdown(selId) {
 
 
 async function pushPartsToStockOrder() {
-  var toOrder = jobPartsLocal.filter(function(jp){ return jp.status === 'to_order'; });
-  if (!toOrder.length) { showToast('No parts marked To Order on this job', 'error'); return; }
+  var toOrder = jobPartsLocal.filter(function(jp){ return jp.status==='to_order'; });
+  if (!toOrder.length) { showToast('No parts marked To Order','error'); return; }
 
-  // Add to stock order selections (accumulate if already in basket)
+  // Detect supplier from parts
+  var supplierCounts = {};
   toOrder.forEach(function(jp) {
-    if (jp.part_id) {
-      _stockOrderSelections[jp.part_id] = (parseInt(_stockOrderSelections[jp.part_id]) || 0) + (jp.quantity || 1);
-    }
-  });
-
-  // Auto-detect preferred supplier from allParts
-  var supplierNames = [];
-  toOrder.forEach(function(jp) {
-    var p = allParts.find(function(x){ return x.id === jp.part_id; });
+    var p = allParts.find(function(x){ return x.id===jp.part_id; });
     if (p && p.suppliers) {
-      var sups = p.suppliers;
-      if (!Array.isArray(sups)) { try { sups = JSON.parse(sups); } catch(e) { sups = []; } }
-      var pref = sups.find(function(s){ return s.is_preferred; }) || sups[0];
-      if (pref && pref.name && supplierNames.indexOf(pref.name) === -1) supplierNames.push(pref.name);
+      var sups = Array.isArray(p.suppliers)?p.suppliers:[];
+      try { if(!Array.isArray(sups)) sups=JSON.parse(p.suppliers); } catch(e){}
+      var pref = sups.find(function(s){ return s.is_preferred; })||sups[0];
+      if (pref && pref.name) supplierCounts[pref.name] = (supplierCounts[pref.name]||0)+1;
     }
   });
-  if (supplierNames.length === 1) _stockOrderSupplier = supplierNames[0];
+  var supplier = Object.keys(supplierCounts).sort(function(a,b){ return supplierCounts[b]-supplierCounts[a]; })[0] || 'Unknown';
 
-  // Show all parts in order builder so pushed parts are visible
-  _stockOrderFilter = 'all';
+  // Find existing Draft PO for this supplier or create new one
+  var existingPO = purchaseOrders.find(function(po){ return po.status==='Draft' && po.supplier===supplier; });
+  var poId, poNum;
+  if (existingPO) {
+    poId = existingPO.id; poNum = existingPO.po_number;
+  } else {
+    var maxNum = 0;
+    purchaseOrders.forEach(function(po){ var m=po.po_number?po.po_number.match(/XPO-(\d+)/):null; if(m) maxNum=Math.max(maxNum,parseInt(m[1])); });
+    poNum = 'XPO-' + String(maxNum+1).padStart(3,'0');
+    var newPO = await db('POST','purchase_orders',{po_number:poNum,supplier:supplier,status:'Draft',updated_at:new Date().toISOString()});
+    poId = newPO[0].id; newPO[0]._items=[]; purchaseOrders.unshift(newPO[0]);
+  }
 
-  // Save draft so it persists to the stock order tab
-  saveStockOrderDraft();
+  // Add items to PO
+  var jobNum = editingJob ? xplNum(editingJob.job_number) : '';
+  var jobId  = editingJob ? editingJob.id : null;
+  var itemPromises = toOrder.map(function(jp) {
+    var p = allParts.find(function(x){ return x.id===jp.part_id; });
+    return db('POST','purchase_order_items',{
+      purchase_order_id: poId,
+      part_id: jp.part_id||null,
+      job_id: jobId,
+      job_number: jobNum,
+      key_no: jp.part_key_no,
+      description: jp.part_description,
+      qty: jp.quantity||1,
+      unit_cost: p&&p.cost_price?parseFloat(p.cost_price):null,
+      status: 'Ordered',
+      updated_at: new Date().toISOString()
+    });
+  });
+  await Promise.all(itemPromises);
 
-  // Mark parts as Ordered locally and in DB
+  // Mark job parts as Ordered
   var patches = [];
   toOrder.forEach(function(jp) {
-    jp.status = 'ordered';
-    if (jp.id) patches.push(
-      db('PATCH', 'job_parts?id=eq.' + jp.id, { status: 'ordered', updated_at: new Date().toISOString() }).catch(function(){})
-    );
+    jp.status='ordered';
+    if (jp.id) patches.push(db('PATCH','job_parts?id=eq.'+jp.id,{status:'ordered',updated_at:new Date().toISOString()}).catch(function(){}));
   });
   if (patches.length) await Promise.all(patches);
   renderJobPartsList();
 
-  showToast(toOrder.length + ' part' + (toOrder.length > 1 ? 's' : '') + ' pushed to stock order — marked Ordered');
-
-  // Navigate to Parts → Stock Order
+  await loadPurchaseOrders();
+  var isNew = !existingPO;
+  showToast(toOrder.length+' part'+(toOrder.length>1?'s':'')+' added to '+poNum+(isNew?' (new PO)':' (existing draft)'));
   closeJobModal();
-  setTimeout(function() {
-    switchToParts();
-    setOrderTab('stock');
-  }, 250);
+  setTimeout(function(){ switchToPurchasing(); setPOFilter('Draft'); }, 250);
 }
 function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); }
 
@@ -4818,6 +4901,203 @@ async function deleteStockTool() {
     await loadStockTools();
     renderStockTools();
   } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+}
+
+
+// ═══════════════════ PURCHASE ORDERS ═══════════════════
+var purchaseOrders = [], _poFilter = 'Draft', editingPOId = null;
+
+async function loadPurchaseOrders() {
+  var pos = await db('GET', 'purchase_orders?select=*&order=created_at.desc');
+  var items = await db('GET', 'purchase_order_items?select=*&order=created_at.asc');
+  purchaseOrders = pos;
+  purchaseOrders.forEach(function(po) {
+    po._items = items.filter(function(it){ return it.purchase_order_id === po.id; });
+  });
+}
+
+function switchToPurchasing() {
+  currentView = 'purchasing'; hideAllViews(); renderTabs();
+  document.getElementById('poToolbar').style.display = 'flex';
+  document.getElementById('poSection').style.display = 'block';
+  document.getElementById('hTitle').textContent = 'Purchasing';
+  renderPurchaseOrders();
+}
+
+function setPOFilter(f) {
+  _poFilter = f;
+  var map = {Draft:'poBtnDraft', Sent:'poBtnSent', 'Partially Received':'poBtnPartial', Received:'poBtnReceived', All:'poBtnAll'};
+  Object.keys(map).forEach(function(k){ var el=document.getElementById(map[k]); if(el) el.classList.toggle('active', k===f); });
+  renderPurchaseOrders();
+}
+
+function poStatusColor(s) {
+  return {Draft:'#60a5fa', Sent:'#f59e0b', 'Partially Received':'#a78bfa', Received:'#10b981', Cancelled:'#ef4444'}[s] || '#4a6080';
+}
+
+function renderPurchaseOrders() {
+  var filtered = _poFilter === 'All' ? purchaseOrders : purchaseOrders.filter(function(po){ return po.status === _poFilter; });
+  var draft = purchaseOrders.filter(function(po){ return po.status === 'Draft'; }).length;
+  var sent  = purchaseOrders.filter(function(po){ return po.status === 'Sent' || po.status === 'Partially Received'; }).length;
+  document.getElementById('hSub').textContent = 'Purchase Orders \u2014 ' + draft + ' draft' + (sent ? ' \u00B7 ' + sent + ' in transit' : '');
+  if (!filtered.length) {
+    document.getElementById('poList').innerHTML = '<div class="center"><div class="icon">\uD83D\uDCCB</div><div style="color:#5a8090">No ' + (_poFilter!=='All'?_poFilter.toLowerCase()+' ':'') + 'purchase orders</div></div>';
+    return;
+  }
+  document.getElementById('poList').innerHTML = filtered.map(function(po) {
+    var items = po._items || [];
+    var totalVal = items.reduce(function(s,i){ return s + ((i.unit_cost||0)*(i.qty||1)); }, 0);
+    var arrived  = items.filter(function(i){ return i.status==='Arrived'; }).length;
+    var col = poStatusColor(po.status);
+    var cls = po.status==='Sent'?'sent':po.status==='Partially Received'?'partial':po.status==='Received'?'received':'';
+    var preview = items.slice(0,3).map(function(i){ return i.description; }).join(', ') + (items.length>3?' +' +(items.length-3)+' more':'');
+    return '<div class="po-card '+cls+'" onclick="openPODetail(\x27'+po.id+'\x27)">'
+      +'<div class="po-card-top"><div><div class="po-number">'+po.po_number+'</div><div class="po-supplier">'+po.supplier+'</div></div>'
+      +'<span class="po-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+po.status.toUpperCase()+'</span></div>'
+      +'<div class="po-meta">'
+      +'<span>'+items.length+' item'+(items.length!==1?'s':'')+'</span>'
+      +(totalVal>0?'<span>$'+totalVal.toFixed(2)+' ex-GST</span>':'')
+      +(po.sent_date?'<span>Sent: '+fmtDate(po.sent_date)+'</span>':'')
+      +(po.expected_date?'<span>Expected: '+fmtDate(po.expected_date)+'</span>':'')
+      +(arrived>0?'<span style="color:#10b981">'+arrived+'/'+items.length+' arrived</span>':'')
+      +'</div>'
+      +(preview?'<div style="font-size:10px;color:#3a5070;margin-top:4px">'+preview+'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function openPODetail(id) {
+  editingPOId = id;
+  var po = purchaseOrders.find(function(p){ return p.id===id; });
+  if (!po) return;
+  var items = po._items || [];
+  var col = poStatusColor(po.status);
+  var totalVal = items.reduce(function(s,i){ return s+((i.unit_cost||0)*(i.qty||1)); }, 0);
+  var isDraft   = po.status === 'Draft';
+  var canArrive = po.status === 'Sent' || po.status === 'Partially Received';
+  document.getElementById('poDetailTitle').innerHTML = po.po_number + ' <span class="po-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40;font-size:12px;vertical-align:middle">'+po.status+'</span>';
+  document.getElementById('poDetailSupplier').textContent = po.supplier;
+  document.getElementById('poDetailSentDate').value = po.sent_date || '';
+  document.getElementById('poDetailExpDate').value  = po.expected_date || '';
+  document.getElementById('poDetailNotes').value    = po.notes || '';
+  document.getElementById('btnMarkPOSent').style.display = isDraft ? 'inline-flex' : 'none';
+  document.getElementById('btnExportPO').style.display   = items.length ? 'inline-flex' : 'none';
+  document.getElementById('poItemsBody').innerHTML = items.length ? items.map(function(it) {
+    var lineTotal = (it.unit_cost||0)*(it.qty||1);
+    var itCol = it.status==='Arrived'?'#10b981':'#60a5fa';
+    return '<tr>'
+      +'<td style="color:#60a5fa;font-size:11px">'+(it.job_number||'-')+'</td>'
+      +'<td style="font-family:monospace;font-size:11px">'+(it.key_no||'-')+'</td>'
+      +'<td>'+(it.description||'-')+'</td>'
+      +'<td style="text-align:center">'+(it.qty||1)+'</td>'
+      +'<td style="text-align:right">'+(it.unit_cost?'$'+parseFloat(it.unit_cost).toFixed(2):'-')+'</td>'
+      +'<td style="text-align:right;font-weight:700">'+(lineTotal>0?'$'+lineTotal.toFixed(2):'-')+'</td>'
+      +'<td style="text-align:center"><span class="po-status-badge" style="background:'+itCol+'20;color:'+itCol+';border:1px solid '+itCol+'40">'+it.status+'</span></td>'
+      +'<td style="text-align:center">'
+        +(canArrive&&it.status!=='Arrived'?'<button onclick="markPOItemArrived(\x27'+it.id+'\x27,\x27'+id+'\x27)" style="padding:3px 8px;background:#10b981;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:700">Arrived</button>':'')
+        +(isDraft?'<button onclick="deletePOItem(\x27'+it.id+'\x27,\x27'+id+'\x27)" style="padding:3px 6px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:5px;font-size:10px;cursor:pointer;margin-left:4px">x</button>':'')
+      +'</td>'
+      +'</tr>';
+  }).join('') : '<tr><td colspan="8" style="padding:16px;text-align:center;color:#3a5070">No items on this order</td></tr>';
+  document.getElementById('poSubtotal').textContent = totalVal>0?'$'+totalVal.toFixed(2):'-';
+  document.getElementById('poGST').textContent      = totalVal>0?'$'+(totalVal*0.1).toFixed(2):'-';
+  document.getElementById('poTotal').textContent    = totalVal>0?'$'+(totalVal*1.1).toFixed(2):'-';
+  document.getElementById('poOverlay').style.display = 'flex';
+}
+
+function closePOModal() { document.getElementById('poOverlay').style.display='none'; editingPOId=null; }
+
+async function savePODetails() {
+  if (!editingPOId) return;
+  var patch = { notes: document.getElementById('poDetailNotes').value||null, expected_date: document.getElementById('poDetailExpDate').value||null, updated_at: new Date().toISOString() };
+  await db('PATCH','purchase_orders?id=eq.'+editingPOId, patch).catch(function(){});
+}
+
+async function markPOSent() {
+  if (!editingPOId) return;
+  await savePODetails();
+  var sentDate = document.getElementById('poDetailSentDate').value || new Date().toISOString().split('T')[0];
+  try {
+    await db('PATCH','purchase_orders?id=eq.'+editingPOId,{status:'Sent',sent_date:sentDate,updated_at:new Date().toISOString()});
+    await loadPurchaseOrders(); showToast('PO marked as Sent'); closePOModal(); renderPurchaseOrders();
+  } catch(e){ showToast('Failed: '+e.message,'error'); }
+}
+
+async function markPOItemArrived(itemId, poId) {
+  try {
+    var po = purchaseOrders.find(function(p){ return p.id===poId; });
+    var item = po?(po._items||[]).find(function(i){ return i.id===itemId; }):null;
+    await db('PATCH','purchase_order_items?id=eq.'+itemId,{status:'Arrived',updated_at:new Date().toISOString()});
+    if (item && item.job_id && item.part_id) {
+      await db('PATCH','job_parts?job_id=eq.'+item.job_id+'&part_id=eq.'+item.part_id+'&status=eq.ordered',{status:'arrived',updated_at:new Date().toISOString()}).catch(function(){});
+    }
+    await loadPurchaseOrders();
+    var upd = purchaseOrders.find(function(p){ return p.id===poId; });
+    if (upd) {
+      var allArrived  = upd._items.every(function(i){ return i.status==='Arrived'; });
+      var someArrived = upd._items.some(function(i){ return i.status==='Arrived'; });
+      var ns = allArrived?'Received':(someArrived?'Partially Received':'Sent');
+      await db('PATCH','purchase_orders?id=eq.'+poId,{status:ns,updated_at:new Date().toISOString()});
+      await loadPurchaseOrders();
+      showToast(allArrived?'All items arrived - PO complete!':'Item marked arrived');
+      openPODetail(poId);
+      renderPurchaseOrders();
+    }
+  } catch(e){ showToast('Failed: '+e.message,'error'); }
+}
+
+async function deletePOItem(itemId, poId) {
+  if (!confirm('Remove this item from the purchase order?')) return;
+  try {
+    await db('DELETE','purchase_order_items?id=eq.'+itemId);
+    await loadPurchaseOrders(); showToast('Item removed'); openPODetail(poId); renderPurchaseOrders();
+  } catch(e){ showToast('Failed: '+e.message,'error'); }
+}
+
+function exportPOExcel() {
+  if (!editingPOId) return;
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; });
+  if (!po) return;
+  savePODetails().catch(function(){});
+  var items = po._items||[];
+  var rows = [
+    ['X-PAK GLOBAL - Purchase Order'],
+    [],
+    ['PO Number:', po.po_number, '', 'Supplier:', po.supplier],
+    ['Status:', po.status, '', 'Sent:', po.sent_date||'', '', 'Expected:', po.expected_date||''],
+    ['Notes:', po.notes||''],
+    [],
+    ['Job No.','Part No.','Description','Qty','Unit Cost (ex-GST)','Line Total','Status']
+  ];
+  var totalVal = 0;
+  items.forEach(function(it) {
+    var lt = (it.unit_cost||0)*(it.qty||1);
+    totalVal += lt;
+    rows.push([it.job_number||'',it.key_no||'',it.description||'',it.qty||1,it.unit_cost||0,lt,it.status]);
+  });
+  rows.push([],[],[],['','','','','Subtotal (ex-GST)', totalVal,''],['','','','','GST (10%)', totalVal*0.1,''],['','','','','TOTAL', totalVal*1.1,'']);
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:10},{wch:16},{wch:35},{wch:6},{wch:18},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws, po.po_number);
+  XLSX.writeFile(wb, 'XPak_' + po.po_number + '.xlsx');
+}
+
+async function createManualPO() {
+  var supplier = prompt('Supplier name:');
+  if (!supplier || !supplier.trim()) return;
+  supplier = supplier.trim();
+  var maxNum = 0;
+  purchaseOrders.forEach(function(po){ var m=po.po_number?po.po_number.match(/XPO-(\d+)/):null; if(m) maxNum=Math.max(maxNum,parseInt(m[1])); });
+  var poNum = 'XPO-' + String(maxNum+1).padStart(3,'0');
+  try {
+    var res = await db('POST','purchase_orders',{po_number:poNum,supplier:supplier,status:'Draft',updated_at:new Date().toISOString()});
+    res[0]._items = [];
+    purchaseOrders.unshift(res[0]);
+    showToast(poNum + ' created');
+    renderPurchaseOrders();
+    openPODetail(res[0].id);
+  } catch(e){ showToast('Failed: '+e.message,'error'); }
 }
 
 // ── AUTH ─────────────────────────────────────────────────────────────────────
