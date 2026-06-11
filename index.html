@@ -2766,7 +2766,7 @@ function addPartToJob(partId, toolTempId) {
   if (existing) { showToast('Already added to this tool', 'error'); return; }
   var toolNum = 1;
   if (toolTempId) { var tt = jobToolsLocal.find(function(x){return x._tempId===toolTempId;}); if(tt) toolNum=tt.tool_number; }
-  jobPartsLocal.push({ _tempId:'tmp_'+Date.now(), _toolTempId:toolTempId||null, part_id:partId, part_key_no:pt.key_no, part_description:pt.description, machine_name:pt.machineName||'', quantity:1, status:qty>0?'use_stock':'to_order', tool_number:toolNum, notes:'' });
+  jobPartsLocal.push({ _tempId:'tmp_'+Date.now(), _toolTempId:toolTempId||null, part_id:partId, part_key_no:pt.key_no, part_description:pt.description, machine_name:pt.machineName||'', quantity:1, unit_price:null, status:qty>0?'use_stock':'to_order', tool_number:toolNum, notes:'' });
   var inp = document.getElementById('psi_'+toolTempId); if(inp) inp.value='';
   var res = document.getElementById('psr_'+toolTempId); if(res) res.innerHTML='';
   renderToolPartsList(toolTempId);
@@ -2800,26 +2800,61 @@ function renderToolPartsList(toolTempId) {
   var parts = jobPartsLocal.filter(function(x){return x._toolTempId===toolTempId;});
   if(!parts.length){el.innerHTML='<div style="font-size:11px;color:#3a5070;padding:6px 0">No parts added yet</div>';return;}
   var partsTotal = 0;
-  el.innerHTML = parts.map(function(jp) {
+  var iS = 'padding:4px 5px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;width:100%;box-sizing:border-box';
+  var hdr = '<div style="display:flex;align-items:center;gap:6px;padding:2px 10px 5px;font-size:9px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:0.5px">'
+    +'<span style="min-width:90px">Part No.</span><span style="flex:1">Description</span>'
+    +'<span style="width:65px;text-align:right">Cost</span><span style="width:50px;text-align:right">GP%</span>'
+    +'<span style="width:44px;text-align:center">Qty</span><span style="width:65px;text-align:right">Sell</span>'
+    +'<span style="width:100px;text-align:center">Status</span><span style="width:20px"></span></div>';
+  var rows = parts.map(function(jp) {
     var sc = STATUS_COLOURS[jp.status]||'#4a6080';
-    var pt = jp.part_id ? allParts.find(function(x){ return x.id === jp.part_id; }) : null;
-    var sell = pt && pt.sell_price ? parseFloat(pt.sell_price) : 0;
+    var pt = jp.part_id ? allParts.find(function(x){ return x.id===jp.part_id; }) : null;
+    var cost = pt && pt.cost_price ? parseFloat(pt.cost_price) : 0;
+    var stdSell = pt && pt.sell_price ? parseFloat(pt.sell_price) : 0;
+    var sell = jp.unit_price != null ? parseFloat(jp.unit_price) : stdSell;
+    var gp = (cost > 0 && sell > 0) ? Math.round((1 - cost/sell)*100) : '';
     var lineTotal = sell * (jp.quantity || 1);
     partsTotal += lineTotal;
-    return '<div class="job-part-row '+jp.status+'">' +
-      '<span class="jpr-keyno">'+jp.part_key_no+'</span>' +
-      '<span class="jpr-desc">'+jp.part_description+'</span>' +
-      '<input type="number" min="1" value="'+jp.quantity+'" onchange="setJobPartQty(\''+jp._tempId+'\',this.value)" style="width:48px;padding:4px 6px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;text-align:center">' +
-      (sell > 0 ? '<span style="font-size:11px;font-weight:700;color:#10b981;flex-shrink:0;min-width:60px;text-align:right">$'+lineTotal.toFixed(2)+'</span>' : '<span style="font-size:10px;color:#3a5070;flex-shrink:0;min-width:60px;text-align:right">No price</span>') +
-      '<select onchange="setJobPartStatus(\''+jp._tempId+'\',this.value)" style="padding:4px 7px;border-radius:5px;border:1px solid '+sc+';background:#0f1923;color:'+sc+';font-size:11px;font-weight:700">' +
-        '<option value="use_stock"'+(jp.status==='use_stock'?' selected':'')+'>Use Stock</option>' +
-        '<option value="to_order"'+(jp.status==='to_order'?' selected':'')+'>To Order</option>' +
-        '<option value="ordered"'+(jp.status==="ordered"?' selected':'')+'>Ordered</option>' +
-        '<option value="arrived"'+(jp.status==="arrived"?' selected':'')+'>Arrived</option>' +
-      '</select>' +
-      '<button class="jpr-remove" onclick="removeJobPart(\''+jp._tempId+'\')">x</button>' +
-    '</div>';
-  }).join('') + (partsTotal > 0 ? '<div style="text-align:right;padding:6px 4px 2px;font-size:12px;font-weight:700;color:#10b981;border-top:1px solid #1e3048;margin-top:4px">Parts subtotal: $'+partsTotal.toFixed(2)+'</div>' : '');
+    var gpCol = gp !== '' ? (gp < 30 ? '#ef4444' : gp > 60 ? '#a78bfa' : '#10b981') : '#3a5070';
+    var tid = jp._tempId;
+    return '<div class="job-part-row '+jp.status+'">'
+      +'<span class="jpr-keyno">'+jp.part_key_no+'</span>'
+      +'<span class="jpr-desc">'+jp.part_description+'</span>'
+      +'<span style="width:65px;text-align:right;font-size:11px;color:#5a8090;flex-shrink:0">'+(cost>0?'$'+cost.toFixed(2):'-')+'</span>'
+      +'<div style="width:50px;flex-shrink:0"><input type="number" min="0" max="99" value="'+(gp!==''?gp:'')+'" placeholder="-"'
+        +' onchange="setJobPartGP(\x27'+tid+'\x27,this.value)"'
+        +' style="'+iS+';text-align:right;border-color:'+gpCol+';color:'+gpCol+'"></div>'
+      +'<div style="width:44px;flex-shrink:0"><input type="number" min="1" value="'+jp.quantity+'"'
+        +' onchange="setJobPartQty(\x27'+tid+'\x27,this.value)"'
+        +' style="'+iS+';text-align:center"></div>'
+      +'<div style="width:65px;flex-shrink:0"><input type="number" min="0" step="0.01" value="'+(sell>0?sell.toFixed(2):'')+'" placeholder="0.00"'
+        +' onchange="setJobPartSell(\x27'+tid+'\x27,this.value)"'
+        +' style="'+iS+';text-align:right'+(jp.unit_price!=null?';border-color:#a78bfa':'')+'">'+'</div>'
+      +'<select onchange="setJobPartStatus(\x27'+tid+'\x27,this.value)" style="width:100px;flex-shrink:0;padding:4px 5px;border-radius:5px;border:1px solid '+sc+';background:#0f1923;color:'+sc+';font-size:11px;font-weight:700">'
+        +'<option value="use_stock"'+(jp.status==='use_stock'?' selected':'')+'>Use Stock</option>'
+        +'<option value="to_order"'+(jp.status==='to_order'?' selected':'')+'>To Order</option>'
+        +'<option value="ordered"'+(jp.status==='ordered'?' selected':'')+'>Ordered</option>'
+        +'<option value="arrived"'+(jp.status==='arrived'?' selected':'')+'>Arrived</option>'
+      +'</select>'
+      +'<button class="jpr-remove" onclick="removeJobPart(\x27'+tid+'\x27)">x</button>'
+      +'</div>';
+  }).join('');
+  el.innerHTML = hdr + rows + (partsTotal > 0 ? '<div style="text-align:right;padding:6px 4px 2px;font-size:12px;font-weight:700;color:#10b981;border-top:1px solid #1e3048;margin-top:4px">Parts subtotal: $'+partsTotal.toFixed(2)+'</div>' : '');
+}
+function setJobPartGP(tempId, gpVal) {
+  var jp = jobPartsLocal.find(function(x){ return x._tempId===tempId; }); if(!jp) return;
+  var pt = jp.part_id ? allParts.find(function(x){ return x.id===jp.part_id; }) : null;
+  var cost = pt && pt.cost_price ? parseFloat(pt.cost_price) : 0;
+  var gp = parseFloat(gpVal);
+  if (!isNaN(gp) && cost > 0 && gp >= 0 && gp < 100) {
+    jp.unit_price = parseFloat((cost / (1 - gp/100)).toFixed(2));
+  } else { jp.unit_price = null; }
+  renderToolPartsList(jp._toolTempId); recalcPartsTotal();
+}
+function setJobPartSell(tempId, sellVal) {
+  var jp = jobPartsLocal.find(function(x){ return x._tempId===tempId; }); if(!jp) return;
+  jp.unit_price = parseFloat(sellVal) > 0 ? parseFloat(parseFloat(sellVal).toFixed(2)) : null;
+  renderToolPartsList(jp._toolTempId); recalcPartsTotal();
 }
 function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsList(t._tempId);}); recalcPartsTotal();}
 
@@ -3084,7 +3119,7 @@ async function openEditJobModal(jobId) {
   // Load existing job parts
   try {
     var existing = await db('GET', 'job_parts?job_id=eq.' + j.id + '&select=*&order=created_at.asc');
-    jobPartsLocal = existing.map(function(ep) {
+    jobPartsLocal = existing.map(function(ep) { ep.unit_price = ep.unit_price != null ? parseFloat(ep.unit_price) : null;
       var matchTool = jobToolsLocal.find(function(t) { return t.tool_number === ep.tool_number; });
       return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id, _toolTempId: matchTool ? matchTool._tempId : (jobToolsLocal[0]?jobToolsLocal[0]._tempId:null) }, ep);
     });
@@ -3218,6 +3253,7 @@ async function saveJob() {
         part_description: jp.part_description,
         machine_name: jp.machine_name,
         quantity: jp.quantity,
+        unit_price: jp.unit_price != null ? jp.unit_price : null,
         status: jp.status,
         tool_number: jp.tool_number || 1,
         notes: jp.notes || null,
