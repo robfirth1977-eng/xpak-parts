@@ -5108,20 +5108,22 @@ function exportPOExcel() {
   XLSX.writeFile(wb, 'XPak_' + po.po_number + '.xlsx');
 }
 
-function openNewPOModal() {
-  // Populate supplier datalist from cache + existing POs
-  var names = [];
-  if (window._supplierCache) {
-    _supplierCache.forEach(function(s){ if (s.name && names.indexOf(s.name)===-1) names.push(s.name); });
-  }
-  purchaseOrders.forEach(function(po){ if (po.supplier && names.indexOf(po.supplier)===-1) names.push(po.supplier); });
-  names.sort();
-  var dl = document.getElementById('newPOSupplierList');
-  dl.innerHTML = names.map(function(n){ return '<option value="'+n+'">'; }).join('');
+async function openNewPOModal() {
   document.getElementById('newPOSupplier').value = '';
   document.getElementById('newPONotes').value = '';
   document.getElementById('newPOOverlay').style.display = 'flex';
   setTimeout(function(){ document.getElementById('newPOSupplier').focus(); }, 100);
+  // Build datalist from suppliers table + existing PO suppliers
+  var names = [];
+  try {
+    if (!window._supplierCache) {
+      window._supplierCache = await db('GET', 'suppliers?select=name&order=name');
+    }
+    _supplierCache.forEach(function(s){ if (s.name && names.indexOf(s.name)===-1) names.push(s.name); });
+  } catch(e) {}
+  purchaseOrders.forEach(function(po){ if (po.supplier && names.indexOf(po.supplier)===-1) names.push(po.supplier); });
+  names.sort();
+  document.getElementById('newPOSupplierList').innerHTML = names.map(function(n){ return '<option value="'+n+'">'; }).join('');
 }
 
 function closeNewPOModal() { document.getElementById('newPOOverlay').style.display = 'none'; }
