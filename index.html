@@ -807,9 +807,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <button class="loan-view-btn"        id="poBtnReceived" onclick="setPOFilter('Received')">Received</button>
     <button class="loan-view-btn"        id="poBtnAll"      onclick="setPOFilter('All')">All</button>
   </div>
-  <button class="btn-add" style="background:#60a5fa;margin-left:auto;color:#0f1923;font-weight:700" onclick="createManualPO()">+ New PO</button>
+  <button class="btn-add" style="background:#60a5fa;margin-left:auto;color:#0f1923;font-weight:700" onclick="openNewPOModal()">+ New PO</button>
 </div>
 <div class="loan-section" id="poSection" style="display:none"><div id="poList"></div></div>
+
+<!-- New PO Modal -->
+<div class="overlay" id="newPOOverlay" onclick="if(event.target===this)closeNewPOModal()">
+  <div class="modal" style="border-top:3px solid #60a5fa;max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">New Purchase Order</div>
+      <button class="modal-close" onclick="closeNewPOModal()">x</button>
+    </div>
+    <div class="field">
+      <label>Supplier *</label>
+      <input id="newPOSupplier" list="newPOSupplierList" placeholder="Select or type supplier name..." autocomplete="off"
+        style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:14px;outline:none">
+      <datalist id="newPOSupplierList"></datalist>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <input id="newPONotes" placeholder="e.g. Reference number, urgency..."
+        style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn-save" style="background:#60a5fa;color:#0f1923;font-weight:700" onclick="saveNewPO()">Create PO</button>
+      <button onclick="closeNewPOModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- PO Detail Modal -->
 <div class="overlay" id="poOverlay" onclick="if(event.target===this)closePOModal()">
@@ -5083,18 +5108,37 @@ function exportPOExcel() {
   XLSX.writeFile(wb, 'XPak_' + po.po_number + '.xlsx');
 }
 
-async function createManualPO() {
-  var supplier = prompt('Supplier name:');
-  if (!supplier || !supplier.trim()) return;
-  supplier = supplier.trim();
+function openNewPOModal() {
+  // Populate supplier datalist from cache + existing POs
+  var names = [];
+  if (window._supplierCache) {
+    _supplierCache.forEach(function(s){ if (s.name && names.indexOf(s.name)===-1) names.push(s.name); });
+  }
+  purchaseOrders.forEach(function(po){ if (po.supplier && names.indexOf(po.supplier)===-1) names.push(po.supplier); });
+  names.sort();
+  var dl = document.getElementById('newPOSupplierList');
+  dl.innerHTML = names.map(function(n){ return '<option value="'+n+'">'; }).join('');
+  document.getElementById('newPOSupplier').value = '';
+  document.getElementById('newPONotes').value = '';
+  document.getElementById('newPOOverlay').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('newPOSupplier').focus(); }, 100);
+}
+
+function closeNewPOModal() { document.getElementById('newPOOverlay').style.display = 'none'; }
+
+async function saveNewPO() {
+  var supplier = document.getElementById('newPOSupplier').value.trim();
+  if (!supplier) { showToast('Supplier name is required', 'error'); return; }
+  var notes = document.getElementById('newPONotes').value.trim() || null;
   var maxNum = 0;
   purchaseOrders.forEach(function(po){ var m=po.po_number?po.po_number.match(/XPO-(\d+)/):null; if(m) maxNum=Math.max(maxNum,parseInt(m[1])); });
   var poNum = 'XPO-' + String(maxNum+1).padStart(3,'0');
   try {
-    var res = await db('POST','purchase_orders',{po_number:poNum,supplier:supplier,status:'Draft',updated_at:new Date().toISOString()});
+    var res = await db('POST','purchase_orders',{po_number:poNum,supplier:supplier,status:'Draft',notes:notes,updated_at:new Date().toISOString()});
     res[0]._items = [];
     purchaseOrders.unshift(res[0]);
-    showToast(poNum + ' created');
+    closeNewPOModal();
+    showToast(poNum + ' created for ' + supplier);
     renderPurchaseOrders();
     openPODetail(res[0].id);
   } catch(e){ showToast('Failed: '+e.message,'error'); }
