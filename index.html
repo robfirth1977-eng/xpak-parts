@@ -844,7 +844,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <button class="modal-close" onclick="closePOModal()">x</button>
     </div>
     <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px">
-      <div style="flex:1;min-width:160px"><div style="font-size:10px;color:#5a8090;margin-bottom:3px">SUPPLIER</div><div id="poDetailSupplier" style="font-size:16px;font-weight:700;color:#e2e8f0"></div></div>
+      <div style="flex:1;min-width:160px"><div style="font-size:10px;color:#5a8090;margin-bottom:3px">SUPPLIER</div><input id="poDetailSupplier" style="font-size:15px;font-weight:700;color:#e2e8f0;background:transparent;border:none;border-bottom:1px solid #2a4060;outline:none;width:100%;padding:2px 0" onblur="savePOSupplier()"></div>
       <div class="field" style="width:140px"><label>Sent Date</label><input type="date" id="poDetailSentDate"></div>
       <div class="field" style="width:140px"><label>Expected</label><input type="date" id="poDetailExpDate"></div>
       <div class="field" style="flex:1;min-width:180px"><label>Notes</label><input id="poDetailNotes" placeholder="e.g. Ref number, special instructions..."></div>
@@ -5031,6 +5031,18 @@ function openPODetail(id) {
 }
 
 function closePOModal() { document.getElementById('poOverlay').style.display='none'; editingPOId=null; }
+
+async function savePOSupplier() {
+  if (!editingPOId) return;
+  var val = document.getElementById('poDetailSupplier').value.trim();
+  if (!val) return;
+  try {
+    await db('PATCH','purchase_orders?id=eq.'+editingPOId,{supplier:val,updated_at:new Date().toISOString()});
+    var po = purchaseOrders.find(function(p){ return p.id===editingPOId; });
+    if (po) po.supplier = val;
+    renderPurchaseOrders();
+  } catch(e){ showToast('Failed to save supplier','error'); }
+}
 
 async function savePODetails() {
   if (!editingPOId) return;
