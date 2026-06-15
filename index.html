@@ -4930,69 +4930,36 @@ function printAllStockLabels() {
   if (!list.length) { showToast('No tools to print for current filter', 'error'); return; }
   var w = window.open('', '_blank');
   if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
-
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Stock Labels</title>');
+
   w.document.write('<style>');
   w.document.write('@page { size: 159mm 104mm; margin: 3mm 4mm; }');
   w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
   w.document.write('body { font-family: Arial, sans-serif; background: #fff; color: #000; }');
-  w.document.write('.label { width: 151mm; height: 98mm; display: flex; flex-direction: column; justify-content: space-between; break-after: page; page-break-after: always; overflow: hidden; }');
-  w.document.write('.hdr { display: flex; align-items: stretch; border-bottom: 0.5mm solid #000; padding-bottom: 2.5mm; margin-bottom: 2.5mm; gap: 4mm; }');
-  w.document.write('.brand { display: flex; flex-direction: column; justify-content: center; min-width: 26mm; max-width: 26mm; }');
-  w.document.write('.brand-main { font-size: 13pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }');
-  w.document.write('.brand-sub  { font-size: 6pt; color: #666; letter-spacing: 2px; text-transform: uppercase; margin-top: 0.5mm; }');
-  w.document.write('.model-block { flex: 1; display: flex; flex-direction: column; justify-content: center; border-left: 0.3mm solid #ccc; border-right: 0.3mm solid #ccc; padding: 0 4mm; }');
-  w.document.write('.model-name { font-size: 20pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }');
-  w.document.write('.model-desc { font-size: 7.5pt; color: #555; margin-top: 1mm; }');
-  w.document.write('.xpak-pn-block { display: flex; flex-direction: column; justify-content: center; text-align: right; min-width: 38mm; }');
-  w.document.write('.xpak-lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5mm; }');
-  w.document.write('.xpak-val { font-size: 22pt; font-weight: 900; color: #000; letter-spacing: -0.5px; line-height: 1; }');
-  w.document.write('.fields { display: flex; gap: 0; border-top: 0.3mm solid #eee; border-bottom: 0.3mm solid #eee; padding: 2mm 0; }');
-  w.document.write('.field { flex: 1; padding: 0 3mm; border-right: 0.3mm solid #eee; }');
+  w.document.write('.label { width: 151mm; height: 98mm; display: flex; flex-direction: column; break-after: page; page-break-after: always; overflow: hidden; }');
+  w.document.write('.hdr { display: flex; align-items: stretch; border-bottom: 0.6mm solid #000; padding-bottom: 3mm; margin-bottom: 3mm; gap: 4mm; }');
+  w.document.write('.brand { display: flex; align-items: center; min-width: 30mm; max-width: 30mm; }');
+  w.document.write('.brand img { width: 30mm; object-fit: contain; }');
+  w.document.write('.model-block { flex: 1; display: flex; flex-direction: column; justify-content: center; border-left: 0.3mm solid #ccc; padding: 0 4mm; }');
+  w.document.write('.model-name { font-size: 24pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }');
+  w.document.write('.model-desc { font-size: 8.5pt; color: #444; margin-top: 1.5mm; font-weight: 600; }');
+  w.document.write('.xpak-pn-block { display: flex; flex-direction: column; justify-content: center; text-align: right; min-width: 38mm; border-left: 0.3mm solid #ccc; padding-left: 4mm; }');
+  w.document.write('.xpak-lbl { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1mm; }');
+  w.document.write('.xpak-val { font-size: 20pt; font-weight: 900; color: #000; letter-spacing: -0.5px; line-height: 1; }');
+  w.document.write('.fields { display: flex; flex: 1; align-items: center; border-top: 0.3mm solid #ddd; border-bottom: 0.3mm solid #ddd; padding: 3mm 0; margin-bottom: 3mm; gap: 0; }');
+  w.document.write('.field { flex: 1; padding: 0 4mm; border-right: 0.3mm solid #ddd; }');
   w.document.write('.field:first-child { padding-left: 0; }');
-  w.document.write('.field:last-child  { border-right: none; }');
-  w.document.write('.lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.8mm; }');
-  w.document.write('.val { font-size: 11pt; font-weight: 700; line-height: 1; }');
-  w.document.write('.val.mono { font-family: "Courier New", monospace; font-size: 10pt; }');
-  w.document.write('.val.large { font-size: 13pt; }');
-  w.document.write('.incl-bar { text-align: center; font-size: 8.5pt; font-weight: 700; border: 0.3mm solid #000; border-radius: 1mm; padding: 1.5mm; }');
-  w.document.write('.footer { display: flex; justify-content: space-between; font-size: 6pt; color: #aaa; }');
-  w.document.write('</style></head><body>');
-
-  list.forEach(function(t) {
-    var battTxt    = t.battery_count ? t.battery_count + ' Batter' + (t.battery_count===1?'y':'ies') : '';
-    var chargerTxt = t.charger_included ? 'Charger Included' : '';
-    var includes   = [battTxt, chargerTxt].filter(Boolean).join(' \u00B7 ');
-
-    w.document.write('<div class="label">');
-
-    // Header
-    w.document.write('<div class="hdr">'
-      + '<div class="brand"><img src="' + _XPAK_LOGO + '" style="max-height:14mm;max-width:24mm;object-fit:contain;display:block"></div>'
-      + '<div class="model-block">'
-        + '<div class="model-name">' + (t.name||'') + '</div>'
-        + (t.description ? '<div class="model-desc">' + t.description + '</div>' : '')
-      + '</div>'
-      + '<div class="xpak-pn-block">'
-        + '<div class="xpak-lbl">X-Pak Part No.</div>'
-        + '<div class="xpak-val">' + (t.xpak_part_no||'\u2014') + '</div>'
-      + '</div>'
-      + '</div>');
-
-    // Fields
-    w.document.write('<div class="fields">');
-    w.document.write('<div class="field"><div class="lbl">Serial Number</div><div class="val large mono">' + (t.serial_number||'\u2014') + '</div></div>');
-    if (t.model_number)   w.document.write('<div class="field"><div class="lbl">Supplier Model No.</div><div class="val mono">' + t.model_number + '</div></div>');
-    if (t.strap_size)     w.document.write('<div class="field"><div class="lbl">Strap Size</div><div class="val">' + t.strap_size + '</div></div>');
-    if (t.warranty_period) w.document.write('<div class="field"><div class="lbl">Warranty</div><div class="val">' + t.warranty_period + ' Months</div></div>');
-    w.document.write('</div>');
-
-    if (includes) w.document.write('<div class="incl-bar">Includes: ' + includes + '</div>');
-
-    w.document.write('<div class="footer"><span>X-Pak Global \u00B7 Tamworth NSW 2340</span><span>info@xpak.com.au \u00B7 www.xpak.com.au</span></div>');
-    w.document.write('</div>');
-  });
-
+  w.document.write('.field:last-child { border-right: none; }');
+  w.document.write('.lbl { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1.5mm; }');
+  w.document.write('.val { font-size: 13pt; font-weight: 700; line-height: 1; }');
+  w.document.write('.val.mono { font-family: "Courier New", monospace; font-size: 12pt; }');
+  w.document.write('.val.sn { font-size: 15pt; }');
+  w.document.write('.incl-bar { text-align: center; font-size: 10pt; font-weight: 700; border: 0.4mm solid #000; border-radius: 1.5mm; padding: 2mm; letter-spacing: 1px; }');
+  w.document.write('.footer { display: flex; justify-content: space-between; font-size: 6.5pt; color: #aaa; margin-top: 2.5mm; }');
+  w.document.write('</style>');
+  w.document.write('<script>' + buildLabel.toString() + '<\/script>');
+  w.document.write('</head><body>');
+  list.forEach(function(t){ w.document.write(buildLabel(t)); });
   w.document.write('<script>setTimeout(function(){ window.print(); }, 300);<\/script>');
   w.document.write('</body></html>');
   w.document.close();
@@ -5003,48 +4970,40 @@ function printStockLabel() {
   var t = editingStockTool;
   var w = window.open('', '_blank');
   if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
-
-  var battTxt    = t.battery_count ? t.battery_count + ' Batter' + (t.battery_count===1?'y':'ies') : '';
-  var chargerTxt = t.charger_included ? 'Charger Included' : '';
-  var includes   = [battTxt, chargerTxt].filter(Boolean).join(' \u00B7 ');
-
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Label - ' + (t.name||'') + '</title>');
+
   w.document.write('<style>');
   w.document.write('@page { size: 159mm 104mm; margin: 3mm 4mm; }');
   w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
-  w.document.write('body { font-family: Arial, sans-serif; width: 151mm; height: 98mm; overflow: hidden; background: #fff; color: #000; }');
-  w.document.write('.label { width: 100%; height: 98mm; display: flex; flex-direction: column; justify-content: space-between; }');
-
-  // Header row: brand left, model centre, xpak part no right (dominant)
-  w.document.write('.hdr { display: flex; align-items: stretch; border-bottom: 0.5mm solid #000; padding-bottom: 2.5mm; margin-bottom: 2.5mm; gap: 4mm; }');
-  w.document.write('.brand { display: flex; flex-direction: column; justify-content: center; min-width: 26mm; max-width: 26mm; }');
-  w.document.write('.brand-main { font-size: 13pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }');
-  w.document.write('.brand-sub  { font-size: 6pt; color: #666; letter-spacing: 2px; text-transform: uppercase; margin-top: 0.5mm; }');
-  w.document.write('.model-block { flex: 1; display: flex; flex-direction: column; justify-content: center; border-left: 0.3mm solid #ccc; border-right: 0.3mm solid #ccc; padding: 0 4mm; }');
-  w.document.write('.model-name  { font-size: 20pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }');
-  w.document.write('.model-desc  { font-size: 7.5pt; color: #555; margin-top: 1mm; }');
-  w.document.write('.xpak-pn-block { display: flex; flex-direction: column; justify-content: center; text-align: right; min-width: 38mm; }');
-  w.document.write('.xpak-lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5mm; }');
-  w.document.write('.xpak-val { font-size: 22pt; font-weight: 900; color: #000; letter-spacing: -0.5px; line-height: 1; }');
-
-  // Fields row
-  w.document.write('.fields { display: flex; gap: 0; border-top: 0.3mm solid #eee; border-bottom: 0.3mm solid #eee; padding: 2mm 0; }');
-  w.document.write('.field { flex: 1; padding: 0 3mm; border-right: 0.3mm solid #eee; }');
+  w.document.write('body { font-family: Arial, sans-serif; background: #fff; color: #000; }');
+  w.document.write('.label { width: 151mm; height: 98mm; display: flex; flex-direction: column; break-after: page; page-break-after: always; overflow: hidden; }');
+  w.document.write('.hdr { display: flex; align-items: stretch; border-bottom: 0.6mm solid #000; padding-bottom: 3mm; margin-bottom: 3mm; gap: 4mm; }');
+  w.document.write('.brand { display: flex; align-items: center; min-width: 30mm; max-width: 30mm; }');
+  w.document.write('.brand img { width: 30mm; object-fit: contain; }');
+  w.document.write('.model-block { flex: 1; display: flex; flex-direction: column; justify-content: center; border-left: 0.3mm solid #ccc; padding: 0 4mm; }');
+  w.document.write('.model-name { font-size: 24pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }');
+  w.document.write('.model-desc { font-size: 8.5pt; color: #444; margin-top: 1.5mm; font-weight: 600; }');
+  w.document.write('.xpak-pn-block { display: flex; flex-direction: column; justify-content: center; text-align: right; min-width: 38mm; border-left: 0.3mm solid #ccc; padding-left: 4mm; }');
+  w.document.write('.xpak-lbl { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1mm; }');
+  w.document.write('.xpak-val { font-size: 20pt; font-weight: 900; color: #000; letter-spacing: -0.5px; line-height: 1; }');
+  w.document.write('.fields { display: flex; flex: 1; align-items: center; border-top: 0.3mm solid #ddd; border-bottom: 0.3mm solid #ddd; padding: 3mm 0; margin-bottom: 3mm; gap: 0; }');
+  w.document.write('.field { flex: 1; padding: 0 4mm; border-right: 0.3mm solid #ddd; }');
   w.document.write('.field:first-child { padding-left: 0; }');
-  w.document.write('.field:last-child  { border-right: none; }');
-  w.document.write('.lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.8mm; }');
-  w.document.write('.val { font-size: 11pt; font-weight: 700; line-height: 1; }');
-  w.document.write('.val.mono { font-family: "Courier New", monospace; font-size: 10pt; }');
-  w.document.write('.val.large { font-size: 13pt; }');
-
-  // Includes + footer
-  w.document.write('.incl-bar { text-align: center; font-size: 8.5pt; font-weight: 700; border: 0.3mm solid #000; border-radius: 1mm; padding: 1.5mm; }');
-  w.document.write('.footer { display: flex; justify-content: space-between; font-size: 6pt; color: #aaa; }');
-  w.document.write('</style></head><body><div class="label">');
-
-  // Header
-  w.document.write('<div class="hdr">'
-    + '<div class="brand"><img src="' + _XPAK_LOGO + '" style="max-height:14mm;max-width:24mm;object-fit:contain;display:block"></div>'
+  w.document.write('.field:last-child { border-right: none; }');
+  w.document.write('.lbl { font-size: 6.5pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1.5mm; }');
+  w.document.write('.val { font-size: 13pt; font-weight: 700; line-height: 1; }');
+  w.document.write('.val.mono { font-family: "Courier New", monospace; font-size: 12pt; }');
+  w.document.write('.val.sn { font-size: 15pt; }');
+  w.document.write('.incl-bar { text-align: center; font-size: 10pt; font-weight: 700; border: 0.4mm solid #000; border-radius: 1.5mm; padding: 2mm; letter-spacing: 1px; }');
+  w.document.write('.footer { display: flex; justify-content: space-between; font-size: 6.5pt; color: #aaa; margin-top: 2.5mm; }');
+  w.document.write('</style>');
+  w.document.write('</head><body>');
+  var battTxt    = t.battery_count ? t.battery_count + (t.battery_count===1?' Battery':' Batteries') : '';
+  var chargerTxt = t.charger_included ? '1 Charger' : '';
+  var includes   = [battTxt, chargerTxt].filter(Boolean).join('     ');
+  var html = '<div class="label">';
+  html += '<div class="hdr">'
+    + '<div class="brand"><img src="' + _XPAK_LOGO + '"></div>'
     + '<div class="model-block">'
       + '<div class="model-name">' + (t.name||'') + '</div>'
       + (t.description ? '<div class="model-desc">' + t.description + '</div>' : '')
@@ -5053,20 +5012,17 @@ function printStockLabel() {
       + '<div class="xpak-lbl">X-Pak Part No.</div>'
       + '<div class="xpak-val">' + (t.xpak_part_no||'\u2014') + '</div>'
     + '</div>'
-    + '</div>');
-
-  // Fields
-  w.document.write('<div class="fields">');
-  w.document.write('<div class="field"><div class="lbl">Serial Number</div><div class="val large mono">' + (t.serial_number||'\u2014') + '</div></div>');
-  if (t.model_number) w.document.write('<div class="field"><div class="lbl">Supplier Model No.</div><div class="val mono">' + t.model_number + '</div></div>');
-  if (t.strap_size)   w.document.write('<div class="field"><div class="lbl">Strap Size</div><div class="val">' + t.strap_size + '</div></div>');
-  if (t.warranty_period) w.document.write('<div class="field"><div class="lbl">Warranty</div><div class="val">' + t.warranty_period + ' Months</div></div>');
-  w.document.write('</div>');
-
-  if (includes) w.document.write('<div class="incl-bar">Includes: ' + includes + '</div>');
-
-  w.document.write('<div class="footer"><span>X-Pak Global \u00B7 Tamworth NSW 2340</span><span>info@xpak.com.au \u00B7 www.xpak.com.au</span></div>');
-  w.document.write('</div>');
+    + '</div>';
+  html += '<div class="fields">';
+  html += '<div class="field"><div class="lbl">Serial Number</div><div class="val sn mono">' + (t.serial_number||'\u2014') + '</div></div>';
+  if (t.model_number)    html += '<div class="field"><div class="lbl">Supplier Model</div><div class="val mono">' + t.model_number + '</div></div>';
+  if (t.strap_size)      html += '<div class="field"><div class="lbl">Strap Size</div><div class="val">' + t.strap_size + '</div></div>';
+  if (t.warranty_period) html += '<div class="field"><div class="lbl">Warranty</div><div class="val">' + t.warranty_period + ' Months</div></div>';
+  html += '</div>';
+  if (includes) html += '<div class="incl-bar">' + includes + '</div>';
+  html += '<div class="footer"><span>X-Pak Global \u00B7 Tamworth NSW 2340</span><span>info@xpak.com.au \u00B7 www.xpak.com.au</span></div>';
+  html += '</div>';
+  w.document.write(html);
   w.document.write('<script>setTimeout(function(){ window.print(); }, 400);<\/script>');
   w.document.write('</body></html>');
   w.document.close();
