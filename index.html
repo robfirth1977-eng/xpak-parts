@@ -727,6 +727,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <button class="loan-view-btn"        id="btnStockSold"      onclick="setStockFilter('Sold')">Sold</button>
     <button class="loan-view-btn"        id="btnStockWritten"   onclick="setStockFilter('Written Off')">Written Off</button>
   </div>
+  <button class="btn-add" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;font-size:12px" onclick="printAllStockLabels()">🖨 Print All Labels</button>
   <button class="btn-add" style="background:#10b981;margin-left:auto;color:#0f1923;font-weight:700" onclick="openStockModal()">+ Add Tool</button>
 </div>
 <div class="loan-section" id="stockSection" style="display:none"><div id="stockList"></div></div>
@@ -4922,6 +4923,79 @@ function toggleStockSoldFields(val) {
   document.getElementById('stStatus').style.borderColor = val === 'Sold' ? '#60a5fa' : val === 'Written Off' ? '#ef4444' : '#10b981';
 }
 
+
+function printAllStockLabels() {
+  var list = _stockFilter === 'All' ? stockTools : stockTools.filter(function(t){ return t.status === _stockFilter; });
+  if (!list.length) { showToast('No tools to print for current filter', 'error'); return; }
+  var w = window.open('', '_blank');
+  if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
+
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Stock Labels</title>');
+  w.document.write('<style>');
+  w.document.write('@page { size: 159mm 104mm; margin: 3mm 4mm; }');
+  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
+  w.document.write('body { font-family: Arial, sans-serif; background: #fff; color: #000; }');
+  w.document.write('.label { width: 151mm; height: 98mm; display: flex; flex-direction: column; justify-content: space-between; break-after: page; page-break-after: always; overflow: hidden; }');
+  w.document.write('.hdr { display: flex; align-items: stretch; border-bottom: 0.5mm solid #000; padding-bottom: 2.5mm; margin-bottom: 2.5mm; gap: 4mm; }');
+  w.document.write('.brand { display: flex; flex-direction: column; justify-content: center; min-width: 22mm; }');
+  w.document.write('.brand-main { font-size: 13pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }');
+  w.document.write('.brand-sub  { font-size: 6pt; color: #666; letter-spacing: 2px; text-transform: uppercase; margin-top: 0.5mm; }');
+  w.document.write('.model-block { flex: 1; display: flex; flex-direction: column; justify-content: center; border-left: 0.3mm solid #ccc; border-right: 0.3mm solid #ccc; padding: 0 4mm; }');
+  w.document.write('.model-name { font-size: 20pt; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }');
+  w.document.write('.model-desc { font-size: 7.5pt; color: #555; margin-top: 1mm; }');
+  w.document.write('.xpak-pn-block { display: flex; flex-direction: column; justify-content: center; text-align: right; min-width: 38mm; }');
+  w.document.write('.xpak-lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5mm; }');
+  w.document.write('.xpak-val { font-size: 22pt; font-weight: 900; color: #000; letter-spacing: -0.5px; line-height: 1; }');
+  w.document.write('.fields { display: flex; gap: 0; border-top: 0.3mm solid #eee; border-bottom: 0.3mm solid #eee; padding: 2mm 0; }');
+  w.document.write('.field { flex: 1; padding: 0 3mm; border-right: 0.3mm solid #eee; }');
+  w.document.write('.field:first-child { padding-left: 0; }');
+  w.document.write('.field:last-child  { border-right: none; }');
+  w.document.write('.lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.8mm; }');
+  w.document.write('.val { font-size: 11pt; font-weight: 700; line-height: 1; }');
+  w.document.write('.val.mono { font-family: "Courier New", monospace; font-size: 10pt; }');
+  w.document.write('.val.large { font-size: 13pt; }');
+  w.document.write('.incl-bar { text-align: center; font-size: 8.5pt; font-weight: 700; border: 0.3mm solid #000; border-radius: 1mm; padding: 1.5mm; }');
+  w.document.write('.footer { display: flex; justify-content: space-between; font-size: 6pt; color: #aaa; }');
+  w.document.write('</style></head><body>');
+
+  list.forEach(function(t) {
+    var battTxt    = t.battery_count ? t.battery_count + ' Batter' + (t.battery_count===1?'y':'ies') : '';
+    var chargerTxt = t.charger_included ? 'Charger Included' : '';
+    var includes   = [battTxt, chargerTxt].filter(Boolean).join(' \u00B7 ');
+
+    w.document.write('<div class="label">');
+
+    // Header
+    w.document.write('<div class="hdr">'
+      + '<div class="brand"><div class="brand-main">X-PAK</div><div class="brand-sub">Global</div></div>'
+      + '<div class="model-block">'
+        + '<div class="model-name">' + (t.name||'') + '</div>'
+        + (t.description ? '<div class="model-desc">' + t.description + '</div>' : '')
+      + '</div>'
+      + '<div class="xpak-pn-block">'
+        + '<div class="xpak-lbl">X-Pak Part No.</div>'
+        + '<div class="xpak-val">' + (t.xpak_part_no||'\u2014') + '</div>'
+      + '</div>'
+      + '</div>');
+
+    // Fields
+    w.document.write('<div class="fields">');
+    w.document.write('<div class="field"><div class="lbl">Serial Number</div><div class="val large mono">' + (t.serial_number||'\u2014') + '</div></div>');
+    if (t.model_number)   w.document.write('<div class="field"><div class="lbl">Supplier Model No.</div><div class="val mono">' + t.model_number + '</div></div>');
+    if (t.strap_size)     w.document.write('<div class="field"><div class="lbl">Strap Size</div><div class="val">' + t.strap_size + '</div></div>');
+    if (t.warranty_period) w.document.write('<div class="field"><div class="lbl">Warranty</div><div class="val">' + t.warranty_period + ' Months</div></div>');
+    w.document.write('</div>');
+
+    if (includes) w.document.write('<div class="incl-bar">Includes: ' + includes + '</div>');
+
+    w.document.write('<div class="footer"><span>X-Pak Global \u00B7 Tamworth NSW 2340</span><span>info@xpak.com.au \u00B7 www.xpak.com.au</span></div>');
+    w.document.write('</div>');
+  });
+
+  w.document.write('<script>setTimeout(function(){ window.print(); }, 300);<\/script>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
 
 function printStockLabel() {
   if (!editingStockTool) return;
