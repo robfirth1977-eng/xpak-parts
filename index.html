@@ -869,6 +869,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <button id="btnMarkPOSent" class="btn-save" style="background:#f59e0b;color:#0f1923" onclick="markPOSent()">Mark as Sent</button>
       <button id="btnExportPO"   class="btn-save green" onclick="exportPOExcel()">⬇ Export Excel</button>
       <button onclick="closePOModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+      <button id="btnDeletePO" onclick="deletePO()" style="margin-left:auto;padding:11px 16px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:10px;font-size:12px;cursor:pointer;font-weight:600">🗑 Delete PO</button>
     </div>
   </div>
 </div>
@@ -1474,6 +1475,14 @@ var _LOGO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaQAAAD8CAIAAAC3h
 var BASE = 'https://hoahfuxxefvfgxcjyqhp.supabase.co/rest/v1';
 var KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvYWhmdXh4ZWZ2Zmd4Y2p5cWhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMDk5OTEsImV4cCI6MjA5Mjg4NTk5MX0.rqV79ekcylTNqlAEIENJZe_lhuxBhhE54d2CXfRve8g';
 var H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' };
+
+function updateAuthHeader(session) {
+  if (session && session.access_token) {
+    H.Authorization = 'Bearer ' + session.access_token;
+  } else {
+    H.Authorization = 'Bearer ' + KEY;
+  }
+}
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
 var jobs = [], editingJob = null, jobFilter = 'OPEN', currentView = 'home', jobViewMode = 'board';
@@ -5007,6 +5016,7 @@ function openPODetail(id) {
   document.getElementById('poDetailNotes').value    = po.notes || '';
   document.getElementById('btnMarkPOSent').style.display = isDraft ? 'inline-flex' : 'none';
   document.getElementById('btnExportPO').style.display   = items.length ? 'inline-flex' : 'none';
+  document.getElementById('btnDeletePO').style.display   = isDraft ? 'inline-flex' : 'none';
   document.getElementById('poItemsBody').innerHTML = items.length ? items.map(function(it) {
     var lineTotal = (it.unit_cost||0)*(it.qty||1);
     var itCol = it.status==='Arrived'?'#10b981':'#60a5fa';
@@ -5031,6 +5041,20 @@ function openPODetail(id) {
 }
 
 function closePOModal() { document.getElementById('poOverlay').style.display='none'; editingPOId=null; }
+
+async function deletePO() {
+  if (!editingPOId) return;
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; });
+  if (!po) return;
+  if (!confirm('Delete ' + po.po_number + ' (' + po.supplier + ')? This cannot be undone.')) return;
+  try {
+    await db('DELETE','purchase_orders?id=eq.'+editingPOId);
+    purchaseOrders = purchaseOrders.filter(function(p){ return p.id!==editingPOId; });
+    showToast(po.po_number + ' deleted');
+    closePOModal();
+    renderPurchaseOrders();
+  } catch(e){ showToast('Failed: '+e.message,'error'); }
+}
 
 async function savePOSupplier() {
   if (!editingPOId) return;
@@ -5166,9 +5190,12 @@ var _currentUser = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // Keep H.Authorization in sync with the live JWT (handles login + token refresh)
+  _supabase.auth.onAuthStateChange(function(event, session) { updateAuthHeader(session); });
   // Check for existing session
   _supabase.auth.getSession().then(function(res) {
     if (res.data.session) {
+      updateAuthHeader(res.data.session);
       _currentUser = res.data.session.user;
       onAuthSuccess(_currentUser);
     }
@@ -5194,6 +5221,7 @@ async function doLogin() {
   try {
     var res = await _supabase.auth.signInWithPassword({ email: email, password: pass });
     if (res.error) throw res.error;
+    updateAuthHeader(res.data.session);
     _currentUser = res.data.user;
     onAuthSuccess(_currentUser);
   } catch(e) {
