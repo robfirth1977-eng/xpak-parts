@@ -775,6 +775,27 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       </datalist>
     </div>
     <div class="field"><label>Notes</label><input id="stNotes" placeholder="Any notes..."></div>
+    <div class="section-label">Specifications</div>
+    <div class="g2">
+      <div class="field"><label>X-Pak Part Number</label><input id="stXpakPartNo" placeholder="e.g. XPS-001"></div>
+      <div class="field"><label>Supplier Model No.</label><input id="stModelNo" placeholder="e.g. 2651.360"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Strap Size</label>
+        <input id="stStrapSize" list="stStrapList" placeholder="e.g. 19mm" autocomplete="off"
+          style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+        <datalist id="stStrapList"><option value="9mm"><option value="13mm"><option value="16mm"><option value="19mm"><option value="25mm"><option value="32mm"><option value="38mm"></datalist>
+      </div>
+      <div class="field"><label>Batteries</label>
+        <select id="stBatteryCount" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <option value="">-- Select --</option><option value="1">1 Battery</option><option value="2">2 Batteries</option><option value="3">3 Batteries</option><option value="0">No Battery</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:10px;padding:4px 0">
+      <input type="checkbox" id="stCharger" style="width:16px;height:16px;accent-color:#10b981;cursor:pointer">
+      <label for="stCharger" style="margin:0;cursor:pointer;font-size:13px;color:#8aa8c0">Charger Included</label>
+    </div>
     <div class="section-label">Status</div>
     <div class="field">
       <label>Status</label>
@@ -792,6 +813,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     </div>
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn-save green" id="btnSaveStock" onclick="saveStockTool()">Save Tool</button>
+    <button id="btnPrintStockLabel" onclick="printStockLabel()" style="display:none;padding:11px 16px;background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;border-radius:10px;font-size:13px;cursor:pointer">🖨 Print Label</button>
       <button onclick="closeStockModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Cancel</button>
     </div>
     <button class="btn-delete" id="btnDeleteStock" onclick="deleteStockTool()" style="display:none">Remove from Register</button>
@@ -4854,7 +4876,13 @@ function openStockModal(id) {
   document.getElementById('stSoldTo').value       = t ? t.sold_to || '' : '';
   document.getElementById('stSoldDate').value     = t ? t.sold_date || '' : '';
   toggleStockSoldFields(document.getElementById('stStatus').value);
-  document.getElementById('btnDeleteStock').style.display = t ? 'block' : 'none';
+  document.getElementById('stXpakPartNo').value   = t ? t.xpak_part_no || '' : '';
+  document.getElementById('stModelNo').value      = t ? t.model_number || '' : '';
+  document.getElementById('stStrapSize').value    = t ? t.strap_size || '' : '';
+  document.getElementById('stBatteryCount').value = t && t.battery_count != null ? String(t.battery_count) : '';
+  document.getElementById('stCharger').checked    = t ? !!t.charger_included : false;
+  document.getElementById('btnDeleteStock').style.display    = t ? 'block' : 'none';
+  document.getElementById('btnPrintStockLabel').style.display = t ? 'inline-flex' : 'none';
   document.getElementById('stockOverlay').style.display = 'flex';
 }
 
@@ -4892,6 +4920,80 @@ function toggleStockSoldFields(val) {
   document.getElementById('stStatus').style.borderColor = val === 'Sold' ? '#60a5fa' : val === 'Written Off' ? '#ef4444' : '#10b981';
 }
 
+
+function printStockLabel() {
+  if (!editingStockTool) return;
+  var t = editingStockTool;
+  var w = window.open('', '_blank');
+  if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
+
+  var battTxt = t.battery_count ? (t.battery_count + ' Batter' + (t.battery_count===1?'y':'ies')) : '';
+  var chargerTxt = t.charger_included ? 'Charger Included' : '';
+  var includes = [battTxt, chargerTxt].filter(Boolean).join(' · ');
+
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Stock Label</title>');
+  w.document.write('<style>');
+  w.document.write('@page { size: 135mm 110mm; margin: 3mm; }');
+  w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
+  w.document.write('body { font-family: Arial, sans-serif; width: 129mm; height: 104mm; overflow: hidden; background: white; }');
+  w.document.write('.label { width: 100%; height: 100%; display: flex; flex-direction: column; border: 0.4mm solid #000; border-radius: 1.5mm; padding: 3mm; }');
+  w.document.write('.header { display: flex; justify-content: space-between; align-items: center; border-bottom: 0.4mm solid #000; padding-bottom: 2mm; margin-bottom: 2.5mm; }');
+  w.document.write('.brand { font-size: 18pt; font-weight: 900; color: #1a1a1a; letter-spacing: -0.5px; }');
+  w.document.write('.brand span { color: #c0392b; }');
+  w.document.write('.product-type { font-size: 7.5pt; color: #555; text-align: right; text-transform: uppercase; letter-spacing: 0.5px; }');
+  w.document.write('.model-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2.5mm; }');
+  w.document.write('.model-name { font-size: 22pt; font-weight: 900; color: #000; letter-spacing: -0.5px; }');
+  w.document.write('.xpak-pn { font-size: 8pt; color: #555; text-align: right; }');
+  w.document.write('.divider { border: none; border-top: 0.3mm solid #ccc; margin: 2mm 0; }');
+  w.document.write('.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 4mm; flex: 1; }');
+  w.document.write('.field-block { display: flex; flex-direction: column; }');
+  w.document.write('.field-lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5mm; }');
+  w.document.write('.field-val { font-size: 12pt; font-weight: 700; color: #000; }');
+  w.document.write('.field-val.mono { font-family: "Courier New", monospace; font-size: 11pt; }');
+  w.document.write('.footer { margin-top: auto; padding-top: 2mm; border-top: 0.3mm solid #ccc; display: flex; justify-content: space-between; align-items: center; }');
+  w.document.write('.includes { font-size: 8pt; color: #333; font-weight: 600; }');
+  w.document.write('.warranty { font-size: 7.5pt; color: #555; text-align: right; }');
+  w.document.write('</style></head><body>');
+
+  w.document.write('<div class="label">');
+  w.document.write('<div class="header">'
+    + '<div class="brand">X<span>-</span>PAK<br><span style="font-size:9pt;font-weight:400;color:#555;letter-spacing:1px">GLOBAL</span></div>'
+    + '<div class="product-type">Strapping &amp; Lashing<br>Equipment</div>'
+    + '</div>');
+
+  w.document.write('<div class="model-row">'
+    + '<div class="model-name">' + (t.name||'') + '</div>'
+    + (t.xpak_part_no ? '<div class="xpak-pn">X-Pak No.<br><strong>' + t.xpak_part_no + '</strong></div>' : '')
+    + '</div>');
+
+  w.document.write('<hr class="divider">');
+
+  w.document.write('<div class="fields">');
+  // Serial
+  w.document.write('<div class="field-block"><div class="field-lbl">Serial Number</div><div class="field-val mono">' + (t.serial_number||'—') + '</div></div>');
+  // Model No
+  if (t.model_number) w.document.write('<div class="field-block"><div class="field-lbl">Model Number</div><div class="field-val mono">' + t.model_number + '</div></div>');
+  // Strap size
+  if (t.strap_size) w.document.write('<div class="field-block"><div class="field-lbl">Strap Size</div><div class="field-val">' + t.strap_size + '</div></div>');
+  // Year of mfr
+  if (t.date_of_manufacture) w.document.write('<div class="field-block"><div class="field-lbl">Year of Manufacture</div><div class="field-val">' + t.date_of_manufacture + '</div></div>');
+  // Warranty
+  if (t.warranty_period) w.document.write('<div class="field-block"><div class="field-lbl">Warranty</div><div class="field-val">' + t.warranty_period + ' Months</div></div>');
+  // Condition
+  if (t.condition) w.document.write('<div class="field-block"><div class="field-lbl">Condition</div><div class="field-val">' + t.condition + '</div></div>');
+  w.document.write('</div>');
+
+  w.document.write('<div class="footer">'
+    + (includes ? '<div class="includes">Includes: ' + includes + '</div>' : '<div></div>')
+    + '<div class="warranty">Service Dept · Tamworth NSW</div>'
+    + '</div>');
+
+  w.document.write('</div>');
+  w.document.write('<script>setTimeout(function(){ window.print(); }, 400);<\/script>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
+
 async function saveStockTool() {
   var name = document.getElementById('stName').value.trim();
   if (!name) { showToast('Model name is required', 'error'); return; }
@@ -4906,6 +5008,11 @@ async function saveStockTool() {
     warranty_period: document.getElementById('stWarranty').value || null,
     location: document.getElementById('stLocation').value || null,
     notes: document.getElementById('stNotes').value || null,
+    xpak_part_no: document.getElementById('stXpakPartNo').value || null,
+    model_number: document.getElementById('stModelNo').value || null,
+    strap_size: document.getElementById('stStrapSize').value || null,
+    battery_count: parseInt(document.getElementById('stBatteryCount').value) || null,
+    charger_included: document.getElementById('stCharger').checked,
     status: status,
     sold_to: status === 'Sold' ? (document.getElementById('stSoldTo').value || null) : null,
     sold_date: status === 'Sold' ? (document.getElementById('stSoldDate').value || null) : null,
