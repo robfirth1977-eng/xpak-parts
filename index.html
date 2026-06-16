@@ -4954,10 +4954,20 @@ function exportStockReport() {
     ['Written Off', writtenOff],
     [],
     ['BY MODEL'],
-    ['Model', 'Total', 'Available', 'Sold'],
+    ['Model', 'X-Pak Part No.', 'Serial Number', 'Status', 'Location'],
   ];
   Object.keys(byModel).sort().forEach(function(m) {
-    summaryRows.push([m, byModel[m].total, byModel[m].available, byModel[m].sold]);
+    var modelTools = sorted.filter(function(t){ return (t.name||'') === m; });
+    modelTools.forEach(function(t, idx) {
+      summaryRows.push([
+        idx === 0 ? m : '',
+        idx === 0 ? (t.xpak_part_no || '') : '',
+        t.serial_number || '—',
+        t.status || '',
+        t.location || ''
+      ]);
+    });
+    summaryRows.push([]);  // blank row between models
   });
 
   // ── Build full register sheet ──
@@ -4996,7 +5006,7 @@ function exportStockReport() {
 
   // Summary sheet
   var wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-  wsSummary['!cols'] = [{wch:22},{wch:14}];
+  wsSummary['!cols'] = [{wch:14},{wch:14},{wch:14},{wch:12},{wch:18}];
   // Bold title
   if (wsSummary['A1']) wsSummary['A1'].s = { font: { bold: true, sz: 14 } };
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
