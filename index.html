@@ -728,6 +728,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <button class="loan-view-btn"        id="btnStockWritten"   onclick="setStockFilter('Written Off')">Written Off</button>
   </div>
   <button class="btn-add" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;font-size:12px" onclick="printAllStockLabels()">🖨 Print All Labels</button>
+  <button class="btn-add" style="background:#1e3048;border:1px solid #217346;color:#4caf74;font-size:12px" onclick="exportStockReport()">⬇ Export Report</button>
   <button class="btn-add" style="background:#10b981;margin-left:auto;color:#0f1923;font-weight:700" onclick="openStockModal()">+ Add Tool</button>
 </div>
 <div class="loan-section" id="stockSection" style="display:none"><div id="stockList"></div></div>
@@ -4924,6 +4925,123 @@ function toggleStockSoldFields(val) {
   document.getElementById('stStatus').style.borderColor = val === 'Sold' ? '#60a5fa' : val === 'Written Off' ? '#ef4444' : '#10b981';
 }
 
+
+
+function exportStockReport() {
+  if (!stockTools.length) { showToast('No stock tools to export', 'error'); return; }
+
+  var today = new Date().toLocaleDateString('en-AU', {day:'2-digit', month:'long', year:'numeric'});
+
+  // ── Summary sheet data ──
+  var total     = stockTools.length;
+  var available = stockTools.filter(function(t){ return t.status === 'Available'; }).length;
+  var sold      = stockTools.filter(function(t){ return t.status === 'Sold'; }).length;
+  var writtenOff= stockTools.filter(function(t){ return t.status === 'Written Off'; }).length;
+
+  // Group by model for summary
+  var byModel = {};
+  stockTools.forEach(function(t) {
+    var m = t.name || 'Unknown';
+    if (!byModel[m]) byModel[m] = { total:0, available:0, sold:0 };
+    byModel[m].total++;
+    if (t.status === 'Available') byModel[m].available++;
+    if (t.status === 'Sold') byModel[m].sold++;
+  });
+
+  // ── Build summary sheet ──
+  var summaryRows = [
+    ['X-PAK GLOBAL — SERVICE DEPARTMENT'],
+    ['Stock Register Report'],
+    ['Generated:', today],
+    [],
+    ['SUMMARY'],
+    ['Total Tools', total],
+    ['Available',   available],
+    ['Sold',        sold],
+    ['Written Off', writtenOff],
+    [],
+    ['BY MODEL'],
+    ['Model', 'Total', 'Available', 'Sold'],
+  ];
+  Object.keys(byModel).sort().forEach(function(m) {
+    summaryRows.push([m, byModel[m].total, byModel[m].available, byModel[m].sold]);
+  });
+
+  // ── Build full register sheet ──
+  var regHeader = [
+    'X-Pak Part No.', 'Model', 'Description', 'Supplier Model No.',
+    'Serial Number', 'Strap Size', 'Batteries', 'Charger',
+    'Warranty (Months)', 'Status', 'Location', 'Date Received', 'Notes'
+  ];
+
+  // Sort by model then serial
+  var sorted = stockTools.slice().sort(function(a,b){
+    return (a.name||'').localeCompare(b.name||'') || (a.serial_number||'').localeCompare(b.serial_number||'');
+  });
+
+  var regRows = [regHeader];
+  sorted.forEach(function(t) {
+    regRows.push([
+      t.xpak_part_no     || '',
+      t.name             || '',
+      t.description      || '',
+      t.model_number     || '',
+      t.serial_number    || '',
+      t.strap_size       || '',
+      t.battery_count    != null ? t.battery_count : '',
+      t.charger_included ? 'Yes' : 'No',
+      t.warranty_period  || '',
+      t.status           || '',
+      t.location         || '',
+      t.date_received    ? fmtDate(t.date_received) : '',
+      t.notes            || '',
+    ]);
+  });
+
+  // ── Build workbook ──
+  var wb = XLSX.utils.book_new();
+
+  // Summary sheet
+  var wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols'] = [{wch:22},{wch:14}];
+  // Bold title
+  if (wsSummary['A1']) wsSummary['A1'].s = { font: { bold: true, sz: 14 } };
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  // Full register sheet
+  var wsReg = XLSX.utils.aoa_to_sheet(regRows);
+  wsReg['!cols'] = [
+    {wch:14},{wch:12},{wch:32},{wch:16},
+    {wch:14},{wch:10},{wch:9},{wch:8},
+    {wch:10},{wch:12},{wch:16},{wch:14},{wch:28}
+  ];
+  XLSX.utils.book_append_sheet(wb, wsReg, 'Stock Register');
+
+  // One sheet per model
+  Object.keys(byModel).sort().forEach(function(modelName) {
+    var modelTools = sorted.filter(function(t){ return (t.name||'') === modelName; });
+    var modelRows  = [regHeader];
+    modelTools.forEach(function(t) {
+      modelRows.push([
+        t.xpak_part_no||'', t.name||'', t.description||'', t.model_number||'',
+        t.serial_number||'', t.strap_size||'',
+        t.battery_count!=null?t.battery_count:'',
+        t.charger_included?'Yes':'No',
+        t.warranty_period||'', t.status||'', t.location||'',
+        t.date_received?fmtDate(t.date_received):'', t.notes||'',
+      ]);
+    });
+    var wsModel = XLSX.utils.aoa_to_sheet(modelRows);
+    wsModel['!cols'] = [{wch:14},{wch:12},{wch:32},{wch:16},{wch:14},{wch:10},{wch:9},{wch:8},{wch:10},{wch:12},{wch:16},{wch:14},{wch:28}];
+    // Safe sheet name (max 31 chars)
+    var sheetName = modelName.substring(0, 31);
+    XLSX.utils.book_append_sheet(wb, wsModel, sheetName);
+  });
+
+  var filename = 'XPak_Stock_Register_' + new Date().toISOString().split('T')[0] + '.xlsx';
+  XLSX.writeFile(wb, filename);
+  showToast('Stock report exported');
+}
 
 function printAllStockLabels() {
   var list = _stockFilter === 'All' ? stockTools : stockTools.filter(function(t){ return t.status === _stockFilter; });
