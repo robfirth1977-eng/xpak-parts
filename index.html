@@ -4717,14 +4717,7 @@ async function renderHome() {
   // Recent site visits (last 3)
   var recentSv = (siteVisits||[]).slice(0,3);
 
-  var statsHtml =
-    '<div class="stat-cards">' +
-      '<div class="stat-card"><div class="stat-label">Open Jobs</div><div class="stat-val cyan">' + openJobs + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Follow Up</div><div class="stat-val amber">' + followUp + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Tools on Loan</div><div class="stat-val">' + onLoan + '</div></div>' +
-      (!window._adminMode ? '<div class="stat-card"><div class="stat-label">Parts to Order</div><div class="stat-val ' + (pendingParts>0?'red':'green') + '">' + pendingParts + '</div></div>' : '') +
-      '<div class="stat-card"><div class="stat-label">Draft Visits</div><div class="stat-val amber">' + draftSv + '</div></div>' +
-    '</div>';
+  var statsHtml = '';
 
   var tilesHtml =
     '<div class="home-section-title">Quick Access</div>' +
