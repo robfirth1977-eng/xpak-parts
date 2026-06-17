@@ -1236,7 +1236,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
           <option value="">-- None --</option>
         </select>
       </div>
-      <div class="field"><label>Hours Spent</label><input id="jHoursSpent" type="number" step="0.25" min="0" placeholder="e.g. 2.5"></div>
+      <div class="field"><label>Billable Hours</label><input id="jHoursSpent" type="number" step="0.25" min="0" placeholder="e.g. 2.5"></div>
+      <div class="field"><label>Hourly Rate ($)</label><input id="jLabourRate" type="number" step="1" min="0" value="120" placeholder="120"></div>
+      <div class="field"><label>Labour Discount ($) <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jLabourDiscount" type="number" step="0.01" min="0" placeholder="0.00"></div>
     </div>
 
     <div class="section-label">Follow-Up and Notes</div>
@@ -3185,6 +3187,8 @@ function clearJobForm() {
   document.getElementById('jFollowup').checked = false;
   document.getElementById('jAgreementId').value = '';
   document.getElementById('jHoursSpent').value = '';
+  document.getElementById('jLabourRate').value = '120';
+  document.getElementById('jLabourDiscount').value = '';
   jobLinks = []; renderLinksList();
   jobPartsLocal = [];
   jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', date_of_manufacture: '', warranty_period: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' }];
@@ -3219,6 +3223,8 @@ async function openEditJobModal(jobId) {
   document.getElementById('jInternalNotes').value = j.internal_notes || '';
   document.getElementById('jAgreementId').value = j.agreement_id || '';
   document.getElementById('jHoursSpent').value = j.hours_spent || '';
+  document.getElementById('jLabourRate').value = j.labour_rate != null ? j.labour_rate : 120;
+  document.getElementById('jLabourDiscount').value = j.labour_discount || '';
   try { jobLinks = j.links ? JSON.parse(j.links) : []; } catch(e) { jobLinks = []; }
   renderLinksList();
   document.getElementById('lLinkName').value = '';
@@ -3368,6 +3374,8 @@ async function saveJob() {
     internal_notes: document.getElementById('jInternalNotes').value || null,
     agreement_id: document.getElementById('jAgreementId').value || null,
     hours_spent: parseFloat(document.getElementById('jHoursSpent').value) || null,
+    labour_rate: parseFloat(document.getElementById('jLabourRate').value) || 120,
+    labour_discount: parseFloat(document.getElementById('jLabourDiscount').value) || null,
     links: JSON.stringify(jobLinks),
     updated_at: new Date().toISOString()
   };
@@ -4224,12 +4232,28 @@ function renderAssessmentReport(j, tools, jparts) {
   w.document.write(toolSections);
 
   // Totals
-  if (grandTotal > 0 || serviceFeeTotal > 0) {
-    w.document.write('<div class="totals-box"><table style="width:auto;margin-left:auto;min-width:280px">');
+  var labourHours    = parseFloat(j.hours_spent) || 0;
+  var labourRate     = parseFloat(j.labour_rate) || 120;
+  var labourDiscount = parseFloat(j.labour_discount) || 0;
+  var labourGross    = labourHours * labourRate;
+  var labourNet      = Math.max(0, labourGross - labourDiscount);
+  var reportTotal    = grandTotal + labourNet;
+
+  if (reportTotal > 0 || serviceFeeTotal > 0 || partsTotal > 0) {
+    w.document.write('<div class="totals-box"><table style="width:auto;margin-left:auto;min-width:320px">');
     if (serviceFeeTotal > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Service Fee</td><td style="text-align:right;font-family:monospace">$' + serviceFeeTotal.toFixed(2) + '</td></tr>');
-    if (partsTotal > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Parts</td><td style="text-align:right;font-family:monospace">$' + partsTotal.toFixed(2) + '</td></tr>');
-    w.document.write('<tr class="total-row"><td style="text-align:right;padding-right:20px">Total</td><td style="text-align:right;font-family:monospace">$' + grandTotal.toFixed(2) + '</td></tr>');
-    w.document.write('</table></div><div class="gst-note">All prices ex GST</div>');
+    if (partsTotal > 0)      w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Parts</td><td style="text-align:right;font-family:monospace">$' + partsTotal.toFixed(2) + '</td></tr>');
+    if (labourHours > 0) {
+      w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Labour (' + labourHours + ' hrs \u00D7 $' + labourRate + '/hr)</td><td style="text-align:right;font-family:monospace">$' + labourGross.toFixed(2) + '</td></tr>');
+      if (labourDiscount > 0) {
+        w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#c0392b">Discount</td><td style="text-align:right;font-family:monospace;color:#c0392b">-$' + labourDiscount.toFixed(2) + '</td></tr>');
+        w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Labour Net</td><td style="text-align:right;font-family:monospace">$' + labourNet.toFixed(2) + '</td></tr>');
+      }
+    }
+    w.document.write('<tr class="total-row"><td style="text-align:right;padding-right:20px">Total (ex GST)</td><td style="text-align:right;font-family:monospace">$' + reportTotal.toFixed(2) + '</td></tr>');
+    w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#888">GST (10%)</td><td style="text-align:right;font-family:monospace;color:#888">$' + (reportTotal * 0.1).toFixed(2) + '</td></tr>');
+    w.document.write('<tr><td style="text-align:right;padding-right:20px;font-weight:700">Total (inc GST)</td><td style="text-align:right;font-family:monospace;font-weight:700">$' + (reportTotal * 1.1).toFixed(2) + '</td></tr>');
+    w.document.write('</table></div><div class="gst-note">All prices ex GST unless stated</div>');
   }
 
   // Approval
@@ -6428,11 +6452,26 @@ function renderInvoiceNotice(j, tools, jparts) {
   w.document.write('<div class="section-title">Tools &amp; Work Completed</div>');
   w.document.write(toolSections || '<div style="color:#888;font-size:10pt">No tools recorded.</div>');
   w.document.write('<div class="totals">');
+  var labourHours2    = parseFloat(j.hours_spent) || 0;
+  var labourRate2     = parseFloat(j.labour_rate) || 120;
+  var labourDiscount2 = parseFloat(j.labour_discount) || 0;
+  var labourGross2    = labourHours2 * labourRate2;
+  var labourNet2      = Math.max(0, labourGross2 - labourDiscount2);
+  var invoiceTotal    = grandTotal + labourNet2;
+  var invoiceGST      = invoiceTotal * 0.1;
+
   if (serviceFeeTotal) w.document.write('<div class="tot-row"><span>Service Fee</span><span>'+fmt(serviceFeeTotal)+'</span></div>');
-  if (partsTotal) w.document.write('<div class="tot-row"><span>Parts</span><span>'+fmt(partsTotal)+'</span></div>');
-  w.document.write('<div class="tot-row grand"><span>Total ex GST</span><span>'+fmt(grandTotal)+'</span></div>');
-  w.document.write('<div class="tot-row gst"><span>GST (10%)</span><span>'+fmt(gst)+'</span></div>');
-  w.document.write('<div class="tot-row" style="font-weight:700"><span>Total inc GST</span><span>'+fmt(grandTotal+gst)+'</span></div>');
+  if (partsTotal)      w.document.write('<div class="tot-row"><span>Parts</span><span>'+fmt(partsTotal)+'</span></div>');
+  if (labourHours2 > 0) {
+    w.document.write('<div class="tot-row"><span>Labour ('+labourHours2+'h \u00D7 $'+labourRate2+'/hr)</span><span>'+fmt(labourGross2)+'</span></div>');
+    if (labourDiscount2 > 0) {
+      w.document.write('<div class="tot-row" style="color:#c0392b"><span>Discount</span><span>-'+fmt(labourDiscount2)+'</span></div>');
+      w.document.write('<div class="tot-row"><span>Labour Net</span><span>'+fmt(labourNet2)+'</span></div>');
+    }
+  }
+  w.document.write('<div class="tot-row grand"><span>Total ex GST</span><span>'+fmt(invoiceTotal)+'</span></div>');
+  w.document.write('<div class="tot-row gst"><span>GST (10%)</span><span>'+fmt(invoiceGST)+'</span></div>');
+  w.document.write('<div class="tot-row" style="font-weight:700"><span>Total inc GST</span><span>'+fmt(invoiceTotal+invoiceGST)+'</span></div>');
   w.document.write('</div>');
   if (j.notes) w.document.write('<div class="note">📝 ' + j.notes + '</div>');
   w.document.write('<div class="footer">X-Pak Global Service Division &nbsp;·&nbsp; rob.firth@xpak.com.au &nbsp;·&nbsp; Generated by MainFlow</div>');
