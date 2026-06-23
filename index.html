@@ -367,7 +367,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 @media print{
   body > *:not(#printArea){display:none !important}
   #printArea{display:block !important}
-  .print-label{width:87mm;height:28mm;page-break-after:always;page-break-inside:avoid;display:flex;align-items:stretch;font-family:Arial,sans-serif;background:white;color:black;overflow:hidden}
+  #partsBreadcrumb{display:none !important}
+  .print-label{width:87mm;height:34mm;page-break-after:always;page-break-inside:avoid;display:flex;align-items:stretch;font-family:Arial,sans-serif;background:white;color:black;overflow:hidden}
   .pl-text{flex:1;padding:1.5mm 1.5mm 1.5mm 3mm;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;border-right:0.3mm solid #ccc}
   .pl-partno-label{font-size:9pt;font-weight:700;color:#666;text-transform:uppercase}
   .pl-partno{font-size:22pt;font-weight:900;font-family:'Courier New',monospace;color:#000;line-height:1.05;word-break:break-all}
@@ -376,7 +377,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   .pl-loc{font-size:9pt;color:#333}
   .pl-qr{flex-shrink:0;width:28mm;display:flex;align-items:center;justify-content:center;padding:1mm}
   .pl-qr canvas,.pl-qr img{width:26mm !important;height:26mm !important}
-  @page{size:89mm 36mm;margin:5mm 1mm 0mm}
+  @page{size:89mm 36mm;margin:1mm 1mm 0mm}
 }
 #printArea{display:none}
 .so-row{background:#141f2d;border-radius:8px;padding:9px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;border-left:3px solid #2a4060;transition:border-color .1s}
