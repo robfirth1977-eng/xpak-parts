@@ -1177,18 +1177,21 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   <div class="modal orange">
     <div class="modal-header"><div class="modal-title" id="jobModalTitle">New Service Case</div><button class="modal-close" onclick="closeJobModal()">x</button></div>
 
-    <div class="field"><label>Status</label>
-      <select id="jStatus">
-        <option value="NEW JOB">New Job</option>
-        <option value="AWAITING ASSESSMENT">Awaiting Assessment</option>
-        <option value="WAITING FOR TOOLS">Waiting for Tools</option>
-        <option value="QUOTED - AWAITING APPROVAL">Quote Sent — Awaiting Approval</option>
-        <option value="WAITING ON PARTS">WAITING ON PARTS</option>
-        <option value="IN WORKSHOP">IN WORKSHOP</option>
-        <option value="WAITING TO BE INVOICED">WAITING TO BE INVOICED</option>
-        <option value="INVOICED AND SENT">INVOICED AND SENT</option>
-        <option value="COMPLETED">COMPLETED</option>
-      </select>
+    <div class="g2">
+      <div class="field"><label>Status</label>
+        <select id="jStatus">
+          <option value="NEW JOB">New Job</option>
+          <option value="AWAITING ASSESSMENT">Awaiting Assessment</option>
+          <option value="WAITING FOR TOOLS">Waiting for Tools</option>
+          <option value="QUOTED - AWAITING APPROVAL">Quote Sent — Awaiting Approval</option>
+          <option value="WAITING ON PARTS">WAITING ON PARTS</option>
+          <option value="IN WORKSHOP">IN WORKSHOP</option>
+          <option value="WAITING TO BE INVOICED">WAITING TO BE INVOICED</option>
+          <option value="INVOICED AND SENT">INVOICED AND SENT</option>
+          <option value="COMPLETED">COMPLETED</option>
+        </select>
+      </div>
+      <div class="field"><label>Order Number <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jOrderNum" placeholder="e.g. PO-12345" autocomplete="off"></div>
     </div>
 
     <div class="section-label">Customer Details</div>
@@ -1259,8 +1262,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     </div>
 
     <div style="display:flex;gap:8px">
-    <button class="btn-save orange" id="btnSaveJob" onclick="saveJob()" style="flex:1">Save Service Case</button>
-    <button onclick="closeJobModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+      <button class="btn-save orange" id="btnSaveJob" onclick="saveJob()" style="flex:1">Save Service Case</button>
+      <button class="btn-save" id="btnSaveCloseJob" onclick="saveAndCloseJob()" style="flex:1;background:#10b981;color:#fff">Save &amp; Close</button>
+      <button onclick="closeJobModal()" style="flex:1;padding:13px;background:#60a5fa;color:#0f1923;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Close</button>
     </div>
     <button class="btn-delete" id="btnDeleteJob" onclick="deleteJob()" style="display:none">Delete This Service Case</button>
   </div>
@@ -3148,6 +3152,17 @@ function initBoardDrag() {
       if (!dragId) return;
       var newStatus = col.dataset.status;
       var j = jobs.find(function(x){ return x.id === dragId; }); if (!j || j.status === newStatus) return;
+      var needsOrder = ['WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED','INVOICED AND SENT','COMPLETED'];
+      if (needsOrder.indexOf(newStatus) !== -1 && !j.order_number) {
+        if (!confirm('No order number on this job. Add one now?\n\nClick OK to open the job, or Cancel to move it anyway.')) {
+          // Cancel = move anyway without order number
+        } else {
+          dragId = null;
+          openEditJobModal(j.id);
+          document.getElementById('jOrderNum').focus();
+          return;
+        }
+      }
       j.status = newStatus;
       db('PATCH', 'jobs?id=eq.' + dragId, { status: newStatus }).catch(function(err){ showToast('Update failed: ' + err.message, 'error'); });
       renderBoard();
@@ -3185,6 +3200,7 @@ function clearJobForm() {
     document.getElementById(id).value = '';
   });
   document.getElementById('jStatus').value = 'NEW JOB';
+  document.getElementById('jOrderNum').value = '';
   document.getElementById('jParts').value = '';
   document.getElementById('jFollowup').checked = false;
   document.getElementById('jAgreementId').value = '';
@@ -3213,6 +3229,7 @@ async function openEditJobModal(jobId) {
   editingJob = j;
   document.getElementById('jobModalTitle').textContent = xpsNum(j.job_number) + ' - ' + (j.customer || '');
   document.getElementById('jStatus').value = j.status || 'NEW JOB';
+  document.getElementById('jOrderNum').value = j.order_number || '';
   document.getElementById('jCustomer').value = j.customer || '';
   document.getElementById('jContact').value = j.contact_name || '';
   document.getElementById('jPhone').value = j.phone || '';
@@ -3359,7 +3376,9 @@ async function saveJob() {
   if (!customer) { showToast('Customer name is required', 'error'); return; }
   var btn = document.getElementById('btnSaveJob'); btn.disabled = true; btn.textContent = 'Saving...';
   var payload = {
-    status: document.getElementById('jStatus').value, customer: customer,
+    status: document.getElementById('jStatus').value,
+    order_number: document.getElementById('jOrderNum').value.trim() || null,
+    customer: customer,
     contact_name: document.getElementById('jContact').value || null,
     phone: document.getElementById('jPhone').value || null,
     mobile: document.getElementById('jMobile').value || null,
@@ -3435,6 +3454,13 @@ async function saveJob() {
     if (!editingJob) closeJobModal();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Service Case'; }
+}
+
+async function saveAndCloseJob() {
+  await saveJob();
+  // closeJobModal is called inside saveJob on new jobs; for edits, close explicitly
+  var btn = document.getElementById('btnSaveJob');
+  if (!btn.disabled) closeJobModal();
 }
 
 async function deleteJob() {
