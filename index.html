@@ -3667,7 +3667,15 @@ function renderParts() {
           (p.notes ? '<span class="part-loc"><em>' + p.notes + '</em></span>' : '') +
           (p.is_stock_item ? '<span class="part-ref" style="background:#10b98120;color:#10b981;border:1px solid #10b98140">★ Stock Item</span>' : '') +
           (p.sell_price ? '<span class="part-ref" style="background:#0a2a1a;color:#10b981">Sell $' + parseFloat(p.sell_price).toFixed(2) + '</span>' : '') +
-          (p.cost_price ? '<span class="part-ref" style="background:#1a1a2a;color:#6080c0">Cost $' + parseFloat(p.cost_price).toFixed(2) + '</span>' : '') +
+          '<span class="part-ref" style="background:#1a1a2a;padding:0;border:1px solid #2a4060;overflow:visible">' +
+            '<label style="font-size:9px;color:#6080c0;padding:0 4px;font-weight:700">COST</label>' +
+            '<input type="number" step="0.01" min="0" value="' + (p.cost_price ? parseFloat(p.cost_price).toFixed(2) : '') + '"' +
+              ' placeholder="—"' +
+              ' data-part-id="' + p.id + '"' +
+              ' onclick="event.stopPropagation()"' +
+              ' onblur="updatePartCost(this)"' +
+              ' style="width:64px;background:transparent;border:none;color:#6080c0;font-size:12px;font-weight:600;padding:2px 4px;outline:none">' +
+          '</span>' +
         '</div></div>' +
       '<div class="action-btns"><div class="qty-controls">' +
         '<button class="qty-btn" onclick="updateQty(\'' + p.id + '\',-1)">-</button>' +
@@ -3689,6 +3697,29 @@ async function updateQty(partId, delta) {
     else { var res = await db('POST', 'stock', { part_id: partId, quantity: newQty, location: '', reorder_threshold: 1 }); p.stock = [res[0]]; }
     renderParts();
   } catch(e) { showToast('Update failed', 'error'); }
+}
+
+async function updatePartCost(input) {
+  var partId = input.dataset.partId;
+  var newCost = parseFloat(input.value);
+  var p = allParts.find(function(x) { return x.id === partId; }) || parts.find(function(x) { return x.id === partId; });
+  if (!p) return;
+  var prev = p.cost_price ? parseFloat(p.cost_price) : null;
+  if (isNaN(newCost) || newCost === prev) return; // no change
+  try {
+    await db('PATCH', 'parts?id=eq.' + partId, { cost_price: newCost });
+    // update local cache so re-render reflects new value without a full reload
+    p.cost_price = newCost;
+    // also update in allParts if it exists there separately
+    var ap = allParts.find(function(x) { return x.id === partId; });
+    if (ap) ap.cost_price = newCost;
+    showToast('Cost updated');
+    input.style.color = '#10b981';
+    setTimeout(function() { input.style.color = '#6080c0'; }, 1200);
+  } catch(e) {
+    showToast('Update failed: ' + e.message, 'error');
+    input.value = prev !== null ? prev.toFixed(2) : '';
+  }
 }
 
 function openAddModal() {
