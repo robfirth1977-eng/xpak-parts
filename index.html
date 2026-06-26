@@ -3874,14 +3874,17 @@ function makeLabelInner(d, prefix) {
 function autoSizeLabelText(el) { var l = (el.textContent || el.innerText).length; el.style.fontSize = l > 14 ? '18px' : l > 10 ? '22px' : '27px'; }
 
 function queueLabel(partId) {
-  var d = makeLabelData(partId); if (!d) return;
+  var d = makeLabelData(partId);
+  if (!d) { showToast('Could not find part data — try refreshing', 'error'); return; }
   if (labelQueue.some(function(x) { return x.id === d.id; })) { showToast('Already in queue', 'error'); return; }
   labelQueue.push(d); updateLabelPanel(); renderParts(); showToast(d.keyno + ' added to queue');
 }
 
 function queueAllVisible() {
   var q = document.getElementById('searchBox').value.toLowerCase();
-  var visible = parts.filter(function(p) { return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || ((p.stock && p.stock[0] && p.stock[0].location) || '').toLowerCase().includes(q); });
+  var isGlobal = q.length > 0;
+  var pool = isGlobal ? allParts : parts;
+  var visible = pool.filter(function(p) { return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || ((p.stock && p.stock[0] && p.stock[0].location) || '').toLowerCase().includes(q); });
   var added = 0;
   visible.forEach(function(p) { if (!labelQueue.some(function(x) { return x.id === p.id; })) { var d = makeLabelData(p.id); if (d) { labelQueue.push(d); added++; } } });
   updateLabelPanel(); renderParts(); showToast(added + ' labels queued');
@@ -3910,14 +3913,25 @@ function updateLabelPanel() {
     var card = el ? el.closest('.label-preview-card') : null;
     if (card) { var pn = card.querySelector('.lp-partno'); if (pn) autoSizeLabelText(pn); }
   });
+  // Scroll panel into view so preview is visible
+  setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
 }
 
 function doPrint() {
-  if (!labelQueue.length) return;
+  if (!labelQueue.length) { showToast('No labels in queue', 'error'); return; }
   var pa = document.getElementById('printArea');
   pa.innerHTML = labelQueue.map(function(d) { return '<div class="print-label">' + makeLabelInner(d, 'pl') + '</div>'; }).join('');
-  labelQueue.forEach(function(d) { var el = document.getElementById('plqr-' + d.id); if (el) new QRCode(el, { text: d.qrText, width: 102, height: 102, correctLevel: QRCode.CorrectLevel.M }); });
-  setTimeout(function() { window.print(); }, 450);
+  // Generate QR codes synchronously before print
+  labelQueue.forEach(function(d) {
+    var el = document.getElementById('plqr-' + d.id);
+    if (el && !el.children.length) new QRCode(el, { text: d.qrText, width: 102, height: 102, correctLevel: QRCode.CorrectLevel.M });
+  });
+  // Use requestAnimationFrame to ensure DOM has painted before print dialog
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      window.print();
+    });
+  });
 }
 
 // ── DIRECT ORDER ──────────────────────────────────────────────────
