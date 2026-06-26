@@ -3921,17 +3921,29 @@ function doPrint() {
   if (!labelQueue.length) { showToast('No labels in queue', 'error'); return; }
   var pa = document.getElementById('printArea');
   pa.innerHTML = labelQueue.map(function(d) { return '<div class="print-label">' + makeLabelInner(d, 'pl') + '</div>'; }).join('');
-  // Generate QR codes synchronously before print
+  // Copy already-rendered QR canvases from the preview rather than regenerating
   labelQueue.forEach(function(d) {
-    var el = document.getElementById('plqr-' + d.id);
-    if (el && !el.children.length) new QRCode(el, { text: d.qrText, width: 102, height: 102, correctLevel: QRCode.CorrectLevel.M });
+    var src = document.getElementById('lpqr-' + d.id);
+    var dst = document.getElementById('plqr-' + d.id);
+    if (src && dst) {
+      var canvas = src.querySelector('canvas');
+      var img = src.querySelector('img');
+      if (canvas) {
+        var c2 = document.createElement('canvas');
+        c2.width = canvas.width; c2.height = canvas.height;
+        c2.getContext('2d').drawImage(canvas, 0, 0);
+        dst.appendChild(c2);
+      } else if (img) {
+        var i2 = document.createElement('img');
+        i2.src = img.src; i2.style.cssText = img.style.cssText;
+        dst.appendChild(i2);
+      } else {
+        // fallback: generate fresh
+        new QRCode(dst, { text: d.qrText, width: 102, height: 102, correctLevel: QRCode.CorrectLevel.M });
+      }
+    }
   });
-  // Use requestAnimationFrame to ensure DOM has painted before print dialog
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      window.print();
-    });
-  });
+  requestAnimationFrame(function() { requestAnimationFrame(function() { window.print(); }); });
 }
 
 // ── DIRECT ORDER ──────────────────────────────────────────────────
