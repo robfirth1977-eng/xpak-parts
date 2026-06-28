@@ -1079,6 +1079,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   <div class="label-previews" id="labelPreviews"></div>
 </div>
 <div id="printArea"></div>
+<div id="weeklyView" style="display:none;padding:20px 24px;max-width:1200px;margin:0 auto"></div>
 <button id="backToTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" style="display:none;position:fixed;bottom:28px;right:20px;z-index:500;width:42px;height:42px;border-radius:50%;background:#00c8e0;color:#0f1923;border:none;font-size:20px;font-weight:900;cursor:pointer;box-shadow:0 2px 10px rgba(0,200,224,0.4);line-height:1">&#8679;</button>
 
 <!-- Part Modal -->
@@ -1726,6 +1727,7 @@ function hideAllViews() {
   var sks = document.getElementById('stockSection'); if(sks) sks.style.display = 'none';
   var pot = document.getElementById('poToolbar'); if(pot) pot.style.display = 'none';
   var pos = document.getElementById('poSection'); if(pos) pos.style.display = 'none';
+  var wv = document.getElementById('weeklyView'); if(wv) wv.style.display = 'none';
 }
 
 function switchToJobs() {
@@ -2651,6 +2653,7 @@ function renderTabs() {
   html2 += '<button class="tab loan-tab'  + (v==='loan' ?' active':'') + '" onclick="' + (v==='loan' ?'':'switchToLoans()')  + '">Loans</button>';
   html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
   html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
+  html2 += '<button class="tab weekly-tab' + (v==='weekly'?' active':'') + '" onclick="' + (v==='weekly'?'':'switchToWeekly()') + '">📋 Weekly</button>';
   html2 += '<button class="tab cust-tab'  + (v==='customers'?' active':'') + '" onclick="' + (v==='customers'?'':'switchToCustomers()') + '">Accounts</button>';
   html2 += '<button class="tab stock-tab' + (v==='stock'?' active':'') + '" onclick="' + (v==='stock'?'':'switchToStock()') + '">Stock</button>';
   if (!window._adminMode) {
@@ -2662,6 +2665,218 @@ function renderTabs() {
     html2 += '<button class="tab po-tab' + (v==='purchasing'?' active':'') + '" onclick="' + (v==='purchasing'?'':'switchToPurchasing()') + '">Purchasing</button>';
   }
   document.getElementById('machineTabs').innerHTML = html2;
+}
+
+function switchToWeekly() {
+  currentView = 'weekly'; hideAllViews(); renderTabs();
+  document.getElementById('weeklyView').style.display = 'block';
+  renderWeeklyReport();
+}
+
+async function renderWeeklyReport() {
+  var el = document.getElementById('weeklyView');
+  el.innerHTML = '<div style="color:#8aa8c0;padding:40px;text-align:center">Loading report...</div>';
+
+  // ── Date windows ─────────────────────────────────────────────────
+  var now = new Date();
+  var dayOfWeek = now.getDay(); // 0=Sun
+  // Last Mon-Fri window
+  var lastFri = new Date(now);
+  lastFri.setDate(now.getDate() - ((dayOfWeek + 2) % 7) - (dayOfWeek === 1 ? 0 : 0));
+  // Find last Monday
+  var lastMon = new Date(lastFri);
+  lastMon.setDate(lastFri.getDate() - 4);
+  // Normalise to midnight
+  lastMon.setHours(0,0,0,0); lastFri.setHours(23,59,59,999);
+  var monISO = lastMon.toISOString();
+  var friISO = lastFri.toISOString();
+  // This week Mon-Sun
+  var thisWeekMon = new Date(now); thisWeekMon.setDate(now.getDate() - ((dayOfWeek+6)%7)); thisWeekMon.setHours(0,0,0,0);
+  var thisWeekSun = new Date(thisWeekMon); thisWeekSun.setDate(thisWeekMon.getDate()+6); thisWeekSun.setHours(23,59,59,999);
+
+  function fmtDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('en-AU',{day:'2-digit',month:'short'}); }
+  function fmtMoney(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+  function wkRange(a,b) { return fmtDate(a.toISOString()) + ' – ' + fmtDate(b.toISOString()); }
+
+  // ── Fetch data ───────────────────────────────────────────────────
+  var wJobs, wLoans, wVisits, wLoanTools;
+  try {
+    wJobs      = jobs && jobs.length ? jobs : await db('GET','jobs?select=*,job_tools(*),job_parts(*)&order=updated_at.desc');
+    wLoans     = loans && loans.length ? loans : await db('GET','loans?select=*&order=loan_number.desc');
+    wLoanTools = loanTools && loanTools.length ? loanTools : await db('GET','loan_tools?select=*');
+    wVisits    = siteVisits && siteVisits.length ? siteVisits : await db('GET','site_visits?select=*&order=visit_date.desc');
+  } catch(e) { el.innerHTML = '<div style="color:#f87171;padding:40px;text-align:center">Failed to load data: ' + e.message + '</div>'; return; }
+
+  // ── Jobs: open by status ─────────────────────────────────────────
+  var openStatuses = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
+  var openJobs = wJobs.filter(function(j){ return openStatuses.indexOf(j.status) !== -1; });
+
+  var statusOrder = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
+  var statusLabels = {'NEW JOB':'New Job','AWAITING ASSESSMENT':'Awaiting Assessment','WAITING FOR TOOLS':'Waiting for Tools','QUOTED - AWAITING APPROVAL':'Quote Sent','WAITING ON PARTS':'Waiting on Parts','IN WORKSHOP':'In Workshop','WAITING TO BE INVOICED':'To Be Invoiced'};
+  var statusColors = {'NEW JOB':'#3a5070','AWAITING ASSESSMENT':'#f59e0b','WAITING FOR TOOLS':'#a78bfa','QUOTED - AWAITING APPROVAL':'#00c8e0','WAITING ON PARTS':'#f97316','IN WORKSHOP':'#10b981','WAITING TO BE INVOICED':'#e879f9'};
+
+  var byStatus = {};
+  statusOrder.forEach(function(s){ byStatus[s] = openJobs.filter(function(j){ return j.status === s; }); });
+
+  // ── Revenue: jobs moved to INVOICED AND SENT last Mon-Fri ────────
+  var billedJobs = wJobs.filter(function(j){
+    if(j.status !== 'INVOICED AND SENT' && j.status !== 'COMPLETED') return false;
+    var ua = new Date(j.updated_at);
+    return ua >= lastMon && ua <= lastFri;
+  });
+
+  function jobRevenue(j) {
+    var svc = (j.job_tools||[]).reduce(function(s,t){ return s + parseFloat(t.service_fee||0); },0);
+    var pts = (j.job_parts||[]).reduce(function(s,p){ return s + parseFloat(p.line_total||p.unit_price||0); },0);
+    var lh  = parseFloat(j.hours_spent||0) * parseFloat(j.labour_rate||120);
+    var ld  = parseFloat(j.labour_discount||0);
+    var pd  = parseFloat(j.parts_discount||0);
+    return svc + Math.max(0,pts-pd) + Math.max(0,lh-ld);
+  }
+  var totalRevenue = billedJobs.reduce(function(s,j){ return s + jobRevenue(j); },0);
+
+  // ── Loans out ────────────────────────────────────────────────────
+  var activeLoans = wLoans.filter(function(l){ return l.status === 'ACTIVE'; });
+
+  // ── Site visits: last week completed + this week upcoming ─────────
+  var lastWeekVisits = wVisits.filter(function(v){
+    var vd = new Date(v.visit_date); return vd >= lastMon && vd <= lastFri;
+  });
+  var thisWeekVisits = wVisits.filter(function(v){
+    var vd = new Date(v.visit_date); return vd >= thisWeekMon && vd <= thisWeekSun;
+  });
+
+  // ── Build HTML ───────────────────────────────────────────────────
+  function sectionHead(title, subtitle, color) {
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:28px 0 12px">'
+      + '<div style="font-size:16px;font-weight:700;color:' + color + ';text-transform:uppercase;letter-spacing:1px">' + title + '</div>'
+      + (subtitle ? '<div style="font-size:12px;color:#5a7090">' + subtitle + '</div>' : '')
+      + '</div>';
+  }
+
+  function pill(label, color) {
+    return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + label + '</span>';
+  }
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #00c8e0;padding-bottom:16px;margin-bottom:4px">'
+    + '<div><div style="font-size:22px;font-weight:900;color:#e2e8f0">Weekly Service Report</div>'
+    + '<div style="font-size:13px;color:#5a7090;margin-top:2px">Generated ' + now.toLocaleDateString('en-AU',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) + '</div></div>'
+    + '<div style="font-size:13px;color:#5a7090;text-align:right">X-Pak Global — Service Division<br>'
+    + '<span style="color:#8aa8c0">Reporting week: ' + wkRange(lastMon, lastFri) + '</span></div></div>';
+
+  // ── Revenue card ─────────────────────────────────────────────────
+  html += sectionHead('Revenue Billed', wkRange(lastMon, lastFri), '#10b981');
+  html += '<div style="display:flex;gap:16px;flex-wrap:wrap">';
+  html += '<div style="background:#0a2a1a;border:1px solid #10b98133;border-radius:12px;padding:20px 28px;min-width:200px">'
+    + '<div style="font-size:11px;color:#10b981;font-weight:700;text-transform:uppercase;letter-spacing:1px">Total Invoiced</div>'
+    + '<div style="font-size:36px;font-weight:900;color:#10b981;margin-top:4px">' + fmtMoney(totalRevenue) + '</div>'
+    + '<div style="font-size:11px;color:#5a7090;margin-top:4px">ex GST · ' + billedJobs.length + ' job' + (billedJobs.length!==1?'s':'') + '</div></div>';
+
+  if (billedJobs.length) {
+    html += '<div style="flex:1;background:#0f1923;border:1px solid #1e3048;border-radius:12px;padding:16px;min-width:300px"><table style="width:100%;border-collapse:collapse">'
+      + '<tr style="font-size:11px;color:#5a7090;text-transform:uppercase"><th style="text-align:left;padding:4px 8px">Job</th><th style="text-align:left;padding:4px 8px">Customer</th><th style="text-align:right;padding:4px 8px">Amount</th></tr>';
+    billedJobs.forEach(function(j){
+      html += '<tr style="border-top:1px solid #1e3048">'
+        + '<td style="padding:6px 8px;font-size:12px;color:#00c8e0;font-family:monospace">' + xpsNum(j.job_number) + '</td>'
+        + '<td style="padding:6px 8px;font-size:12px;color:#e2e8f0">' + (j.customer||'—') + '</td>'
+        + '<td style="padding:6px 8px;font-size:13px;color:#10b981;text-align:right;font-weight:700">' + fmtMoney(jobRevenue(j)) + '</td></tr>';
+    });
+    html += '</table></div>';
+  } else {
+    html += '<div style="flex:1;background:#0f1923;border:1px solid #1e3048;border-radius:12px;padding:20px;color:#5a7090;font-size:13px">No jobs invoiced last week.</div>';
+  }
+  html += '</div>';
+
+  // ── Open Jobs by status ──────────────────────────────────────────
+  html += sectionHead('Open Service Cases', openJobs.length + ' open', '#00c8e0');
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
+  statusOrder.forEach(function(s) {
+    var list = byStatus[s];
+    var col = statusColors[s];
+    html += '<div style="background:#0f1923;border:1px solid #1e3048;border-top:3px solid ' + col + ';border-radius:10px;padding:14px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      + '<div style="font-size:12px;font-weight:700;color:' + col + '">' + statusLabels[s] + '</div>'
+      + '<div style="font-size:20px;font-weight:900;color:' + col + '">' + list.length + '</div></div>';
+    if (list.length) {
+      list.slice(0,5).forEach(function(j){
+        html += '<div style="padding:5px 0;border-top:1px solid #1e3048;display:flex;justify-content:space-between;align-items:center">'
+          + '<div><div style="font-size:11px;color:#00c8e0;font-family:monospace">' + xpsNum(j.job_number) + '</div>'
+          + '<div style="font-size:12px;color:#c0cfe0">' + (j.customer||'—') + '</div></div>'
+          + (j.order_number ? '<div style="font-size:10px;color:#5a7090">' + j.order_number + '</div>' : '') + '</div>';
+      });
+      if (list.length > 5) html += '<div style="font-size:11px;color:#5a7090;margin-top:6px;text-align:right">+' + (list.length-5) + ' more</div>';
+    } else {
+      html += '<div style="font-size:11px;color:#3a5070;padding-top:4px">None</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // ── Loans out ────────────────────────────────────────────────────
+  html += sectionHead('Loan Tools Out', activeLoans.length + ' active', '#a78bfa');
+  if (activeLoans.length) {
+    html += '<div style="background:#0f1923;border:1px solid #1e3048;border-radius:10px;overflow:hidden"><table style="width:100%;border-collapse:collapse">'
+      + '<tr style="background:#141f2d;font-size:11px;color:#5a7090;text-transform:uppercase">'
+      + '<th style="text-align:left;padding:8px 12px">Loan #</th>'
+      + '<th style="text-align:left;padding:8px 12px">Tool</th>'
+      + '<th style="text-align:left;padding:8px 12px">Customer</th>'
+      + '<th style="text-align:left;padding:8px 12px">Loaned</th>'
+      + '<th style="text-align:left;padding:8px 12px">Due Back</th>'
+      + '<th style="text-align:left;padding:8px 12px">Type</th></tr>';
+    activeLoans.forEach(function(l, i){
+      var tool = wLoanTools.find(function(t){ return t.id === l.loan_tool_id; });
+      var isOD = l.expected_return && new Date(l.expected_return) < now;
+      html += '<tr style="border-top:1px solid #1e3048;' + (i%2===0?'background:#0a1520':'') + '">'
+        + '<td style="padding:8px 12px;font-size:12px;color:#a78bfa;font-family:monospace">' + xplNum(l.loan_number) + '</td>'
+        + '<td style="padding:8px 12px;font-size:12px;color:#e2e8f0">' + (tool?tool.name:'Unknown') + '</td>'
+        + '<td style="padding:8px 12px;font-size:12px;color:#c0cfe0">' + (l.customer||'—') + '</td>'
+        + '<td style="padding:8px 12px;font-size:12px;color:#8aa8c0">' + fmtDate(l.loaned_date) + '</td>'
+        + '<td style="padding:8px 12px;font-size:12px;color:' + (isOD?'#f87171':'#8aa8c0') + '">' + (l.expected_return ? fmtDate(l.expected_return) + (isOD?' ⚠':'') : '—') + '</td>'
+        + '<td style="padding:8px 12px">' + pill(l.is_trial?'Trial':'Loan', l.is_trial?'#f59e0b':'#a78bfa') + '</td></tr>';
+    });
+    html += '</table></div>';
+  } else {
+    html += '<div style="background:#0f1923;border:1px solid #1e3048;border-radius:10px;padding:20px;color:#5a7090;font-size:13px">No tools currently on loan.</div>';
+  }
+
+  // ── Site Visits ───────────────────────────────────────────────────
+  html += sectionHead('Site Visits', '', '#f59e0b');
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+
+  // Last week completed
+  html += '<div><div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:10px">COMPLETED LAST WEEK &nbsp;·&nbsp; ' + wkRange(lastMon,lastFri) + '</div>';
+  if (lastWeekVisits.length) {
+    lastWeekVisits.forEach(function(v){
+      html += '<div style="background:#0f1923;border:1px solid #1e3048;border-left:3px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:8px">'
+        + '<div style="display:flex;justify-content:space-between">'
+        + '<div style="font-size:12px;color:#00c8e0;font-family:monospace">' + (v.visit_number?xsvNum(v.visit_number):'—') + '</div>'
+        + '<div style="font-size:11px;color:#8aa8c0">' + fmtDate(v.visit_date) + '</div></div>'
+        + '<div style="font-size:13px;color:#e2e8f0;font-weight:600;margin-top:2px">' + (v.customer||'—') + '</div>'
+        + (v.technician?'<div style="font-size:11px;color:#5a7090;margin-top:2px">' + v.technician + '</div>':'') + '</div>';
+    });
+  } else {
+    html += '<div style="background:#0f1923;border:1px solid #1e3048;border-radius:8px;padding:16px;color:#5a7090;font-size:13px">No visits last week.</div>';
+  }
+  html += '</div>';
+
+  // This week upcoming
+  html += '<div><div style="font-size:12px;font-weight:700;color:#10b981;margin-bottom:10px">THIS WEEK &nbsp;·&nbsp; ' + wkRange(thisWeekMon,thisWeekSun) + '</div>';
+  if (thisWeekVisits.length) {
+    thisWeekVisits.forEach(function(v){
+      html += '<div style="background:#0f1923;border:1px solid #1e3048;border-left:3px solid #10b981;border-radius:8px;padding:10px 14px;margin-bottom:8px">'
+        + '<div style="display:flex;justify-content:space-between">'
+        + '<div style="font-size:12px;color:#00c8e0;font-family:monospace">' + (v.visit_number?xsvNum(v.visit_number):'—') + '</div>'
+        + '<div style="font-size:11px;color:#8aa8c0">' + fmtDate(v.visit_date) + '</div></div>'
+        + '<div style="font-size:13px;color:#e2e8f0;font-weight:600;margin-top:2px">' + (v.customer||'—') + '</div>'
+        + (v.technician?'<div style="font-size:11px;color:#5a7090;margin-top:2px">' + v.technician + '</div>':'') + '</div>';
+    });
+  } else {
+    html += '<div style="background:#0f1923;border:1px solid #1e3048;border-radius:8px;padding:16px;color:#5a7090;font-size:13px">No visits scheduled this week.</div>';
+  }
+  html += '</div></div>';
+
+  html += '<div style="height:40px"></div>';
+  el.innerHTML = html;
 }
 
 function switchToParts() {
@@ -3862,11 +4077,11 @@ async function savePart() {
 function makeLabelData(partId) {
   var p = parts.find(function(x) { return x.id === partId; }) || allParts.find(function(x) { return x.id === partId; }); if (!p) return null;
   var mName = p.machineName || (selectedMachine ? selectedMachine.name : '');
-  return { id: p.id, machine: mName, keyno: p.key_no, description: p.description, location: (p.stock && p.stock[0] && p.stock[0].location) || '', qrText: 'XPAK|' + p.key_no + '|' + p.description + '|' + mName };
+  return { id: p.id, machine: mName, keyno: p.key_no, description: p.description, section: p.assembly_section || '', location: (p.stock && p.stock[0] && p.stock[0].location) || '', qrText: 'XPAK|' + p.key_no + '|' + p.description + '|' + mName };
 }
 
 function makeLabelInner(d, prefix) {
-  return '<div class="' + prefix + '-text"><div class="' + prefix + '-partno-label">Part No.</div><div class="' + prefix + '-partno">' + d.keyno + '</div><div class="' + prefix + '-desc">' + d.description + '</div><div class="' + prefix + '-machine">' + d.machine + '</div>' + (d.location ? '<div class="' + prefix + '-loc">S/L ' + d.location + '</div>' : '') + '</div><div class="' + prefix + '-qr" id="' + prefix + 'qr-' + d.id + '"></div>';
+  return '<div class="' + prefix + '-text"><div class="' + prefix + '-partno-label">Part No.</div><div class="' + prefix + '-partno">' + d.keyno + '</div><div class="' + prefix + '-desc">' + d.description + '</div><div class="' + prefix + '-machine">' + d.machine + (d.section ? ' &nbsp;·&nbsp; ' + d.section : '') + '</div>' + (d.location ? '<div class="' + prefix + '-loc">S/L ' + d.location + '</div>' : '') + '</div><div class="' + prefix + '-qr" id="' + prefix + 'qr-' + d.id + '"></div>';
 }
 
 function autoSizeLabelText(el) { var l = (el.textContent || el.innerText).length; el.style.fontSize = l > 14 ? '18px' : l > 10 ? '22px' : '27px'; }
