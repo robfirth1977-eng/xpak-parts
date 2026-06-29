@@ -2720,9 +2720,9 @@ async function renderWeeklyReport() {
 
   // ── Revenue: jobs moved to INVOICED AND SENT last Mon-Fri ────────
   var billedJobs = wJobs.filter(function(j){
-    if(j.status !== 'INVOICED AND SENT' && j.status !== 'COMPLETED') return false;
-    var ua = new Date(j.updated_at);
-    return ua >= lastMon && ua <= lastFri;
+    if(!j.invoiced_at) return false;
+    var ia = new Date(j.invoiced_at);
+    return ia >= lastMon && ia <= lastFri;
   });
 
   function jobRevenue(j) {
@@ -3300,6 +3300,7 @@ function renderList() {
       (linkTiles ? '<div class="job-links">' + linkTiles + '</div>' : '') +
       '<div class="job-links">' +
         '<button class="job-link-tile" onclick="event.stopPropagation();printCaseLabel(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f4a;border-color:#00c8e0;color:#00c8e0">Print Bin Label</button>' +
+        '<button class="job-link-tile" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')" style="cursor:pointer;background:#0a1a2a;border-color:#f59e0b;color:#f59e0b">Job Card</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Assessment Report</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')" style="cursor:pointer;background:#1a0a2a;border-color:#e879f9;color:#e879f9">Invoice Notice</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Export Quote</button>' +
@@ -3379,7 +3380,9 @@ function initBoardDrag() {
         }
       }
       j.status = newStatus;
-      db('PATCH', 'jobs?id=eq.' + dragId, { status: newStatus }).catch(function(err){ showToast('Update failed: ' + err.message, 'error'); });
+      var dragPatch = { status: newStatus };
+      if (newStatus === 'INVOICED AND SENT' && !j.invoiced_at) { dragPatch.invoiced_at = new Date().toISOString(); j.invoiced_at = dragPatch.invoiced_at; }
+      db('PATCH', 'jobs?id=eq.' + dragId, dragPatch).catch(function(err){ showToast('Update failed: ' + err.message, 'error'); });
       renderBoard();
       dragId = null;
     });
@@ -3591,6 +3594,7 @@ async function saveJob() {
   var payload = {
     status: document.getElementById('jStatus').value,
     order_number: document.getElementById('jOrderNum').value.trim() || null,
+    invoiced_at: document.getElementById('jStatus').value === 'INVOICED AND SENT' ? (editingJobId ? (jobs.find(function(j){return j.id===editingJobId;})||{}).invoiced_at || new Date().toISOString() : new Date().toISOString()) : null,
     customer: customer,
     contact_name: document.getElementById('jContact').value || null,
     phone: document.getElementById('jPhone').value || null,
@@ -4438,6 +4442,163 @@ function printReturnSlip(tempId) {
   w.document.write('<div class="badge pass">✓ Tested: Passed</div>');
   w.document.write('</div></div>');
   w.document.write('</div></body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 400);
+}
+
+// ── JOB CARD ────────────────────────────────────────────────────────
+
+async function printJobCard(jobId) {
+  var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
+  if (!allParts.length) await loadAllParts();
+  db('GET', 'job_tools?job_id=eq.' + jobId + '&select=*&order=tool_number.asc').then(function(tools) {
+    db('GET', 'job_parts?job_id=eq.' + jobId + '&select=*').then(function(jparts) {
+      renderJobCard(j, tools, jparts);
+    }).catch(function() { renderJobCard(j, tools, []); });
+  }).catch(function() {
+    var fakeTool = [{ tool_number:1, machine_id: j.machine_id, serial_number: j.serial_number, fault_type: j.fault_type, customer_issue: j.customer_issue }];
+    renderJobCard(j, fakeTool, []);
+  });
+}
+
+function renderJobCard(j, tools, jparts) {
+  var today = new Date().toLocaleDateString('en-AU', { day:'2-digit', month:'long', year:'numeric' });
+  var mLookup = function(id) { var m = machines.find(function(x){return x.id===id;}); return m ? m.name : (id || ''); };
+
+  var SERVICE_STEPS = [
+    'Strip-down and visual inspection',
+    'Clean all internal components',
+    'Clean external housing',
+    'Re-lubricate all moving parts',
+    'Adjust tension to specification',
+    'Adjust seal pressure / temperature',
+    'Check and adjust belt tension',
+    'Reassemble to torque spec',
+    'Function test - full cycle range',
+    'Seal quality check on strap sample',
+    'Cycle count recorded',
+    'Condition report completed'
+  ];
+
+  var w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
+  w.document.write('<title>Job Card - ' + xpsNum(j.job_number) + ' - ' + (j.customer||'') + '</title><style>');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+  w.document.write('body{font-family:Arial,sans-serif;font-size:10.5pt;color:#111;background:#fff;padding:14mm 14mm 10mm}');
+  w.document.write('@media print{body{padding:10mm 12mm}@page{size:A4 portrait;margin:0}}');
+  w.document.write('.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #E87722;padding-bottom:10px;margin-bottom:12px}');
+  w.document.write('.brand{font-size:22pt;font-weight:900;color:#1A2F4A;letter-spacing:-0.5px}');
+  w.document.write('.brand span{color:#E87722}');
+  w.document.write('.job-num{font-size:17pt;font-weight:900;color:#E87722;font-family:monospace;text-align:right}');
+  w.document.write('.job-sub{font-size:9pt;color:#666;margin-top:2px;text-align:right}');
+  w.document.write('.cust-box{background:#f5f7fa;border:1px solid #dde3f0;border-radius:6px;padding:9px 14px;margin-bottom:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 16px}');
+  w.document.write('.cf-label{font-size:7.5pt;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.3px}');
+  w.document.write('.cf-val{font-size:10.5pt;font-weight:700;color:#1A2F4A}');
+  w.document.write('.tool-block{border:1px solid #ccd5e0;border-radius:7px;margin-bottom:12px;page-break-inside:avoid;break-inside:avoid;overflow:hidden}');
+  w.document.write('.tool-hdr{background:#1A2F4A;color:#fff;padding:7px 12px;display:flex;align-items:center;gap:12px}');
+  w.document.write('.t-num{font-size:9pt;font-weight:900;letter-spacing:1px;opacity:0.8}');
+  w.document.write('.t-model{font-size:13pt;font-weight:900}');
+  w.document.write('.t-sn{font-size:9.5pt;opacity:0.75;margin-left:auto}');
+  w.document.write('.tool-body{display:grid;grid-template-columns:1fr 1fr;gap:0}');
+  w.document.write('.col-left{padding:10px 12px;border-right:1px solid #dde3f0}');
+  w.document.write('.col-right{padding:10px 12px}');
+  w.document.write('.section-lbl{font-size:8pt;font-weight:700;color:#E87722;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;border-bottom:1px solid #f0e0d0;padding-bottom:3px}');
+  w.document.write('.issue-box{background:#fff8f0;border:1px solid #f0d8b0;border-radius:5px;padding:7px 10px;font-size:10pt;line-height:1.5;min-height:48px}');
+  w.document.write('.checklist{list-style:none;padding:0}');
+  w.document.write('.checklist li{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dotted #e0e6f0;font-size:9.5pt}');
+  w.document.write('.checklist li:last-child{border-bottom:none}');
+  w.document.write('.cb{width:14px;height:14px;border:1.5px solid #999;border-radius:2px;flex-shrink:0;display:inline-block}');
+  w.document.write('.parts-tbl{width:100%;border-collapse:collapse;font-size:9pt;margin-top:4px}');
+  w.document.write('.parts-tbl th{background:#1A2F4A;color:#fff;padding:5px 8px;text-align:left;font-size:8pt;font-weight:700}');
+  w.document.write('.parts-tbl td{padding:4px 8px;border-bottom:1px solid #eee}');
+  w.document.write('.parts-tbl tr:nth-child(even) td{background:#f8f9fc}');
+  w.document.write('.write-line{border-bottom:1px solid #bbb;height:22px;margin-bottom:2px}');
+  w.document.write('.card-footer{margin-top:14px;padding-top:8px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:8pt;color:#999}');
+  w.document.write('</style></head><body>');
+
+  // Header
+  w.document.write('<div class="header">');
+  w.document.write('<div><div class="brand">X-PAK <span>SERVICE</span></div><div style="font-size:9pt;color:#666;margin-top:2px">Workshop Job Card</div></div>');
+  w.document.write('<div>');
+  w.document.write('<div class="job-num">' + xpsNum(j.job_number) + '</div>');
+  w.document.write('<div class="job-sub">' + today + '</div>');
+  if (j.order_number) w.document.write('<div class="job-sub" style="color:#E87722;font-weight:700">PO: ' + j.order_number + '</div>');
+  w.document.write('</div></div>');
+
+  // Customer box
+  w.document.write('<div class="cust-box">');
+  w.document.write('<div><div class="cf-label">Customer</div><div class="cf-val">' + (j.customer||'--') + '</div></div>');
+  w.document.write('<div><div class="cf-label">Contact</div><div class="cf-val">' + (j.contact_name||'--') + '</div></div>');
+  w.document.write('<div><div class="cf-label">Phone</div><div class="cf-val">' + (j.mobile||j.phone||'--') + '</div></div>');
+  w.document.write('</div>');
+
+  // Tool blocks
+  tools.forEach(function(t) {
+    var mName = mLookup(t.machine_id);
+    var toolParts = jparts.filter(function(p){ return p.tool_number === t.tool_number || (!p.tool_number && t.tool_number === 1); });
+
+    w.document.write('<div class="tool-block">');
+    w.document.write('<div class="tool-hdr">');
+    w.document.write('<span class="t-num">TOOL ' + t.tool_number + '</span>');
+    w.document.write('<span class="t-model">' + (mName||'Unknown Model') + '</span>');
+    if (t.serial_number) w.document.write('<span class="t-sn">S/N: ' + t.serial_number + '</span>');
+    w.document.write('</div>');
+
+    w.document.write('<div class="tool-body">');
+
+    // Left column: fault description + service checklist
+    w.document.write('<div class="col-left">');
+    w.document.write('<div class="section-lbl">Customer Fault Description</div>');
+    var issueText = [t.fault_type, t.customer_issue].filter(Boolean).join(' -- ');
+    w.document.write('<div class="issue-box">' + (issueText ? issueText.replace(/\n/g,'<br>') : '&nbsp;') + '</div>');
+    if (t.workshop_notes) {
+      w.document.write('<div class="section-lbl" style="margin-top:10px">Workshop Notes</div>');
+      w.document.write('<div class="issue-box" style="background:#f0f8ff;border-color:#b0cce8">' + t.workshop_notes.replace(/\n/g,'<br>') + '</div>');
+    }
+    w.document.write('<div class="section-lbl" style="margin-top:10px">Service Checklist</div>');
+    w.document.write('<ul class="checklist">');
+    SERVICE_STEPS.forEach(function(step) {
+      w.document.write('<li><span class="cb"></span>' + step + '</li>');
+    });
+    w.document.write('</ul>');
+    w.document.write('</div>');
+
+    // Right column: parts + write-on area + sign-off
+    w.document.write('<div class="col-right">');
+    w.document.write('<div class="section-lbl">Parts</div>');
+    if (toolParts.length) {
+      w.document.write('<table class="parts-tbl"><thead><tr>');
+      w.document.write('<th>Part No.</th><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:center">Status</th>');
+      w.document.write('</tr></thead><tbody>');
+      toolParts.forEach(function(p) {
+        var sLabel = {'use_stock':'Stock','to_order':'To Order','ordered':'Ordered','arrived':'Arrived','fitted':'Fitted'}[p.status] || (p.status||'');
+        var sColor = {'use_stock':'#10b981','to_order':'#f97316','ordered':'#a78bfa','arrived':'#00c8e0','fitted':'#10b981'}[p.status] || '#999';
+        w.document.write('<tr><td style="font-family:monospace;font-size:8.5pt">' + (p.part_key_no||'--') + '</td>');
+        w.document.write('<td>' + (p.part_description||'') + '</td>');
+        w.document.write('<td style="text-align:center">' + (p.quantity||1) + '</td>');
+        w.document.write('<td style="text-align:center;font-size:8pt;font-weight:700;color:' + sColor + '">' + sLabel + '</td></tr>');
+      });
+      w.document.write('</tbody></table>');
+    } else {
+      w.document.write('<div style="font-size:9pt;color:#aaa;font-style:italic;padding:6px 0">No parts recorded.</div>');
+    }
+    w.document.write('<div class="section-lbl" style="margin-top:14px">Technician Notes / Findings</div>');
+    for (var i=0; i<7; i++) w.document.write('<div class="write-line"></div>');
+    w.document.write('<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">');
+    w.document.write('<div><div style="font-size:7.5pt;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:18px">Technician</div><div style="border-bottom:1.5px solid #555;height:1px"></div></div>');
+    w.document.write('<div><div style="font-size:7.5pt;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:18px">Date Completed</div><div style="border-bottom:1.5px solid #555;height:1px"></div></div>');
+    w.document.write('</div>');
+    w.document.write('</div>'); // col-right
+    w.document.write('</div>'); // tool-body
+    w.document.write('</div>'); // tool-block
+  });
+
+  // Footer
+  w.document.write('<div class="card-footer">');
+  w.document.write('<span>X-Pak Global Service Division &nbsp;·&nbsp; ' + xpsNum(j.job_number) + ' &nbsp;·&nbsp; ' + (j.customer||'') + '</span>');
+  w.document.write('<span>Generated by MainFlow &nbsp;·&nbsp; ' + today + '</span>');
+  w.document.write('</div>');
+  w.document.write('</body></html>');
   w.document.close();
   setTimeout(function(){ w.print(); }, 400);
 }
