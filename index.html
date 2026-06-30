@@ -3981,8 +3981,26 @@ function autoGenPartNo() {
 
 function openEditModal(partId) {
   var p = parts.find(function(x) { return x.id === partId; }) || allParts.find(function(x) { return x.id === partId; }); if (!p) return;
-  editingPart = p; var s = (p.stock && p.stock[0]) || {};
+  editingPart = p;
   document.getElementById('modalTitle').textContent = 'Edit Part';
+  document.getElementById('overlay').classList.add('show');
+  populatePartModal(p);
+  // Fetch fresh from Supabase to avoid stale cache (stock counts, prices etc.)
+  db('GET', 'parts?id=eq.' + partId + '&select=*,stock(*)').then(function(fresh) {
+    if (!fresh || !fresh.length) return;
+    var fp = fresh[0];
+    // Update local caches
+    var ai = allParts.findIndex(function(x){ return x.id === partId; });
+    if (ai !== -1) allParts[ai] = fp;
+    var pi = parts.findIndex(function(x){ return x.id === partId; });
+    if (pi !== -1) parts[pi] = fp;
+    editingPart = fp;
+    populatePartModal(fp);
+  }).catch(function() { /* keep stale data on error */ });
+}
+
+function populatePartModal(p) {
+  var s = (p.stock && p.stock[0]) || {};
   document.getElementById('fKeyno').value = p.key_no; document.getElementById('fRef').value = p.diagram_ref || '';
   document.getElementById('fDesc').value = p.description; document.getElementById('fSpec').value = p.spec || '';
   document.getElementById('fAltPartNo').value = p.alt_part_no || ''; document.getElementById('fCategory').value = p.category || '';
@@ -3993,14 +4011,11 @@ function openEditModal(partId) {
   document.getElementById('fCost').value = p.cost_price || '';
   document.getElementById('fSell').value = p.sell_price || '';
   if (p.cost_price && p.sell_price && parseFloat(p.sell_price) > 0) {
-    // Existing prices — calculate actual GP%
     document.getElementById('fGP').value = Math.round((1 - parseFloat(p.cost_price) / parseFloat(p.sell_price)) * 100);
   } else if (p.cost_price && parseFloat(p.cost_price) > 0) {
-    // Cost exists but no sell price — default to 40% and auto-calc sell
     document.getElementById('fGP').value = '50';
     autoCalcSell();
   } else {
-    // No prices at all — default GP to 40%, leave sell blank
     document.getElementById('fGP').value = '50';
   }
   document.getElementById('fMyobIncome').value = p.myob_account_income || ''; document.getElementById('fMyobAsset').value = p.myob_account_asset || '';
@@ -4010,7 +4025,7 @@ function openEditModal(partId) {
   renderSuppliersList();
   document.getElementById('fLoc').value = s.location || ''; document.getElementById('fQty').value = s.quantity !== undefined ? s.quantity : 0;
   document.getElementById('fThreshold').value = s.reorder_threshold || 1;
-  document.getElementById('btnDeletePart').style.display = 'block'; document.getElementById('overlay').classList.add('show');
+  document.getElementById('btnDeletePart').style.display = 'block';
 }
 
 function populatePartSupplierDrop() {
