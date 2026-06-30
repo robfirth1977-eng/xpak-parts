@@ -2885,25 +2885,50 @@ function switchToParts() {
   document.getElementById('allPartsSection').style.display = 'block';
 }
 
+function getBrandFromMachine(m) {
+  if (m.brand && m.brand !== 'Other') return m.brand;
+  var n = (m.name || '').toUpperCase();
+  if (n.includes('ZAPAK') || n.match(/ZP9[0-9]/)) return 'Zapak';
+  if (n.includes('KRONOS') || n.includes('H-46')) return 'Kronos';
+  if (n.includes('STRAPEX') || n.includes('STB')) return 'Strapex';
+  if (n.includes('CYKLOP') || n.includes('CMT') || n.includes('CHT') || n.includes('CLT')) return 'Cyklop';
+  if (n.includes('FROMM') || n.match(/P3[0-9]{2}/)) return 'Fromm';
+  if (n.includes('STRAPACK') || n.includes('SQ-') || n.includes('SQ8')) return 'Strapack';
+  if (n.includes('ORGAPACK') || n.includes('OR-T') || n.includes('ORT')) return 'Orgapack';
+  if (n.includes('TITAN') || n.includes('TA2') || n.includes('TA220')) return 'Titan';
+  if (n.includes('MUL') || n.includes('EP-') || n.includes('EP1') || n.includes('ENCORE') || n.includes('MANUCORD') || n.includes('MRC') || n.includes('PNEUMOCORD') || n.includes('PRC')) return 'Messersì & Vordermann';
+  if (n.includes('XS CONSUMABLE') || n.includes('CONSUMABLE')) return 'Consumables';
+  return 'Other';
+}
+
 function renderMachineCardList() {
   var brandColors = {
-    'Cyklop':'#64b5c8','Kronos':'#f59e0b','Titan':'#10b981',
-    'Strapack':'#f97316','Orgapack OR-T':'#a78bfa',
-    'X-Pak':'#00c8e0','Consumables':'#5a8090','Fromm':'#e879f9','Other':'#3a5070'
+    'Zapak':'#f59e0b','Kronos':'#e879f9','Strapex':'#10b981',
+    'Cyklop':'#64b5c8','Fromm':'#a78bfa','Strapack':'#f97316',
+    'Orgapack':'#00c8e0','Titan':'#10b981',
+    'Messersì & Vordermann':'#8b5cf6',
+    'Consumables':'#5a8090','Other':'#3a5070'
   };
-  var groups = {}, groupOrder = [];
+  var brandOrder = ['Zapak','Kronos','Strapex','Cyklop','Fromm','Strapack','Orgapack','Titan','Messersì & Vordermann','Consumables','Other'];
+  var groups = {};
   machines.forEach(function(m) {
-    var brand = m.brand || 'Other';
-    if (!groups[brand]) { groups[brand] = []; groupOrder.push(brand); }
+    var brand = getBrandFromMachine(m);
+    if (!groups[brand]) groups[brand] = [];
     groups[brand].push(m);
   });
-  var html2 = '<div class="machine-card-list"><div style="padding:4px 2px 10px"><button class="tab-add" onclick="openMachineModal()">+ Add Machine</button></div>';
-  groupOrder.forEach(function(brand) {
+  // Search bar + add button header
+  var html2 = '<div class="machine-card-list">';
+  html2 += '<div style="padding:10px 14px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #1e3048;margin-bottom:12px">';
+  html2 += '<input id="toolsMachineSearch" placeholder="Search all parts across all machines..." oninput="toolsGlobalSearch(this.value)" autocomplete="off" style="flex:1;padding:9px 13px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">';
+  html2 += '<button class="tab-add" onclick="openMachineModal()">+ Add Machine</button>';
+  html2 += '</div>';
+  // Brand groups — only render brands that have machines
+  brandOrder.forEach(function(brand) {
+    if (!groups[brand] || !groups[brand].length) return;
     var col = brandColors[brand] || '#3a5070';
     html2 += '<div class="machine-brand-section">';
     html2 += '<div class="machine-brand-label" style="color:' + col + '">' + brand + '</div>';
     groups[brand].forEach(function(m) {
-      var partCount = '';
       var mIdx = machines.indexOf(m);
       html2 += '<div class="machine-card" style="border-left-color:' + col + '">' +
         '<div style="flex:1;min-width:0" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">' +
@@ -2917,6 +2942,18 @@ function renderMachineCardList() {
   });
   html2 += '</div>';
   document.getElementById('machineCardSection').innerHTML = html2;
+}
+
+function toolsGlobalSearch(q) {
+  if (!q || q.trim().length < 2) return;
+  // Switch to all-parts view, pre-populate the search and filter
+  currentView = 'parts'; hideAllViews(); renderTabs();
+  document.getElementById('hSub').textContent = 'All Parts';
+  document.getElementById('lowBadge').innerHTML = '';
+  renderAllPartsList();
+  document.getElementById('allPartsSection').style.display = 'block';
+  var box = document.getElementById('allPartsSearch');
+  if (box) { box.value = q; filterAllParts(); }
 }
 
 async function drillIntoMachine(m) {
