@@ -303,14 +303,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .label-preview-card{background:white;color:black;border-radius:4px;width:267px;height:108px;display:flex;align-items:stretch;font-family:Arial,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,0.5);overflow:hidden;flex-shrink:0;position:relative;border:1px solid #ddd}
 .lp-remove{position:absolute;top:3px;right:88px;background:none;border:none;color:#bbb;font-size:12px;cursor:pointer;z-index:2}
 .lp-remove:hover{color:#ef4444}
-.lp-text{flex:1;padding:8px 6px 8px 10px;display:flex;flex-direction:column;justify-content:center;gap:2px;overflow:hidden;border-right:1px solid #e0e0e0}
+.lp-text{flex:1;padding:8px 10px;display:flex;flex-direction:column;justify-content:center;gap:2px;overflow:hidden}
 .lp-partno-label{font-size:11px;font-weight:700;color:#888;text-transform:uppercase}
 .lp-partno{font-size:27px;font-weight:900;font-family:'Courier New',monospace;color:#000;line-height:1.05;word-break:break-all}
 .lp-desc{font-size:16px;font-weight:700;color:#111;line-height:1.2;margin-top:1px}
 .lp-machine{font-size:12px;color:#444;margin-top:3px}
 .lp-loc{font-size:12px;color:#444}
-.lp-qr{flex-shrink:0;width:84px;display:flex;align-items:center;justify-content:center;padding:4px}
-.lp-qr canvas,.lp-qr img{width:76px !important;height:76px !important}
+
 .docs-bar{background:#0d1f30;border-bottom:1px solid #1e3048;padding:8px 14px;display:none;flex-wrap:wrap;gap:8px;align-items:center}
 .docs-bar.show{display:flex}
 .docs-label{font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px}
@@ -369,14 +368,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   #printArea{display:block !important}
   #partsBreadcrumb{display:none !important}
   .print-label{width:87mm;height:34mm;page-break-after:always;page-break-inside:avoid;display:flex;align-items:stretch;font-family:Arial,sans-serif;background:white;color:black;overflow:hidden}
-  .pl-text{flex:1;padding:1.5mm 1.5mm 1.5mm 3mm;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;border-right:0.3mm solid #ccc}
+  .pl-text{flex:1;padding:1.5mm 3mm;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
   .pl-partno-label{font-size:9pt;font-weight:700;color:#666;text-transform:uppercase}
   .pl-partno{font-size:22pt;font-weight:900;font-family:'Courier New',monospace;color:#000;line-height:1.05;word-break:break-all}
   .pl-desc{font-size:13pt;font-weight:700;color:#111;line-height:1.15}
   .pl-machine{font-size:9pt;color:#333}
   .pl-loc{font-size:9pt;color:#333}
-  .pl-qr{flex-shrink:0;width:28mm;display:flex;align-items:center;justify-content:center;padding:1mm}
-  .pl-qr canvas,.pl-qr img{width:26mm !important;height:26mm !important}
+  
   @page{size:89mm 36mm;margin:1mm 1mm 0mm}
 }
 #printArea{display:none}
@@ -4100,7 +4098,7 @@ function makeLabelData(partId) {
 }
 
 function makeLabelInner(d, prefix) {
-  return '<div class="' + prefix + '-text"><div class="' + prefix + '-partno-label">Part No.</div><div class="' + prefix + '-partno">' + d.keyno + '</div><div class="' + prefix + '-desc">' + d.description + '</div><div class="' + prefix + '-machine">' + d.machine + (d.section ? ' &nbsp;·&nbsp; ' + d.section : '') + '</div>' + (d.location ? '<div class="' + prefix + '-loc">S/L ' + d.location + '</div>' : '') + '</div><div class="' + prefix + '-qr" id="' + prefix + 'qr-' + d.id + '"></div>';
+  return '<div class="' + prefix + '-text"><div class="' + prefix + '-partno-label">Part No.</div><div class="' + prefix + '-partno">' + d.keyno + '</div><div class="' + prefix + '-desc">' + d.description + '</div><div class="' + prefix + '-machine">' + d.machine + (d.section ? ' &nbsp;·&nbsp; ' + d.section : '') + '</div>' + (d.location ? '<div class="' + prefix + '-loc">S/L ' + d.location + '</div>' : '') + '</div>';
 }
 
 function autoSizeLabelText(el) { var l = (el.textContent || el.innerText).length; el.style.fontSize = l > 14 ? '18px' : l > 10 ? '22px' : '27px'; }
@@ -4137,10 +4135,8 @@ function updateLabelPanel() {
     return '<div class="label-preview-card"><button class="lp-remove" onclick="removeFromQueue(\'' + d.id + '\')">x</button>' + makeLabelInner(d, 'lp') + '</div>';
   }).join('');
   labelQueue.forEach(function(d) {
-    var el = document.getElementById('lpqr-' + d.id);
-    if (el && !el.children.length) new QRCode(el, { text: d.qrText, width: 76, height: 76, correctLevel: QRCode.CorrectLevel.M });
-    var card = el ? el.closest('.label-preview-card') : null;
-    if (card) { var pn = card.querySelector('.lp-partno'); if (pn) autoSizeLabelText(pn); }
+    var cards = document.querySelectorAll('.label-preview-card');
+    cards.forEach(function(card) { var pn = card.querySelector('.lp-partno'); if (pn) autoSizeLabelText(pn); });
   });
   // Scroll panel into view so preview is visible
   setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
@@ -4150,29 +4146,7 @@ function doPrint() {
   if (!labelQueue.length) { showToast('No labels in queue', 'error'); return; }
   var pa = document.getElementById('printArea');
   pa.innerHTML = labelQueue.map(function(d) { return '<div class="print-label">' + makeLabelInner(d, 'pl') + '</div>'; }).join('');
-  // Copy already-rendered QR canvases from the preview rather than regenerating
-  labelQueue.forEach(function(d) {
-    var src = document.getElementById('lpqr-' + d.id);
-    var dst = document.getElementById('plqr-' + d.id);
-    if (src && dst) {
-      var canvas = src.querySelector('canvas');
-      var img = src.querySelector('img');
-      if (canvas) {
-        var c2 = document.createElement('canvas');
-        c2.width = canvas.width; c2.height = canvas.height;
-        c2.getContext('2d').drawImage(canvas, 0, 0);
-        dst.appendChild(c2);
-      } else if (img) {
-        var i2 = document.createElement('img');
-        i2.src = img.src; i2.style.cssText = img.style.cssText;
-        dst.appendChild(i2);
-      } else {
-        // fallback: generate fresh
-        new QRCode(dst, { text: d.qrText, width: 102, height: 102, correctLevel: QRCode.CorrectLevel.M });
-      }
-    }
-  });
-  requestAnimationFrame(function() { requestAnimationFrame(function() { window.print(); }); });
+    requestAnimationFrame(function() { requestAnimationFrame(function() { window.print(); }); });
 }
 
 // ── DIRECT ORDER ──────────────────────────────────────────────────
