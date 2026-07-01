@@ -397,9 +397,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .tab.cust-tab:hover,.tab.cust-tab.active{background:#e879f9;border-color:#e879f9;color:#0f1923}
 .cust-section{padding:14px;display:none}
 .cust-toolbar{display:none}
-.cust-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
-.cust-card{background:#1a2a3d;border:1px solid #2a4060;border-radius:10px;padding:14px;cursor:pointer;transition:border-color .2s}
-.cust-card:hover{border-color:#e879f980}
+.cust-grid{display:flex;flex-direction:column;gap:0}
+.cust-card{background:#0f1923;border-bottom:1px solid #1e3048;padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:0;transition:background .15s}
+.cust-card:hover{background:#141f2d}
+.cust-card:first-child{border-top:1px solid #1e3048}
 .cust-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
 .cust-name{font-size:14px;font-weight:700;color:#e0f0ff}
 .cust-type{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
@@ -6256,7 +6257,7 @@ function switchToCustomers() {
   currentView = 'customers'; hideAllViews(); renderTabs();
   document.getElementById('custToolbar').style.display = 'flex';
   document.getElementById('custSection').style.display = 'block';
-  document.getElementById('custGrid').style.display = 'grid';
+  document.getElementById('custGrid').style.display = 'flex';
   document.getElementById('custAccountSection').style.display = 'none';
   _viewingCustId = null;
   document.getElementById('hSub').textContent = 'Accounts';
@@ -6581,7 +6582,7 @@ async function openCustomerAccount(id) {
 
 function closeCustAccount() {
   document.getElementById('custAccountSection').style.display = 'none';
-  document.getElementById('custGrid').style.display = 'grid';
+  document.getElementById('custGrid').style.display = 'flex';
   _viewingCustId = null;
 }
 
@@ -6765,41 +6766,49 @@ function renderCustomers(list) {
     return;
   }
   var today = new Date(); today.setHours(0,0,0,0);
+  // Add column header before list
+  var header = '<div style="display:flex;align-items:center;padding:6px 16px;background:#0a1520;border-bottom:2px solid #1e3048;font-size:10px;font-weight:700;color:#4a6080;text-transform:uppercase;letter-spacing:0.5px">' +
+    '<div style="flex:0 0 260px">Account Name</div>' +
+    '<div style="flex:0 0 180px">Primary Contact</div>' +
+    '<div style="flex:0 0 130px">Mobile</div>' +
+    '<div style="flex:0 0 130px">Phone</div>' +
+    '<div style="flex:1;display:flex;justify-content:space-between"><span>Account No.</span><span></span></div>' +
+    '</div>';
   var html = filtered.map(function(c) {
     var primary = c._contacts && c._contacts.find(function(x){ return x.is_primary; });
-    var mList = parseMachines(c.machines_owned);
     var typeClass = (c.type||'Prospect').toLowerCase();
-    var jobCount = jobs.filter(function(j){ return j.customer && j.customer.toLowerCase()===c.company_name.toLowerCase(); }).length;
-    var loanCount = (loans||[]).filter(function(l){ return l.customer && l.customer.toLowerCase() === c.company_name.toLowerCase(); }).length;
-    var followupHtml = '';
+    var followupDot = '';
     if (c.follow_up_date) {
       var fd = new Date(c.follow_up_date); fd.setHours(0,0,0,0);
       var diff = Math.round((fd - today) / 86400000);
-      var fcls = diff < 0 ? 'overdue' : diff <= 7 ? 'soon' : 'ok';
-      followupHtml = '<div class="cust-followup ' + fcls + '">📅 ' + (diff<0?'Overdue':diff===0?'Today':diff<=7?'Due soon':'Follow up') + ': ' + fd.toLocaleDateString('en-AU',{day:'2-digit',month:'short'}) + (c.follow_up_notes?' — '+c.follow_up_notes:'') + '</div>';
+      var dotColor = diff < 0 ? '#ef4444' : diff <= 7 ? '#f59e0b' : '#10b981';
+      followupDot = '<span style="width:7px;height:7px;border-radius:50%;background:' + dotColor + ';display:inline-block;margin-right:7px;flex-shrink:0;vertical-align:middle" title="Follow-up: ' + fd.toLocaleDateString('en-AU',{day:'2-digit',month:'short'}) + '"></span>';
     }
+    var contactName = primary ? primary.name : (c.contact_name || '');
+    var contactMobile = primary ? (primary.phone || '') : '';
+    var accountPhone = c.phone || '';
+    var acctNum = c.account_number ? xsaNum(c.account_number) : '';
     return '<div class="cust-card" onclick="openCustomerAccount(\'' + c.id + '\')">' +
-      '<div class="cust-card-top">' +
-        '<div>' +
-          '<div style="font-size:9px;font-weight:700;color:#3a5070;font-family:\'Courier New\',monospace;margin-bottom:2px">Service ID: ' + (c.account_number ? xsaNum(c.account_number) : '') + '</div>' +
-          '<div class="cust-name">' + c.company_name + '</div>' +
-        '</div>' +
-        '<span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span>' +
+      '<div style="flex:0 0 260px;min-width:0;padding-right:12px;display:flex;align-items:center">' +
+        followupDot +
+        '<span class="cust-name" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + c.company_name + '</span>' +
       '</div>' +
-      (c.industry ? '<div class="cust-row"><span class="ico">🏭</span><span class="val" style="color:#5a8090">' + c.industry + '</span></div>' : '') +
-      (primary ? '<div class="cust-row"><span class="ico">👤</span><span class="val">' + primary.name + (primary.phone?' · '+primary.phone:'') + '</span></div>' : (c.contact_name?'<div class="cust-row"><span class="ico">👤</span><span class="val">'+c.contact_name+'</span></div>':'')) +
-      (c.phone ? '<div class="cust-row"><span class="ico">📞</span><span class="val">' + c.phone + '</span></div>' : '') +
-      (mList.length ? '<div class="cust-row"><span class="ico">⚙️</span><span class="val">' + mList.map(function(m){ return m.name; }).join(', ') + '</span></div>' : '') +
-      followupHtml +
-      '<div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid #2a4060">' +
-        (jobCount ? '<span style="font-size:10px;color:#3b82f6;background:#3b82f620;border:1px solid #3b82f640;border-radius:8px;padding:2px 7px">' + jobCount + ' job' + (jobCount!==1?'s':'') + '</span>' : '') +
-        (loanCount ? '<span style="font-size:10px;color:#a78bfa;background:#a78bfa20;border:1px solid #a78bfa40;border-radius:8px;padding:2px 7px">' + loanCount + ' loan' + (loanCount!==1?'s':'') + '</span>' : '') +
-        (mList.length ? '<span style="font-size:10px;color:#00c8e0;background:#00c8e020;border:1px solid #00c8e040;border-radius:8px;padding:2px 7px">' + mList.length + ' machine' + (mList.length!==1?'s':'') + '</span>' : '') +
-        '<span style="margin-left:auto;font-size:10px;color:#3a5070">View account ›</span>' +
+      '<div style="flex:0 0 180px;min-width:0;padding-right:12px;font-size:12px;color:#8aa8c0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+        (contactName || '<span style="color:#3a5070">—</span>') +
+      '</div>' +
+      '<div style="flex:0 0 130px;min-width:0;padding-right:12px;font-size:12px;color:#c0cfe0;white-space:nowrap">' +
+        (contactMobile || '<span style="color:#3a5070">—</span>') +
+      '</div>' +
+      '<div style="flex:0 0 130px;min-width:0;padding-right:12px;font-size:12px;color:#c0cfe0;white-space:nowrap">' +
+        (accountPhone || '<span style="color:#3a5070">—</span>') +
+      '</div>' +
+      '<div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+        '<span style="font-size:11px;font-weight:700;color:#e879f9;font-family:\'Courier New\',monospace">' + acctNum + '</span>' +
+        '<span class="cust-type ' + typeClass + '">' + (c.type||'Prospect') + '</span>' +
       '</div>' +
     '</div>';
   }).join('');
-  document.getElementById('custGrid').innerHTML = html;
+  document.getElementById('custGrid').innerHTML = header + html;
 }
 
 function openCustModal() {
