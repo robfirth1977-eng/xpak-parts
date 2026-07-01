@@ -5220,7 +5220,8 @@ function printSvQuote() {
   var fmt        = function(n) { return '$' + parseFloat(n||0).toLocaleString('en-AU', {minimumFractionDigits:2,maximumFractionDigits:2}); };
 
   var labourEst  = hrs > 0 ? hrs * rate : null;
-  var subtotal   = callout + (labourEst || 0) + travel + accom;
+  var partsQuoted = svMachines.reduce(function(s,m){return s+m.parts.reduce(function(ps,p){return ps+parseFloat(p.line_total||0);},0);},0);
+  var subtotal   = callout + (labourEst || 0) + partsQuoted + travel + accom;
   var gst        = subtotal * 0.1;
 
   // Get visit number if saved
@@ -5304,6 +5305,7 @@ function printSvQuote() {
 
   // ── Pricing ──────────────────────────────────────────────────────
   w.document.write('<div class="section-title">Pricing (ex GST)</div>');
+  w.document.write('.price-tbl th.qty{text-align:center;width:40px}.price-tbl th.unit{text-align:right;width:80px}.price-tbl td.qty{text-align:center}.price-tbl td.unit{text-align:right}.price-tbl td.part-no{font-size:9pt;color:#666;font-family:monospace}');
   w.document.write('<table class="price-tbl"><thead><tr><th>Item</th><th class="amt">Amount</th></tr></thead><tbody>');
   w.document.write('<tr><td>Field service callout fee (within 100km)</td><td class="amt">' + fmt(callout) + '</td></tr>');
   if (hrs > 0) {
@@ -5313,24 +5315,39 @@ function printSvQuote() {
   }
   if (travel) w.document.write('<tr><td>Travel</td><td class="amt">' + fmt(travel) + '</td></tr>');
   if (accom)  w.document.write('<tr><td>Accommodation</td><td class="amt">' + fmt(accom) + '</td></tr>');
-  w.document.write('<tr><td colspan="2" style="padding:4px 10px;font-size:9pt;color:#888;font-style:italic;border-bottom:1px solid #e8ecf0">Parts &amp; consumables — quoted separately if required. No parts will be fitted without prior approval.</td></tr>');
 
-  if (labourEst) {
-    w.document.write('<tr class="subtotal"><td>Total (ex GST)</td><td class="amt">' + fmt(subtotal) + '</td></tr>');
-    w.document.write('<tr class="gst"><td>GST (10%)</td><td class="amt">' + fmt(gst) + '</td></tr>');
-    w.document.write('<tr class="total"><td>Total (inc GST)</td><td class="amt">' + fmt(subtotal + gst) + '</td></tr>');
+  // ── Parts from svMachines ─────────────────────────────────────
+  var allQuotedParts = [];
+  svMachines.forEach(function(m) { m.parts.forEach(function(p){ if(p.description) allQuotedParts.push(p); }); });
+  if (allQuotedParts.length) {
+    w.document.write('<tr><td colspan="2" style="padding:6px 10px 2px;font-size:9pt;font-weight:700;color:#1A2F4A;background:#f5f7fa;border-bottom:none">Parts &amp; Materials</td></tr>');
+    allQuotedParts.forEach(function(p) {
+      var lineTotal = parseFloat(p.line_total||0);
+      w.document.write('<tr style="background:#fafbfc"><td style="padding:5px 10px 5px 20px;font-size:10pt">' +
+        p.description +
+        (p.part_no ? ' <span style="font-size:8.5pt;color:#888;font-family:monospace">' + p.part_no + '</span>' : '') +
+        '</td><td class="amt" style="font-size:10pt">' +
+        (lineTotal ? fmt(lineTotal) : '<span style="color:#888">TBC</span>') +
+        '</td></tr>');
+    });
   } else {
-    w.document.write('<tr class="subtotal"><td>Minimum charge (callout, ex GST)</td><td class="amt">' + fmt(callout) + '</td></tr>');
-    w.document.write('<tr class="gst"><td>GST on minimum charge</td><td class="amt">' + fmt(callout * 0.1) + '</td></tr>');
-    w.document.write('<tr class="total"><td>Minimum (inc GST)</td><td class="amt">' + fmt(callout * 1.1) + '</td></tr>');
+    w.document.write('<tr><td colspan="2" style="padding:4px 10px;font-size:9pt;color:#888;font-style:italic;border-bottom:1px solid #e8ecf0">Parts &amp; consumables — to be confirmed on site. No parts will be fitted without prior approval.</td></tr>');
   }
+
+  w.document.write('<tr class="subtotal"><td>Total (ex GST)</td><td class="amt">' + fmt(subtotal) + '</td></tr>');
+  w.document.write('<tr class="gst"><td>GST (10%)</td><td class="amt">' + fmt(gst) + '</td></tr>');
+  w.document.write('<tr class="total"><td>Total (inc GST)</td><td class="amt">' + fmt(subtotal + gst) + '</td></tr>');
   w.document.write('</tbody></table>');
 
   // ── Terms ────────────────────────────────────────────────────────
   w.document.write('<div class="terms">');
   w.document.write('<strong>Quote validity:</strong> This quote is valid for 30 days from the date above.<br>');
   w.document.write('<strong>Labour:</strong> Charged in 30-minute increments after the first hour. Minimum 1 hour on site.<br>');
-  w.document.write('<strong>Parts:</strong> Any parts required will be identified during the service visit and quoted separately before work proceeds.<br>');
+  if (allQuotedParts.length) {
+    w.document.write('<strong>Parts:</strong> Quoted parts are subject to availability. Any additional parts identified on site will be quoted before fitting.<br>');
+  } else {
+    w.document.write('<strong>Parts:</strong> Any parts required will be identified during the service visit and quoted separately before work proceeds.<br>');
+  }
   w.document.write('<strong>Cancellation:</strong> Please provide 24 hours notice if rescheduling is required.');
   w.document.write('</div>');
 
