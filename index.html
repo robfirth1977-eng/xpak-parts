@@ -1049,10 +1049,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
       <div class="field"><label>Machine / Equipment</label><input id="svMachineDesc" placeholder="e.g. Youngsun MH-FG-1000A Stretch Wrapper"></div>
     </div>
     <div class="field" style="margin-top:4px"><label>Scope of Work</label><textarea id="svScope" rows="3" placeholder="Describe the work to be carried out..." style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-save orange" id="btnSaveSv" onclick="saveSiteVisit()">Save Visit</button>
-      <button class="btn-save" style="background:#1e3048;border:1px solid #00c8e0;color:#00c8e0;flex:0 0 auto" onclick="printSvQuote()">📋 Quote</button>
-      <button class="btn-save" style="background:#1e3048;border:1px solid #fb923c;color:#fb923c;flex:0 0 auto" onclick="printSvReport()">📄 Report</button>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn-save orange" id="btnSaveSv" onclick="saveSiteVisit()" style="flex:1">Save Visit</button>
+      <button onclick="printSvQuote()" style="padding:11px 18px;background:#1e3048;border:1px solid #00c8e0;color:#00c8e0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">📋 Quote</button>
+      <button onclick="printSvReport()" style="padding:11px 18px;background:#1e3048;border:1px solid #fb923c;color:#fb923c;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">📄 Report</button>
     </div>
     <button class="btn-delete" id="btnDeleteSv" onclick="deleteSiteVisit()" style="display:none">Delete This Visit</button>
   </div>
@@ -5256,6 +5256,7 @@ function printSvQuote() {
 
   // Scope box
   w.document.write('.scope-box{background:#f5f7fa;border-left:3px solid #1A2F4A;border-radius:0 6px 6px 0;padding:10px 14px;font-size:10.5pt;line-height:1.6;color:#333}');
+  w.document.write('a{color:#333;text-decoration:none} *{color:inherit}');
 
   // Pricing table
   w.document.write('.price-tbl{width:100%;border-collapse:collapse;margin-top:8px}');
@@ -5294,10 +5295,10 @@ function printSvQuote() {
 
   // ── Service checklist ────────────────────────────────────────────
   w.document.write('<div class="section-title">Standard Service Includes</div>');
-  w.document.write('<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 16px;font-size:10pt;color:#333">');
+  w.document.write('<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 16px;font-size:10pt;color:#333 !important">');
   var items = ['Full strip-down and inspection','Cleaning of all internal components','Re-lubrication per manufacturer spec','Tension and pressure adjustment','Belt and drive adjustment','Operational test and sign-off'];
   items.forEach(function(item) {
-    w.document.write('<div style="padding:3px 0;border-bottom:1px dotted #ddd">✓ ' + item + '</div>');
+    w.document.write('<div style="padding:3px 0;border-bottom:1px dotted #ddd;color:#333 !important">✓ ' + item + '</div>');
   });
   w.document.write('</div>');
 
