@@ -809,7 +809,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     </div>
     <div id="stSoldFields" style="display:none">
       <div class="g2">
-        <div class="field"><label>Sold To</label><input id="stSoldTo" placeholder="Customer or company name"></div>
+        <div class="field"><label>Sold To (Account)</label>
+          <input id="stSoldTo" placeholder="Search customer account..." autocomplete="off" list="stSoldToList" oninput="matchSoldAccount(this.value)">
+          <datalist id="stSoldToList"></datalist>
+          <input type="hidden" id="stSoldAccountId">
+        </div>
         <div class="field"><label>Sold Date</label><input id="stSoldDate" type="date"></div>
       </div>
     </div>
@@ -5415,6 +5419,7 @@ function openStockModal(id) {
   document.getElementById('stStatus').value       = t ? t.status || 'Available' : 'Available';
   document.getElementById('stSoldTo').value       = t ? t.sold_to || '' : '';
   document.getElementById('stSoldDate').value     = t ? t.sold_date || '' : '';
+  document.getElementById('stSoldAccountId').value = t ? t.sold_account_id || '' : '';
   toggleStockSoldFields(document.getElementById('stStatus').value);
   document.getElementById('stXpakPartNo').value   = t ? t.xpak_part_no || '' : '';
   document.getElementById('stModelNo').value      = t ? t.model_number || '' : '';
@@ -5455,9 +5460,23 @@ function updateStWarrantyColor() {
   );
   document.getElementById('stWarranty').style.borderColor = col || '#2a4060';
 }
+function populateSoldAccountDatalist() {
+  var dl = document.getElementById('stSoldToList');
+  if (!dl || !customers) return;
+  dl.innerHTML = customers.map(function(c) {
+    return '<option value="' + c.company_name.replace(/"/g,'&quot;') + '" data-id="' + c.id + '">';
+  }).join('');
+}
+
+function matchSoldAccount(val) {
+  var match = customers && customers.find(function(c) { return c.company_name.toLowerCase() === val.toLowerCase(); });
+  document.getElementById('stSoldAccountId').value = match ? match.id : '';
+}
+
 function toggleStockSoldFields(val) {
   document.getElementById('stSoldFields').style.display = val === 'Sold' ? 'block' : 'none';
   document.getElementById('stStatus').style.borderColor = val === 'Sold' ? '#60a5fa' : val === 'Written Off' ? '#ef4444' : '#10b981';
+  if (val === 'Sold') populateSoldAccountDatalist();
 }
 
 
@@ -5783,6 +5802,7 @@ async function saveStockTool() {
     status: status,
     sold_to: status === 'Sold' ? (document.getElementById('stSoldTo').value || null) : null,
     sold_date: status === 'Sold' ? (document.getElementById('stSoldDate').value || null) : null,
+    sold_account_id: status === 'Sold' ? (document.getElementById('stSoldAccountId').value || null) : null,
     updated_at: new Date().toISOString()
   };
   try {
@@ -6234,8 +6254,9 @@ async function deleteMachineFromAccount(custId, machineIndex) {
       cJobs = await db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; });
       cLoans = await db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; });
       cActs = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc&limit=8').catch(function(){ return []; });
+      var cPurchases2 = await db('GET', 'stock_tools?sold_account_id=eq.' + custId + '&select=*&order=sold_date.desc').catch(function(){ return []; });
     } catch(e2) {}
-    renderAccountView(c, cJobs, cLoans, cActs);
+    renderAccountView(c, cJobs, cLoans, cActs, cPurchases2);
   } catch(e) { showToast('Remove failed: ' + e.message, 'error'); }
 }
 
@@ -6383,7 +6404,8 @@ async function syncMachinesFromJobs(custId) {
     var cJobs2 = await db('GET', 'jobs?customer=eq.' + encodeURIComponent(customerName) + '&select=*&order=created_at.desc').catch(function(){ return []; });
     var cLoans2 = await db('GET', 'loans?customer=eq.' + encodeURIComponent(customerName) + '&select=*&order=loan_number.desc').catch(function(){ return []; });
     var cActs2 = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc&limit=8').catch(function(){ return []; });
-    renderAccountView(c, cJobs2, cLoans2, cActs2);
+    var cPurch2 = await db('GET', 'stock_tools?sold_account_id=eq.' + custId + '&select=*&order=sold_date.desc').catch(function(){ return []; });
+    renderAccountView(c, cJobs2, cLoans2, cActs2, cPurch2);
   } catch(e) { showToast('Sync failed: ' + e.message, 'error'); }
 }
 
@@ -6460,17 +6482,17 @@ async function openCustomerAccount(id) {
   document.getElementById('acctBreadcrumb').textContent = (c.account_number ? xsaNum(c.account_number) + ' — ' : '') + c.company_name;
   document.getElementById('acctLayout').innerHTML = '<div class="center"><span class="spinner"></span></div>';
   // Load fresh data in parallel
-  var cJobs = [], cLoans = [], cActs = [];
+  var cJobs = [], cLoans = [], cActs = [], cPurchases = [];
   try {
     var encoded = encodeURIComponent(c.company_name);
-    [cJobs, cLoans, cActs] = await Promise.all([
+    [cJobs, cLoans, cActs, cPurchases] = await Promise.all([
       db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; }),
       db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; }),
-      db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc&limit=8').catch(function(){ return []; })
+      db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc&limit=8').catch(function(){ return []; }),
+      db('GET', 'stock_tools?sold_account_id=eq.' + id + '&select=*&order=sold_date.desc').catch(function(){ return []; })
     ]);
-    // Exact match already enforced by eq. query - no further filtering needed
   } catch(e) {}
-  renderAccountView(c, cJobs, cLoans, cActs);
+  renderAccountView(c, cJobs, cLoans, cActs, cPurchases);
 }
 
 function closeCustAccount() {
@@ -6484,7 +6506,8 @@ function editCustFromAccount() {
   openEditCust(_viewingCustId);
 }
 
-function renderAccountView(c, cJobs, cLoans, cActs) {
+function renderAccountView(c, cJobs, cLoans, cActs, cPurchases) {
+  cPurchases = cPurchases || [];
   var today = new Date(); today.setHours(0,0,0,0);
   var machineList = parseMachines(c.machines_owned);
 
@@ -6602,6 +6625,24 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
   }
   machinesHtml += '</div>';
 
+  // TOOLS PURCHASED panel
+  var purchasedHtml = '<div class="acct-panel">' +
+    '<div class="acct-panel-hdr"><span class="acct-panel-title" style="color:#f59e0b">🛒 Tools Purchased</span><span class="acct-panel-count">' + cPurchases.length + '</span></div>';
+  if (cPurchases.length) {
+    purchasedHtml += cPurchases.map(function(t) {
+      return '<div class="acct-panel-item">' +
+        '<div class="acct-item-main">' +
+          '<div class="acct-item-title">' + t.name + (t.serial_number ? ' <span style="font-size:10px;color:#5a7090;font-family:monospace">S/N: ' + t.serial_number + '</span>' : '') + '</div>' +
+          '<div class="acct-item-sub">' + (t.sold_date ? 'Sold ' + fmtDate(t.sold_date) : 'Date unknown') + (t.xpak_part_no ? ' · ' + t.xpak_part_no : '') + '</div>' +
+        '</div>' +
+        '<span class="acct-item-badge" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40">Sold</span>' +
+      '</div>';
+    }).join('');
+  } else {
+    purchasedHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No tools sold to this account.</div>';
+  }
+  purchasedHtml += '</div>';
+
   // RECENT ACTIVITY panel
   var actHtml = '<div class="acct-panel">' +
     '<div class="acct-panel-hdr"><span class="acct-panel-title" style="color:#64b5c8">📋 Recent Activity</span>' +
@@ -6623,7 +6664,7 @@ function renderAccountView(c, cJobs, cLoans, cActs) {
 
   document.getElementById('acctLayout').innerHTML =
     '<div>' + leftHtml + '</div>' +
-    '<div>' + jobsHtml + loansHtml + machinesHtml + actHtml + '</div>';
+    '<div>' + jobsHtml + loansHtml + machinesHtml + purchasedHtml + actHtml + '</div>';
 }
 
 function renderCustomers(list) {
