@@ -1034,11 +1034,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     </div>
     <div class="field" style="margin-top:12px"><label>Notes</label><textarea id="svNotes" rows="2" placeholder="General visit notes..." style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
     <div class="field-row" style="margin-top:4px">
-      <div class="field"><label>Status</label><select id="svStatus" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="Draft">Draft</option><option value="Invoiced">Invoiced</option></select></div>
+      <div class="field"><label>Status</label><select id="svStatus" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+        <option value="Draft">Draft</option>
+        <option value="Quoted">Quoted</option>
+        <option value="Confirmed">Confirmed</option>
+        <option value="Completed">Completed</option>
+        <option value="Invoiced">Invoiced</option>
+      </select></div>
       <div class="field"><label>Invoice Ref</label><input id="svInvoiceRef" placeholder="e.g. INV-1042"></div>
     </div>
+    <div class="section-label" style="margin-top:8px">Quote Details</div>
+    <div class="field-row">
+      <div class="field"><label>Callout Fee ($)</label><input id="svCalloutFee" type="number" min="0" step="10" value="400" placeholder="400"></div>
+      <div class="field"><label>Machine / Equipment</label><input id="svMachineDesc" placeholder="e.g. Youngsun MH-FG-1000A Stretch Wrapper"></div>
+    </div>
+    <div class="field" style="margin-top:4px"><label>Scope of Work</label><textarea id="svScope" rows="3" placeholder="Describe the work to be carried out..." style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn-save orange" id="btnSaveSv" onclick="saveSiteVisit()">Save Visit</button>
+      <button class="btn-save" style="background:#1e3048;border:1px solid #00c8e0;color:#00c8e0;flex:0 0 auto" onclick="printSvQuote()">📋 Quote</button>
       <button class="btn-save" style="background:#1e3048;border:1px solid #fb923c;color:#fb923c;flex:0 0 auto" onclick="printSvReport()">📄 Report</button>
     </div>
     <button class="btn-delete" id="btnDeleteSv" onclick="deleteSiteVisit()" style="display:none">Delete This Visit</button>
@@ -5019,6 +5032,9 @@ function openSvModal() {
   document.getElementById('svAccom').value = '';
   document.getElementById('svNotes').value = '';
   document.getElementById('svStatus').value = 'Draft';
+  document.getElementById('svCalloutFee').value = '400';
+  document.getElementById('svMachineDesc').value = '';
+  document.getElementById('svScope').value = '';
   document.getElementById('svInvoiceRef').value = '';
   document.getElementById('btnDeleteSv').style.display = 'none';
   populateSvAgrDropdown(null);
@@ -5044,6 +5060,9 @@ function openEditSv(id) {
   document.getElementById('svAccom').value = v.accommodation_cost||'';
   document.getElementById('svNotes').value = v.notes||'';
   document.getElementById('svStatus').value = v.status||'Draft';
+  document.getElementById('svCalloutFee').value = v.callout_fee||400;
+  document.getElementById('svMachineDesc').value = v.machine_description||'';
+  document.getElementById('svScope').value = v.scope_of_work||'';
   document.getElementById('svInvoiceRef').value = v.invoice_ref||'';
   document.getElementById('btnDeleteSv').style.display = 'block';
   populateSvAgrDropdown(v.agreement_id||null);
@@ -5146,6 +5165,10 @@ async function saveSiteVisit() {
       accommodation_cost: parseFloat(document.getElementById('svAccom').value)||null,
       notes: document.getElementById('svNotes').value.trim()||null,
       status: document.getElementById('svStatus').value,
+      callout_fee: parseFloat(document.getElementById('svCalloutFee').value)||null,
+      machine_description: document.getElementById('svMachineDesc').value.trim()||null,
+      scope_of_work: document.getElementById('svScope').value.trim()||null,
+      quoted_at: document.getElementById('svStatus').value === 'Quoted' ? (editingSvId ? ((siteVisits.find(function(x){return x.id===editingSvId;})||{}).quoted_at || new Date().toISOString()) : new Date().toISOString()) : null,
       invoice_ref: document.getElementById('svInvoiceRef').value.trim()||null };
     var vid;
     if (editingSvId) {
@@ -5177,6 +5200,148 @@ async function deleteSiteVisit() {
     await db('DELETE','site_visits?id=eq.'+editingSvId);
     closeSvModal(); await loadSiteVisits(); showToast('Visit deleted');
   } catch(e) { showToast('Delete failed: '+e.message,'error'); }
+}
+
+function printSvQuote() {
+  var customer   = document.getElementById('svCustomer').value || 'Customer';
+  var date       = document.getElementById('svDate').value;
+  var tech       = document.getElementById('svTech').value || 'Rob Firth';
+  var hrs        = parseFloat(document.getElementById('svHours').value || 0);
+  var rate       = parseFloat(document.getElementById('svRate').value || 220);
+  var callout    = parseFloat(document.getElementById('svCalloutFee').value || 400);
+  var machDesc   = document.getElementById('svMachineDesc').value || '';
+  var scope      = document.getElementById('svScope').value || '';
+  var notes      = document.getElementById('svNotes').value || '';
+  var travel     = parseFloat(document.getElementById('svTravel').value || 0);
+  var accom      = parseFloat(document.getElementById('svAccom').value || 0);
+
+  var quoteDate  = new Date().toLocaleDateString('en-AU', {day:'2-digit',month:'long',year:'numeric'});
+  var visitDate  = date ? new Date(date).toLocaleDateString('en-AU', {day:'2-digit',month:'long',year:'numeric'}) : 'To be confirmed';
+  var fmt        = function(n) { return '$' + parseFloat(n||0).toLocaleString('en-AU', {minimumFractionDigits:2,maximumFractionDigits:2}); };
+
+  var labourEst  = hrs > 0 ? hrs * rate : null;
+  var subtotal   = callout + (labourEst || 0) + travel + accom;
+  var gst        = subtotal * 0.1;
+
+  // Get visit number if saved
+  var svRef = editingSvId ? (siteVisits.find(function(x){return x.id===editingSvId;})||{}).visit_number : null;
+  var quoteRef = svRef ? 'XSQ-' + String(svRef).padStart(3,'0') : 'DRAFT';
+
+  var w = window.open('', '_blank');
+  if (!w) { showToast('Allow pop-ups for this site to print quotes', 'error'); return; }
+
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
+  w.document.write('<title>Field Service Quote - ' + customer + '</title><style>');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+  w.document.write('body{font-family:Arial,sans-serif;color:#1a1a1a;font-size:11pt;padding:18mm 18mm 14mm;max-width:210mm;margin:0 auto}');
+  w.document.write('@media print{body{padding:12mm 14mm}@page{size:A4 portrait;margin:0}button{display:none}}');
+
+  // Header styles
+  w.document.write('.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:12px;margin-bottom:16px;border-bottom:3px solid #1A2F4A}');
+  w.document.write('.brand{font-size:22pt;font-weight:900;color:#1A2F4A;letter-spacing:-0.5px}');
+  w.document.write('.brand-sub{font-size:9pt;color:#666;margin-top:2px}');
+  w.document.write('.quote-title{text-align:right}');
+  w.document.write('.quote-label{font-size:18pt;font-weight:900;color:#1A2F4A;letter-spacing:1px}');
+  w.document.write('.quote-ref{font-size:10pt;color:#666;margin-top:4px}');
+
+  // Info grid
+  w.document.write('.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}');
+  w.document.write('.info-box{background:#f5f7fa;border-radius:6px;padding:9px 12px}');
+  w.document.write('.info-label{font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:#888;margin-bottom:3px}');
+  w.document.write('.info-val{font-size:11pt;font-weight:700;color:#1A2F4A}');
+  w.document.write('.info-val-sm{font-size:10pt;color:#333}');
+
+  // Section
+  w.document.write('.section-title{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#1A2F4A;border-bottom:2px solid #1A2F4A;padding-bottom:4px;margin:16px 0 10px}');
+
+  // Scope box
+  w.document.write('.scope-box{background:#f5f7fa;border-left:3px solid #1A2F4A;border-radius:0 6px 6px 0;padding:10px 14px;font-size:10.5pt;line-height:1.6;color:#333}');
+
+  // Pricing table
+  w.document.write('.price-tbl{width:100%;border-collapse:collapse;margin-top:8px}');
+  w.document.write('.price-tbl th{background:#1A2F4A;color:#fff;padding:7px 10px;font-size:9pt;text-align:left}');
+  w.document.write('.price-tbl th.amt{text-align:right}');
+  w.document.write('.price-tbl td{padding:8px 10px;border-bottom:1px solid #e8ecf0;font-size:10.5pt}');
+  w.document.write('.price-tbl td.amt{text-align:right;font-weight:600}');
+  w.document.write('.price-tbl tr.subtotal td{border-top:2px solid #1A2F4A;border-bottom:none;font-weight:700;font-size:11.5pt}');
+  w.document.write('.price-tbl tr.gst td{color:#888;font-size:10pt;border-bottom:none}');
+  w.document.write('.price-tbl tr.total td{font-weight:900;font-size:13pt;color:#1A2F4A;border-top:2px solid #1A2F4A;border-bottom:none}');
+
+  // Terms
+  w.document.write('.terms{margin-top:20px;padding:10px 14px;background:#fffbf0;border:1px solid #e8d88a;border-radius:6px;font-size:9pt;color:#555;line-height:1.6}');
+  w.document.write('.footer{margin-top:24px;padding-top:10px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:8.5pt;color:#aaa}');
+  w.document.write('</style></head><body>');
+
+  // ── Header ──────────────────────────────────────────────────────
+  w.document.write('<div class="header">');
+  w.document.write('<div><div class="brand">X-PAK SERVICE</div><div class="brand-sub">X-Pak Global · Service Division<br>rob.firth@xpak.com.au</div></div>');
+  w.document.write('<div class="quote-title"><div class="quote-label">FIELD SERVICE QUOTE</div><div class="quote-ref">' + quoteRef + '<br>Date: ' + quoteDate + '</div></div>');
+  w.document.write('</div>');
+
+  // ── Info grid ───────────────────────────────────────────────────
+  w.document.write('<div class="info-grid">');
+  w.document.write('<div class="info-box"><div class="info-label">Prepared For</div><div class="info-val">' + customer + '</div></div>');
+  w.document.write('<div class="info-box"><div class="info-label">Proposed Visit Date</div><div class="info-val">' + visitDate + '</div></div>');
+  if (machDesc) w.document.write('<div class="info-box" style="grid-column:1/-1"><div class="info-label">Machine / Equipment</div><div class="info-val-sm">' + machDesc + '</div></div>');
+  w.document.write('</div>');
+
+  // ── Scope ────────────────────────────────────────────────────────
+  if (scope || notes) {
+    w.document.write('<div class="section-title">Scope of Work</div>');
+    var scopeText = scope || notes;
+    w.document.write('<div class="scope-box">' + scopeText.split('\n').join('<br>') + '</div>');
+  }
+
+  // ── Service checklist ────────────────────────────────────────────
+  w.document.write('<div class="section-title">Standard Service Includes</div>');
+  w.document.write('<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 16px;font-size:10pt;color:#333">');
+  var items = ['Full strip-down and inspection','Cleaning of all internal components','Re-lubrication per manufacturer spec','Tension and pressure adjustment','Belt and drive adjustment','Operational test and sign-off'];
+  items.forEach(function(item) {
+    w.document.write('<div style="padding:3px 0;border-bottom:1px dotted #ddd">✓ ' + item + '</div>');
+  });
+  w.document.write('</div>');
+
+  // ── Pricing ──────────────────────────────────────────────────────
+  w.document.write('<div class="section-title">Pricing (ex GST)</div>');
+  w.document.write('<table class="price-tbl"><thead><tr><th>Item</th><th class="amt">Amount</th></tr></thead><tbody>');
+  w.document.write('<tr><td>Field service callout fee (within 100km)</td><td class="amt">' + fmt(callout) + '</td></tr>');
+  if (hrs > 0) {
+    w.document.write('<tr><td>Labour — estimated ' + hrs + ' hrs × ' + fmt(rate) + '/hr</td><td class="amt">' + fmt(labourEst) + '</td></tr>');
+  } else {
+    w.document.write('<tr><td>Labour — ' + fmt(rate) + '/hr (hours TBC on site)</td><td class="amt" style="color:#888">TBC</td></tr>');
+  }
+  if (travel) w.document.write('<tr><td>Travel</td><td class="amt">' + fmt(travel) + '</td></tr>');
+  if (accom)  w.document.write('<tr><td>Accommodation</td><td class="amt">' + fmt(accom) + '</td></tr>');
+  w.document.write('<tr><td colspan="2" style="padding:4px 10px;font-size:9pt;color:#888;font-style:italic;border-bottom:1px solid #e8ecf0">Parts &amp; consumables — quoted separately if required. No parts will be fitted without prior approval.</td></tr>');
+
+  if (labourEst) {
+    w.document.write('<tr class="subtotal"><td>Total (ex GST)</td><td class="amt">' + fmt(subtotal) + '</td></tr>');
+    w.document.write('<tr class="gst"><td>GST (10%)</td><td class="amt">' + fmt(gst) + '</td></tr>');
+    w.document.write('<tr class="total"><td>Total (inc GST)</td><td class="amt">' + fmt(subtotal + gst) + '</td></tr>');
+  } else {
+    w.document.write('<tr class="subtotal"><td>Minimum charge (callout, ex GST)</td><td class="amt">' + fmt(callout) + '</td></tr>');
+    w.document.write('<tr class="gst"><td>GST on minimum charge</td><td class="amt">' + fmt(callout * 0.1) + '</td></tr>');
+    w.document.write('<tr class="total"><td>Minimum (inc GST)</td><td class="amt">' + fmt(callout * 1.1) + '</td></tr>');
+  }
+  w.document.write('</tbody></table>');
+
+  // ── Terms ────────────────────────────────────────────────────────
+  w.document.write('<div class="terms">');
+  w.document.write('<strong>Quote validity:</strong> This quote is valid for 30 days from the date above.<br>');
+  w.document.write('<strong>Labour:</strong> Charged in 30-minute increments after the first hour. Minimum 1 hour on site.<br>');
+  w.document.write('<strong>Parts:</strong> Any parts required will be identified during the service visit and quoted separately before work proceeds.<br>');
+  w.document.write('<strong>Cancellation:</strong> Please provide 24 hours notice if rescheduling is required.');
+  w.document.write('</div>');
+
+  // ── Footer ───────────────────────────────────────────────────────
+  w.document.write('<div class="footer">');
+  w.document.write('<span>X-Pak Global Service Division · rob.firth@xpak.com.au</span>');
+  w.document.write('<span>' + quoteRef + ' · Generated by MainFlow</span>');
+  w.document.write('</div>');
+
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function() { w.print(); }, 400);
 }
 
 function printSvReport() {
