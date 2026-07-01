@@ -822,6 +822,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <button id="btnPrintStockLabel" onclick="printStockLabel()" style="display:none;padding:11px 16px;background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;border-radius:10px;font-size:13px;cursor:pointer">🖨 Print Label</button>
       <button onclick="closeStockModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Cancel</button>
     </div>
+    <div id="stTestedRow" style="display:none;margin-top:8px;padding:10px;background:#0a1a0a;border:1px solid #10b98133;border-radius:8px">
+      <div id="stTestedStatus" style="font-size:12px;color:#10b981;font-weight:700;margin-bottom:8px">✓ Pre-sale test passed</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="markStockTested()" style="padding:8px 16px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✓ Mark as Tested</button>
+        <button onclick="printBoxLabel()" id="btnPrintBoxLabel" style="display:none;padding:8px 16px;background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;border-radius:8px;font-size:13px;cursor:pointer">🖨 Print Box Label</button>
+      </div>
+    </div>
     <button class="btn-delete" id="btnDeleteStock" onclick="deleteStockTool()" style="display:none">Remove from Register</button>
   </div>
 </div>
@@ -5420,6 +5427,19 @@ function openStockModal(id) {
   document.getElementById('stSoldTo').value       = t ? t.sold_to || '' : '';
   document.getElementById('stSoldDate').value     = t ? t.sold_date || '' : '';
   document.getElementById('stSoldAccountId').value = t ? t.sold_account_id || '' : '';
+  // Show tested status if tool has been tested
+  if (t && t.status === 'Sold') {
+    document.getElementById('stTestedRow').style.display = 'block';
+    if (t.tested_at) {
+      var d = new Date(t.tested_at);
+      document.getElementById('stTestedStatus').textContent = '\u2713 Tested ' + d.toLocaleDateString('en-AU') + (t.tested_by ? ' by ' + t.tested_by : '');
+      document.getElementById('btnPrintBoxLabel').style.display = 'inline-block';
+    } else {
+      document.getElementById('stTestedStatus').textContent = '\u26a0 Not yet tested';
+      document.getElementById('stTestedStatus').style.color = '#f59e0b';
+      document.getElementById('btnPrintBoxLabel').style.display = 'none';
+    }
+  } else { document.getElementById('stTestedRow').style.display = 'none'; }
   toggleStockSoldFields(document.getElementById('stStatus').value);
   document.getElementById('stXpakPartNo').value   = t ? t.xpak_part_no || '' : '';
   document.getElementById('stModelNo').value      = t ? t.model_number || '' : '';
@@ -5476,7 +5496,8 @@ function matchSoldAccount(val) {
 function toggleStockSoldFields(val) {
   document.getElementById('stSoldFields').style.display = val === 'Sold' ? 'block' : 'none';
   document.getElementById('stStatus').style.borderColor = val === 'Sold' ? '#60a5fa' : val === 'Written Off' ? '#ef4444' : '#10b981';
-  if (val === 'Sold') populateSoldAccountDatalist();
+  if (val === 'Sold') { populateSoldAccountDatalist(); document.getElementById('stTestedRow').style.display = 'block'; }
+  else document.getElementById('stTestedRow').style.display = 'none';
 }
 
 
@@ -5803,6 +5824,9 @@ async function saveStockTool() {
     sold_to: status === 'Sold' ? (document.getElementById('stSoldTo').value || null) : null,
     sold_date: status === 'Sold' ? (document.getElementById('stSoldDate').value || null) : null,
     sold_account_id: status === 'Sold' ? (document.getElementById('stSoldAccountId').value || null) : null,
+    // preserve tested_at/tested_by — set via markStockTested(), not overwritten on save
+    tested_at: (editingStockTool && editingStockTool.tested_at) || null,
+    tested_by: (editingStockTool && editingStockTool.tested_by) || null,
     updated_at: new Date().toISOString()
   };
   try {
@@ -5817,6 +5841,66 @@ async function saveStockTool() {
     renderStockTools();
   } catch(e) { showToast('Failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; }
+}
+
+async function markStockTested() {
+  if (!editingStockTool) return;
+  var now = new Date().toISOString();
+  var by = 'Rob Firth';
+  try {
+    await db('PATCH', 'stock_tools?id=eq.' + editingStockTool.id, { tested_at: now, tested_by: by });
+    editingStockTool.tested_at = now;
+    editingStockTool.tested_by = by;
+    var d = new Date(now);
+    document.getElementById('stTestedStatus').textContent = '\u2713 Tested ' + d.toLocaleDateString('en-AU') + ' by ' + by;
+    document.getElementById('stTestedStatus').style.color = '#10b981';
+    document.getElementById('btnPrintBoxLabel').style.display = 'inline-block';
+    showToast('Pre-sale test recorded');
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+}
+
+function printBoxLabel() {
+  if (!editingStockTool) return;
+  var t = editingStockTool;
+  var soldDate = t.sold_date ? new Date(t.sold_date).toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'}) : new Date().toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'});
+  var soldTo = t.sold_to || 'Customer';
+  var testedDate = t.tested_at ? new Date(t.tested_at).toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'}) : '';
+
+  var w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+  w.document.write('@page{size:89mm 36mm;margin:1mm}');
+  w.document.write('@media print{body{padding:0}button{display:none}}');
+  w.document.write('body{font-family:Arial,sans-serif;width:87mm;height:34mm;display:flex;align-items:stretch;overflow:hidden;background:#fff}');
+  w.document.write('.label{width:87mm;height:34mm;display:flex;flex-direction:column;justify-content:space-between;padding:3mm 4mm;border:0.5mm solid #000;border-radius:1mm}');
+  w.document.write('.brand{font-size:9pt;font-weight:900;color:#000;letter-spacing:-0.5px}');
+  w.document.write('.brand span{color:#000}');
+  w.document.write('.model{font-size:15pt;font-weight:900;font-family:"Courier New",monospace;color:#000;margin:1mm 0}');
+  w.document.write('.sn{font-size:9pt;color:#000;margin-bottom:1mm}');
+  w.document.write('.divider{border-top:0.3mm solid #000;margin:1mm 0}');
+  w.document.write('.row{display:flex;justify-content:space-between;align-items:center}');
+  w.document.write('.sold-to{font-size:8pt;font-weight:700;color:#000;flex:1}');
+  w.document.write('.sold-date{font-size:8pt;color:#000}');
+  w.document.write('.tested{font-size:7pt;color:#000;font-weight:700}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="label">');
+  w.document.write('<div>');
+  w.document.write('<div class="brand">X-PAK <span>SERVICE</span></div>');
+  w.document.write('<div class="model">' + (t.name || '') + '</div>');
+  if (t.serial_number) w.document.write('<div class="sn">S/N: ' + t.serial_number + '</div>');
+  w.document.write('</div>');
+  w.document.write('<div>');
+  w.document.write('<div class="divider"></div>');
+  w.document.write('<div class="row">');
+  w.document.write('<div class="sold-to">' + soldTo + '</div>');
+  w.document.write('<div class="sold-date">' + soldDate + '</div>');
+  w.document.write('</div>');
+  if (testedDate) w.document.write('<div class="tested">\u2713 Pre-sale tested ' + testedDate + '</div>');
+  w.document.write('</div>');
+  w.document.write('</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function() { w.print(); }, 300);
 }
 
 async function deleteStockTool() {
