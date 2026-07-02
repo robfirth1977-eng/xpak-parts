@@ -6043,6 +6043,49 @@ async function markStockTested() {
   } catch(e) { showToast('Failed: ' + e.message, 'error'); }
 }
 
+function printCheckedPackedLabel(toolName, serial, soldDate, customer) {
+  var today = new Date().toLocaleDateString('en-AU', {day:'2-digit', month:'short', year:'numeric'});
+  var w = window.open('', '_blank');
+  if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+  w.document.write('@page{size:89mm 36mm;margin:1mm}');
+  w.document.write('@media print{body{padding:0}button{display:none}}');
+  w.document.write('body{font-family:Arial,sans-serif;width:87mm;height:34mm;background:#fff;overflow:hidden}');
+  w.document.write('.label{width:87mm;height:34mm;display:flex;flex-direction:column;justify-content:space-between;padding:2.5mm 4mm;border:0.5mm solid #000;border-radius:1mm}');
+  w.document.write('.top{display:flex;justify-content:space-between;align-items:flex-start}');
+  w.document.write('.brand{font-size:11pt;font-weight:900;letter-spacing:-0.5px;color:#000;line-height:1}');
+  w.document.write('.brand-sub{font-size:7pt;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#000;margin-top:1px}');
+  w.document.write('.checked{font-size:7.5pt;font-weight:700;text-align:right;text-transform:uppercase;letter-spacing:0.5px;line-height:1.3}');
+  w.document.write('.divider{border-top:0.4mm solid #000;margin:1.5mm 0}');
+  w.document.write('.model{font-size:12pt;font-weight:900;font-family:"Courier New",monospace;line-height:1}');
+  w.document.write('.sn{font-size:8.5pt;color:#000;margin-top:1mm}');
+  w.document.write('.bottom{display:flex;justify-content:space-between;align-items:flex-end}');
+  w.document.write('.customer{font-size:8pt;font-weight:700;color:#000;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
+  w.document.write('.date{font-size:8pt;color:#000;white-space:nowrap;margin-left:4mm}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="label">');
+  // Top row: brand left, checked & packed right
+  w.document.write('<div class="top">');
+  w.document.write('<div><div class="brand">X-PAK</div><div class="brand-sub">Service</div></div>');
+  w.document.write('<div class="checked">Checked &amp; Packed<br>by X-Pak Service</div>');
+  w.document.write('</div>');
+  // Divider
+  w.document.write('<div class="divider"></div>');
+  // Model and serial
+  w.document.write('<div class="model">' + (toolName||'') + '</div>');
+  if (serial) w.document.write('<div class="sn">S/N: ' + serial + '</div>');
+  // Bottom: customer and date
+  w.document.write('<div class="bottom">');
+  w.document.write('<div class="customer">' + (customer||'') + '</div>');
+  w.document.write('<div class="date">' + (soldDate||today) + '</div>');
+  w.document.write('</div>');
+  w.document.write('</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+}
+
 function printBoxLabel() {
   if (!editingStockTool) return;
   var t = editingStockTool;
@@ -6898,12 +6941,19 @@ function renderAccountView(c, cJobs, cLoans, cActs, cPurchases) {
     '<div class="acct-panel-hdr"><span class="acct-panel-title" style="color:#f59e0b">🛒 Tools Purchased</span><span class="acct-panel-count">' + cPurchases.length + '</span></div>';
   if (cPurchases.length) {
     purchasedHtml += cPurchases.map(function(t) {
+      var soldDateStr = t.sold_date ? fmtDate(t.sold_date) : '';
+      var labelData = encodeURIComponent(JSON.stringify({
+        name: t.name||'', serial: t.serial_number||'', date: soldDateStr, customer: c.company_name||''
+      }));
       return '<div class="acct-panel-item">' +
         '<div class="acct-item-main">' +
           '<div class="acct-item-title">' + t.name + (t.serial_number ? ' <span style="font-size:10px;color:#5a7090;font-family:monospace">S/N: ' + t.serial_number + '</span>' : '') + '</div>' +
-          '<div class="acct-item-sub">' + (t.sold_date ? 'Sold ' + fmtDate(t.sold_date) : 'Date unknown') + (t.xpak_part_no ? ' · ' + t.xpak_part_no : '') + '</div>' +
+          '<div class="acct-item-sub">' + (t.sold_date ? 'Sold ' + soldDateStr : 'Date unknown') + (t.xpak_part_no ? ' · ' + t.xpak_part_no : '') + '</div>' +
         '</div>' +
-        '<span class="acct-item-badge" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40">Sold</span>' +
+        '<div style="display:flex;gap:6px;align-items:center">' +
+          '<button onclick="printCheckedPackedLabel(' + JSON.stringify(t.name||'').replace(/"/g,'&quot;') + ',' + JSON.stringify(t.serial_number||'').replace(/"/g,'&quot;') + ',' + JSON.stringify(soldDateStr).replace(/"/g,'&quot;') + ',' + JSON.stringify(c.company_name||'').replace(/"/g,'&quot;') + ')" style="padding:3px 9px;background:#1e3048;border:1px solid #a78bfa60;color:#a78bfa;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap">🖨 Label</button>' +
+          '<span class="acct-item-badge" style="background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40">Sold</span>' +
+        '</div>' +
       '</div>';
     }).join('');
   } else {
