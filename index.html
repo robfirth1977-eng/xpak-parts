@@ -2299,7 +2299,7 @@ function generateStockTakeReport(){
     +'tr:nth-child(even){background:#f9fafb}'
     +'</style></head><body>');
   w.document.write('<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
-    +'<div><div style="font-size:16pt;font-weight:900;color:#1e3a5f">X-PAK GLOBAL — SERVICE</div>'
+    +'<div><div style="font-size:16pt;font-weight:900;color:#1e3a5f">X-PAK SERVICE</div>'
     +'<div style="font-size:11pt;font-weight:700;color:#555">Loan &amp; Trial Tool Stock Take</div></div>'
     +'<div style="text-align:right;font-size:9pt;color:#555">Generated: '+dateStr+'<br>By: '+(_currentUser?_currentUser.email.split('@')[0]:'')+'</div></div>');
   w.document.write('<hr style="border:none;border-top:2px solid #1e3a5f;margin:8px 0 14px">');
@@ -5401,7 +5401,7 @@ function printSvReport() {
   w.document.write('.cost-table{width:100%;border-collapse:collapse;margin-top:8px}.cost-table td{padding:7px 10px;border-bottom:1px solid #f0f0f0}.cost-table .label{color:#333}.cost-table .amount{text-align:right;font-weight:600}.total-row td{font-weight:800;font-size:15px;color:#fb923c;border-top:2px solid #fb923c;border-bottom:none}');
   w.document.write('@media print{body{padding:10px}button{display:none}}</style></head><body>');
   var svRef2 = editingSvId ? (siteVisits.find(function(x){return x.id===editingSvId;})||{}).visit_number : null;
-  w.document.write('<div class="header"><div><div class="company">X-PAK GLOBAL</div><div class="sub">Service Division</div></div><div class="title-block"><div class="report-title">FIELD SERVICE REPORT</div><div class="ref">' + (svRef2?xsvNum(svRef2)+'<br>':'') + (invRef?'Invoice Ref: '+invRef+'<br>':'') + 'Date: '+dateStr+'</div></div></div>');
+  w.document.write('<div class="header"><div><div class="company">X-PAK SERVICE</div><div class="sub">X-Pak Global · Service Division</div></div><div class="title-block"><div class="report-title">FIELD SERVICE REPORT</div><div class="ref">' + (svRef2?xsvNum(svRef2)+'<br>':'') + (invRef?'Invoice Ref: '+invRef+'<br>':'') + 'Date: '+dateStr+'</div></div></div>');
   w.document.write('<div class="meta-grid">');
   w.document.write('<div class="meta-item"><div class="meta-label">Customer</div><div class="meta-val">'+customer+'</div></div>');
   w.document.write('<div class="meta-item"><div class="meta-label">Technician</div><div class="meta-val">'+tech+'</div></div>');
@@ -5709,7 +5709,7 @@ function exportStockReport() {
 
   // ── Build summary sheet ──
   var summaryRows = [
-    ['X-PAK GLOBAL — SERVICE DEPARTMENT'],
+    ['X-PAK SERVICE — SERVICE DEPARTMENT'],
     ['Stock Register Report'],
     ['Generated:', today],
     [],
@@ -6020,6 +6020,35 @@ async function saveStockTool() {
       await db('POST', 'stock_tools', payload);
     }
     showToast(editingStockTool ? 'Tool updated' : 'Tool added');
+    // If sold to an account, add to that customer's machines_owned
+    if (status === 'Sold' && payload.sold_account_id) {
+      try {
+        var soldCust = customers.find(function(x){ return x.id === payload.sold_account_id; });
+        // If not in local cache, fetch fresh
+        if (!soldCust) {
+          var freshCust = await db('GET', 'customers?id=eq.' + payload.sold_account_id + '&select=*');
+          if (freshCust && freshCust.length) {
+            soldCust = freshCust[0];
+            customers.push(soldCust);
+          }
+        }
+        if (soldCust) {
+          var existing = parseMachines(soldCust.machines_owned);
+          var alreadyThere = existing.some(function(m){
+            return m.name === name && (m.serial||'') === (payload.serial_number||'');
+          });
+          if (!alreadyThere) {
+            existing.push({ name: name, serial: payload.serial_number || '' });
+            var newVal = formatMachinesJson(existing);
+            await db('PATCH', 'customers?id=eq.' + payload.sold_account_id, { machines_owned: newVal });
+            soldCust.machines_owned = newVal;
+            var ci = customers.findIndex(function(x){ return x.id === payload.sold_account_id; });
+            if (ci > -1) customers[ci].machines_owned = newVal;
+            showToast(name + ' added to ' + soldCust.company_name + ' Machines Owned');
+          }
+        }
+      } catch(e) { console.warn('Could not update machines_owned:', e); }
+    }
     closeStockModal();
     await loadStockTools();
     renderStockTools();
@@ -6646,7 +6675,7 @@ async function printAccountReport(custId) {
   w.document.write('.footer{margin-top:24px;font-size:9pt;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}');
   w.document.write('@media print{body{padding:10mm}@page{size:A4;margin:10mm}}');
   w.document.write('</style></head><body>');
-  w.document.write('<div class="hdr"><div><div class="co">X-PAK GLOBAL</div><div class="co-sub">Service Division</div></div><div class="rhs"><div class="rhs-title">ACCOUNT REPORT</div><div class="rhs-sub">' + (c.account_number ? 'Service ID: ' + xsaNum(c.account_number) + '<br>' : '') + today + '</div></div></div>');
+  w.document.write('<div class="hdr"><div><div class="co">X-PAK SERVICE</div><div class="co-sub">X-Pak Global · Service Division</div></div><div class="rhs"><div class="rhs-title">ACCOUNT REPORT</div><div class="rhs-sub">' + (c.account_number ? 'Service ID: ' + xsaNum(c.account_number) + '<br>' : '') + today + '</div></div></div>');
   w.document.write('<div class="meta">');
   w.document.write('<div class="mb"><div class="ml">Account</div><div class="mv">' + customerName + '</div></div>');
   w.document.write('<div class="mb"><div class="ml">Type</div><div class="mv">' + (c.type||'—') + (c.industry?' · '+c.industry:'') + '</div></div>');
