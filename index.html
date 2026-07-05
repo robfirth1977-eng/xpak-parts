@@ -1101,6 +1101,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   </div>
   <div class="label-previews" id="labelPreviews"></div>
 </div>
+<div id="invoicePromptOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#141f2d;border:1px solid #2a4060;border-radius:14px;padding:24px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+    <div style="font-size:15px;font-weight:700;color:#e2e8f0;margin-bottom:16px">Mark as Invoiced</div>
+    <div class="field" style="margin-bottom:12px"><label>Invoice Date</label><input type="date" id="invPromptDate"></div>
+    <div class="field" style="margin-bottom:16px"><label>Invoice Total (ex GST $)</label><input type="number" id="invPromptAmount" step="0.01" min="0" placeholder="0.00"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmInvoicePrompt()" style="flex:1;padding:11px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Confirm</button>
+      <button onclick="cancelInvoicePrompt()" style="flex:1;padding:11px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:14px;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
 <div id="printArea"></div>
 <div id="weeklyView" style="display:none;padding:20px 24px;max-width:1200px;margin:0 auto"></div>
 <button id="backToTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" style="display:none;position:fixed;bottom:28px;right:20px;z-index:500;width:42px;height:42px;border-radius:50%;background:#00c8e0;color:#0f1923;border:none;font-size:20px;font-weight:900;cursor:pointer;box-shadow:0 2px 10px rgba(0,200,224,0.4);line-height:1">&#8679;</button>
@@ -2690,6 +2701,32 @@ function renderTabs() {
   document.getElementById('machineTabs').innerHTML = html2;
 }
 
+var _invoicePromptCallback = null;
+
+function showInvoicePrompt(job, callback) {
+  _invoicePromptCallback = callback;
+  var today = new Date().toISOString().slice(0,10);
+  document.getElementById('invPromptDate').value = job.invoiced_at ? job.invoiced_at.slice(0,10) : today;
+  document.getElementById('invPromptAmount').value = job.invoice_amount || '';
+  var el = document.getElementById('invoicePromptOverlay');
+  el.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('invPromptAmount').focus(); }, 100);
+}
+
+function confirmInvoicePrompt() {
+  var date = document.getElementById('invPromptDate').value;
+  var amount = parseFloat(document.getElementById('invPromptAmount').value) || null;
+  if (!date) { showToast('Please enter an invoice date', 'error'); return; }
+  document.getElementById('invoicePromptOverlay').style.display = 'none';
+  if (_invoicePromptCallback) _invoicePromptCallback(new Date(date).toISOString(), amount);
+  _invoicePromptCallback = null;
+}
+
+function cancelInvoicePrompt() {
+  document.getElementById('invoicePromptOverlay').style.display = 'none';
+  _invoicePromptCallback = null;
+}
+
 function switchToWeekly() {
   currentView = 'weekly'; hideAllViews(); renderTabs();
   document.getElementById('weeklyView').style.display = 'block';
@@ -2749,6 +2786,9 @@ async function renderWeeklyReport() {
   });
 
   function jobRevenue(j) {
+    // Use manually entered invoice_amount if available (from MYOB)
+    if (j.invoice_amount) return parseFloat(j.invoice_amount);
+    // Fall back to calculated amount from parts/labour
     var svc = (j.job_tools||[]).reduce(function(s,t){ return s + parseFloat(t.service_fee||0); },0);
     var pts = (j.job_parts||[]).reduce(function(s,p){ return s + parseFloat(p.line_total||p.unit_price||0); },0);
     var lh  = parseFloat(j.hours_spent||0) * parseFloat(j.labour_rate||120);
@@ -3439,9 +3479,22 @@ function initBoardDrag() {
           return;
         }
       }
+      if (newStatus === 'INVOICED AND SENT') {
+        var capturedDragId = dragId;
+        var capturedJob = j;
+        showInvoicePrompt(capturedJob, function(invDate, invAmount) {
+          capturedJob.status = newStatus;
+          capturedJob.invoiced_at = invDate;
+          capturedJob.invoice_amount = invAmount;
+          var dragPatch = { status: newStatus, invoiced_at: invDate, invoice_amount: invAmount || null };
+          db('PATCH', 'jobs?id=eq.' + capturedDragId, dragPatch).catch(function(err){ showToast('Update failed: ' + err.message, 'error'); });
+          renderBoard();
+        });
+        dragId = null;
+        return;
+      }
       j.status = newStatus;
       var dragPatch = { status: newStatus };
-      if (newStatus === 'INVOICED AND SENT' && !j.invoiced_at) { dragPatch.invoiced_at = new Date().toISOString(); j.invoiced_at = dragPatch.invoiced_at; }
       db('PATCH', 'jobs?id=eq.' + dragId, dragPatch).catch(function(err){ showToast('Update failed: ' + err.message, 'error'); });
       renderBoard();
       dragId = null;
@@ -3655,6 +3708,7 @@ async function saveJob() {
     status: document.getElementById('jStatus').value,
     order_number: document.getElementById('jOrderNum').value.trim() || null,
     invoiced_at: document.getElementById('jStatus').value === 'INVOICED AND SENT' ? (editingJobId ? (jobs.find(function(j){return j.id===editingJobId;})||{}).invoiced_at || new Date().toISOString() : new Date().toISOString()) : null,
+    invoice_amount: (editingJobId ? (jobs.find(function(j){return j.id===editingJobId;})||{}).invoice_amount : null) || null,
     customer: customer,
     contact_name: document.getElementById('jContact').value || null,
     phone: document.getElementById('jPhone').value || null,
