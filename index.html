@@ -3786,10 +3786,10 @@ async function saveJob() {
 }
 
 async function saveAndCloseJob() {
-  await saveJob();
-  // closeJobModal is called inside saveJob on new jobs; for edits, close explicitly
-  var btn = document.getElementById('btnSaveJob');
-  if (!btn.disabled) closeJobModal();
+  try {
+    await saveJob();
+    closeJobModal();
+  } catch(e) { /* saveJob shows its own error toast, don't close on failure */ }
 }
 
 async function deleteJob() {
