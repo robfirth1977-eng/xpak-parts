@@ -3749,36 +3749,47 @@ async function saveJob() {
       var jt = jobToolsLocal[ti];
       await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
     }
-    // Save job parts
+    // Save job parts — each part saved independently so one failure doesn't block others
+    var partErrors = [];
     for (var i = 0; i < jobPartsLocal.length; i++) {
       var jp = jobPartsLocal[i];
       var jpPayload = {
         job_id: savedJob.id,
         part_id: jp.part_id || null,
-        part_key_no: jp.part_key_no,
-        part_description: jp.part_description,
-        machine_name: jp.machine_name,
-        quantity: jp.quantity,
+        part_key_no: jp.part_key_no || null,
+        part_description: jp.part_description || null,
+        machine_name: jp.machine_name || null,
+        quantity: jp.quantity || 1,
         unit_price: jp.unit_price != null ? jp.unit_price : null,
-        status: jp.status,
+        status: jp.status || 'to_order',
         tool_number: jp.tool_number || 1,
         notes: jp.notes || null,
         updated_at: new Date().toISOString()
       };
-      await db('POST', 'job_parts', jpPayload);
-      // If use_stock, deduct from stock
-      if (jp.status === 'use_stock' && jp.part_id) {
-        var stockRows = await db('GET', 'stock?part_id=eq.' + jp.part_id + '&select=*');
-        if (stockRows.length) {
-          var newQty = Math.max(0, (stockRows[0].quantity || 0) - jp.quantity);
-          await db('PATCH', 'stock?id=eq.' + stockRows[0].id, { quantity: newQty, updated_at: new Date().toISOString() });
+      try {
+        await db('POST', 'job_parts', jpPayload);
+        // Deduct from stock if use_stock
+        if (jp.status === 'use_stock' && jp.part_id) {
+          try {
+            var stockRows = await db('GET', 'stock?part_id=eq.' + jp.part_id + '&select=*');
+            if (stockRows && stockRows.length) {
+              var newQty = Math.max(0, (stockRows[0].quantity || 0) - (jp.quantity || 1));
+              await db('PATCH', 'stock?id=eq.' + stockRows[0].id, { quantity: newQty, updated_at: new Date().toISOString() });
+            }
+          } catch(se) { /* stock deduct failed silently — non-critical */ }
         }
+      } catch(pe) {
+        partErrors.push((jp.part_key_no || jp.part_description || 'Part ' + (i+1)) + ': ' + pe.message);
       }
     }
     // Auto-update customer machines owned
     try { await updateCustomerMachines(customer, jobToolsLocal); } catch(e) {}
-    showToast(editingJob ? 'Service case updated' : 'Service case created');
-    loadJobs(); // don't await — let UI reset immediately
+    if (partErrors.length) {
+      showToast('Job saved but ' + partErrors.length + ' part(s) failed: ' + partErrors[0], 'error');
+    } else {
+      showToast(editingJob ? 'Service case updated' : 'Service case created');
+    }
+    loadJobs();
     if (!editingJob) closeJobModal();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Service Case'; }
