@@ -3707,8 +3707,8 @@ async function saveJob() {
   var payload = {
     status: document.getElementById('jStatus').value,
     order_number: document.getElementById('jOrderNum').value.trim() || null,
-    invoiced_at: document.getElementById('jStatus').value === 'INVOICED AND SENT' ? (editingJobId ? (jobs.find(function(j){return j.id===editingJobId;})||{}).invoiced_at || new Date().toISOString() : new Date().toISOString()) : null,
-    invoice_amount: (editingJobId ? (jobs.find(function(j){return j.id===editingJobId;})||{}).invoice_amount : null) || null,
+    invoiced_at: document.getElementById('jStatus').value === 'INVOICED AND SENT' ? (editingJob ? (editingJob.invoiced_at || new Date().toISOString()) : new Date().toISOString()) : null,
+    invoice_amount: editingJob ? (editingJob.invoice_amount || null) : null,
     customer: customer,
     contact_name: document.getElementById('jContact').value || null,
     phone: document.getElementById('jPhone').value || null,
