@@ -3775,21 +3775,27 @@ async function saveJob() {
         }
       }
     }
-    await loadAllParts();
     // Auto-update customer machines owned
     try { await updateCustomerMachines(customer, jobToolsLocal); } catch(e) {}
     showToast(editingJob ? 'Service case updated' : 'Service case created');
-    await loadJobs();
+    loadJobs(); // don't await — let UI reset immediately
     if (!editingJob) closeJobModal();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Service Case'; }
 }
 
 async function saveAndCloseJob() {
+  var btn = document.getElementById('btnSaveJob');
+  var closeBtn = document.getElementById('btnSaveCloseJob');
+  if (closeBtn) { closeBtn.disabled = true; closeBtn.textContent = 'Saving...'; }
   try {
     await saveJob();
     closeJobModal();
-  } catch(e) { /* saveJob shows its own error toast, don't close on failure */ }
+  } catch(e) {
+    // saveJob handles its own error toast
+  } finally {
+    if (closeBtn) { closeBtn.disabled = false; closeBtn.textContent = 'Save & Close'; }
+  }
 }
 
 async function deleteJob() {
