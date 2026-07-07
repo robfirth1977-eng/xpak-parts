@@ -2962,6 +2962,7 @@ function getBrandFromMachine(m) {
   if (n.includes('ORGAPACK') || n.includes('OR-T') || n.includes('ORT')) return 'Orgapack';
   if (n.includes('TITAN') || n.includes('TA2') || n.includes('TA220')) return 'Titan';
   if (n.includes('MUL') || n.includes('EP-') || n.includes('EP1') || n.includes('ENCORE') || n.includes('MANUCORD') || n.includes('MRC') || n.includes('PNEUMOCORD') || n.includes('PRC')) return 'Messersì & Vordermann';
+  if (n.includes('SIGNODE') || n.includes('BXT')) return 'Signode';
   if (n.includes('XS CONSUMABLE') || n.includes('CONSUMABLE')) return 'Consumables';
   return 'Other';
 }
@@ -2970,11 +2971,11 @@ function renderMachineCardList() {
   var brandColors = {
     'Zapak':'#f59e0b','Kronos':'#e879f9','Strapex':'#10b981',
     'Cyklop':'#64b5c8','Fromm':'#a78bfa','Strapack':'#f97316',
-    'Orgapack':'#00c8e0','Titan':'#10b981',
+    'Orgapack':'#00c8e0','Titan':'#10b981','Signode':'#ef4444',
     'Messersì & Vordermann':'#8b5cf6',
     'Consumables':'#5a8090','Other':'#3a5070'
   };
-  var brandOrder = ['Zapak','Kronos','Strapex','Cyklop','Fromm','Strapack','Orgapack','Titan','Messersì & Vordermann','Consumables','Other'];
+  var brandOrder = ['Zapak','Kronos','Strapex','Cyklop','Signode','Fromm','Strapack','Orgapack','Titan','Messersì & Vordermann','Consumables','Other'];
   var groups = {};
   machines.forEach(function(m) {
     var brand = getBrandFromMachine(m);
@@ -3195,21 +3196,63 @@ function searchPartsForJob(toolTempId) {
   function makeRow(pt) {
     var s = pt.stock && pt.stock[0]; var qty = s ? s.quantity : null;
     var st = qty===null?'unset':qty===0?'empty':qty<=(s.reorder_threshold||1)?'low':'ok';
-    return '<div class="part-search-item" onclick="addPartToJob(\'' + pt.id + '\',\'' + toolTempId + '\')">' +
-      '<div class="psi-left"><div class="psi-keyno">' + pt.key_no + '</div><div class="psi-desc">' + pt.description + '</div>' +
+    var alreadyAdded = jobPartsLocal.some(function(x){ return x.part_id===pt.id && x._toolTempId===toolTempId; });
+    var cbId = 'jpcb_' + pt.id + '_' + toolTempId;
+    return '<div class="part-search-item" style="cursor:default;' + (alreadyAdded?'opacity:0.45;':'') + '" onclick="togglePartCheckbox(\'' + cbId + '\')">' +
+      '<input type="checkbox" id="' + cbId + '" ' + (alreadyAdded?'disabled checked':'') + ' data-part-id="' + pt.id + '" data-tool-temp-id="' + toolTempId + '" onclick="event.stopPropagation()" style="margin-right:8px;flex-shrink:0;width:15px;height:15px;cursor:pointer;accent-color:#10b981">' +
+      '<div class="psi-left" style="flex:1"><div class="psi-keyno">' + pt.key_no + '</div><div class="psi-desc">' + pt.description + '</div>' +
       (toolMachineId && pt.machine_id!==toolMachineId ? '<div class="psi-machine" style="color:#5a8090">' + (pt.machineName||'') + '</div>' : '') +
       '</div><div class="psi-stock ' + st + '">' + (qty===null?'No stock':'Stock: '+qty) + '</div></div>';
   }
   if (!thisMachine.length && !others.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found</div>'; return; }
   var html2 = '';
-  if (thisMachine.length) {
-    html2 += thisMachine.map(makeRow).join('');
-  }
+  if (thisMachine.length) html2 += thisMachine.map(makeRow).join('');
   if (others.length) {
     if (thisMachine.length) html2 += '<div style="font-size:9px;color:#3a5070;text-transform:uppercase;letter-spacing:1px;padding:4px 8px;background:#0a1420">Other machines</div>';
     html2 += others.map(makeRow).join('');
   }
+  html2 += '<div style="padding:8px;border-top:1px solid #1e3048;display:flex;gap:8px;justify-content:flex-end">' +
+    '<button onclick="addCheckedPartsToJob(\'' + toolTempId + '\')" style="padding:6px 16px;background:#10b981;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">+ Add Selected</button>' +
+    '<button onclick="clearPartSearch(\'' + toolTempId + '\')" style="padding:6px 12px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:7px;font-size:12px;cursor:pointer">Clear</button>' +
+    '</div>';
   res.innerHTML = html2;
+}
+
+function togglePartCheckbox(cbId) {
+  var cb = document.getElementById(cbId);
+  if (cb && !cb.disabled) cb.checked = !cb.checked;
+}
+
+function clearPartSearch(toolTempId) {
+  var inp = document.getElementById('psi_' + toolTempId);
+  var res = document.getElementById('psr_' + toolTempId);
+  if (inp) inp.value = '';
+  if (res) res.innerHTML = '';
+}
+
+function addCheckedPartsToJob(toolTempId) {
+  var res = document.getElementById('psr_' + toolTempId);
+  if (!res) return;
+  var checkboxes = res.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)');
+  if (!checkboxes.length) { showToast('No parts selected', 'error'); return; }
+  var added = 0;
+  checkboxes.forEach(function(cb) {
+    var partId = cb.dataset.partId;
+    var pt = allParts.find(function(x) { return x.id === partId; });
+    if (!pt) return;
+    var s = pt.stock && pt.stock[0]; var qty = s ? s.quantity : 0;
+    var existing = jobPartsLocal.find(function(x) { return x.part_id === partId && x._toolTempId === toolTempId; });
+    if (existing) return;
+    var toolNum = 1;
+    var tt = jobToolsLocal.find(function(x){ return x._tempId === toolTempId; });
+    if (tt) toolNum = tt.tool_number;
+    jobPartsLocal.push({ _tempId:'tmp_'+Date.now()+'_'+added, _toolTempId:toolTempId||null, part_id:partId, part_key_no:pt.key_no, part_description:pt.description, machine_name:pt.machineName||'', quantity:1, unit_price:null, status:qty>0?'use_stock':'to_order', tool_number:toolNum, notes:'' });
+    added++;
+  });
+  clearPartSearch(toolTempId);
+  renderToolPartsList(toolTempId);
+  recalcPartsTotal();
+  if (added) showToast(added + ' part' + (added > 1 ? 's' : '') + ' added');
 }
 
 function addPartToJob(partId, toolTempId) {
