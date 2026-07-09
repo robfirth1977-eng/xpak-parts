@@ -7466,13 +7466,14 @@ function renderInvoiceNotice(j, tools, jparts) {
   w.document.write('.footer{margin-top:24px;font-size:9pt;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}');
   w.document.write('@media print{body{padding:12px}button{display:none}}');
   w.document.write('</style></head><body>');
-  w.document.write('<div class="hdr"><div><div class="co-name">X-PAK GLOBAL</div><div class="co-sub">Service Division</div></div><div class="notice-title"><div class="notice-h">INVOICE NOTICE</div><div class="notice-ref">'+xpsNum(j.job_number)+'&nbsp;&nbsp;·&nbsp;&nbsp;'+today+'</div></div></div>');
+  w.document.write('<div class="hdr"><div><div class="co-name">X-PAK GLOBAL</div><div class="co-sub">Service Division</div></div><div class="notice-title"><div class="notice-h">INVOICE NOTICE</div><div class="notice-ref">'+xpsNum(j.job_number)+'&nbsp;&nbsp;·&nbsp;&nbsp;'+today+'</div>' + (j.order_number ? '<div class="notice-ref" style="color:#e879f9;font-weight:700">PO: '+j.order_number+'</div>' : '') + '</div></div>');
   w.document.write('<div class="meta">');
   w.document.write('<div class="meta-box"><div class="meta-label">Bill To</div><div class="meta-val">'+(j.customer||'—')+'</div></div>');
   w.document.write('<div class="meta-box"><div class="meta-label">Contact</div><div class="meta-val">'+(j.contact_name||'—')+'</div></div>');
   w.document.write('<div class="meta-box"><div class="meta-label">Phone</div><div class="meta-val">'+(j.mobile||'—')+'</div></div>');
   w.document.write('<div class="meta-box"><div class="meta-label">Email</div><div class="meta-val">'+(j.email||'—')+'</div></div>');
   w.document.write('</div>');
+  if (j.internal_notes) w.document.write('<div class="note" style="margin-bottom:14px"><strong>Additional Notes:</strong> ' + j.internal_notes.split('\n').join('<br>') + '</div>');
   w.document.write('<div class="section-title">Tools &amp; Work Completed</div>');
   w.document.write(toolSections || '<div style="color:#888;font-size:10pt">No tools recorded.</div>');
   w.document.write('<div class="totals">');
