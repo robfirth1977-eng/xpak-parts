@@ -6633,14 +6633,8 @@ function switchToCustomers() {
 }
 
 async function loadCustomers() {
-  if (_custCache) { renderCustomers(_custCache); return; }
-  document.getElementById('custGrid').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
-  try {
-    _custCache = await db('GET', 'customers?select=*&order=company_name.asc');
-    renderCustomers(_custCache);
-  } catch(e) {
-    document.getElementById('custGrid').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load customers.</div></div>';
-  }
+  // Note: full loadCustomers with contacts is defined below near the customers module
+  await _loadCustomersFull();
 }
 
 function filterCustomers() { renderCustomers(_custCache || []); }
@@ -7270,7 +7264,7 @@ async function importCustomersFromJobs() {
 // ── CUSTOMER CONTACTS ────────────────────────────────────────────────────────
 var _contactRows = [], _contactRowIdx = 0;
 
-async function loadCustomers() {
+async function _loadCustomersFull() {
   if (_custCache) { renderCustomers(_custCache); return; }
   document.getElementById('custGrid').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
   try {
