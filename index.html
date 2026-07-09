@@ -1715,7 +1715,7 @@ async function loadAllParts() {
   try {
     var all = [], offset = 0, batch;
     do {
-      batch = await db('GET', 'parts?select=*,stock(*)&order=key_no.asc&limit=1000&offset=' + offset);
+      batch = await db('GET', 'parts?select=*,stock(*)&is_deleted=neq.true&order=key_no.asc&limit=1000&offset=' + offset);
       all = all.concat(batch);
       offset += 1000;
     } while (batch.length === 1000);
@@ -3059,7 +3059,7 @@ async function selectMachine(m) {
   selectedMachine = m; renderTabs(); renderDocsBar();
   document.getElementById('partsList').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
   try {
-    parts = await db('GET', 'parts?machine_id=eq.' + m.id + '&select=*,stock(*)&order=key_no.asc');
+    parts = await db('GET', 'parts?machine_id=eq.' + m.id + '&select=*,stock(*)&is_deleted=neq.true&order=key_no.asc');
     selectedMachine = machines.find(function(x) { return x.id === m.id; }) || m; partsFilter = 'all'; renderParts();
   } catch(e) { showToast('Failed to load parts', 'error'); }
 }
@@ -3969,7 +3969,7 @@ async function deleteMachine() {
   if (!selectedMachine) return;
   if (!confirm('Delete "' + selectedMachine.name + '" AND all its parts? This cannot be undone.')) return;
   try {
-    await db('DELETE', 'parts?machine_id=eq.' + selectedMachine.id);
+    await db('PATCH', 'parts?machine_id=eq.' + selectedMachine.id, { is_deleted: true });
     await db('DELETE', 'machines?id=eq.' + selectedMachine.id);
     machines = machines.filter(function(m) { return m.id !== selectedMachine.id; });
     selectedMachine = null; closeMachineModal(); showToast('Machine deleted');
@@ -4160,7 +4160,7 @@ function openEditModal(partId) {
   document.getElementById('overlay').classList.add('show');
   populatePartModal(p);
   // Fetch fresh from Supabase to avoid stale cache (stock counts, prices etc.)
-  db('GET', 'parts?id=eq.' + partId + '&select=*,stock(*)').then(function(fresh) {
+  db('GET', 'parts?id=eq.' + partId + '&select=*,stock(*)&is_deleted=neq.true').then(function(fresh) {
     if (!fresh || !fresh.length) return;
     var fp = fresh[0];
     // Update local caches
@@ -4225,14 +4225,12 @@ window.addEventListener('scroll', function() {
 
 async function deletePart() {
   if (!editingPart) return;
-  if (!confirm('Delete ' + editingPart.key_no + ' - ' + editingPart.description + '? This cannot be undone.')) return;
+  if (!confirm('Remove ' + editingPart.key_no + ' - ' + editingPart.description + ' from parts lists? Job history will be preserved.')) return;
   try {
-    var s = editingPart.stock && editingPart.stock[0];
-    if (s && s.id) await db('DELETE', 'stock?id=eq.' + s.id);
-    await db('DELETE', 'parts?id=eq.' + editingPart.id);
-    closeModal(); showToast(editingPart.key_no + ' deleted');
+    await db('PATCH', 'parts?id=eq.' + editingPart.id, { is_deleted: true });
+    closeModal(); showToast(editingPart.key_no + ' removed');
     await selectMachine(selectedMachine); await loadAllParts();
-  } catch(e) { showToast('Delete failed', 'error'); }
+  } catch(e) { showToast('Remove failed', 'error'); }
 }
 
 async function saveAndClosePart() {
