@@ -4489,6 +4489,12 @@ function removeTool(tempId) {
   renderToolsList();
 }
 
+function setToolRecommendation(tempId, text) {
+  setToolField(tempId, 'recommendation', text);
+  var ta = document.getElementById('rec_' + tempId);
+  if (ta) ta.value = text;
+}
+
 function setToolField(tempId, field, val) {
   var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; });
   if (!t) return;
@@ -4536,7 +4542,13 @@ function renderToolsList() {
         '<div class="field"><label>Cycle Count</label><input type="number" value="' + (t.cycle_count||'') + '" placeholder="e.g. 16835" min="0" oninput="setToolField(\'' + t._tempId + '\',\'cycle_count\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field full"><label>Customer Reported Issue</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'customer_issue\',this.value)" placeholder="What the customer reported..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.customer_issue||'') + '</textarea></div>' +
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
-        '<div class="field full"><label>Recommendation</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
+        '<div class="field full"><label>Recommendation</label>' +
+        '<div style="display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap">' +
+          '<button type="button" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Repair not required — tool is serviceable and within specification.\')" style="padding:3px 8px;font-size:11px;background:#0a2a1a;border:1px solid #10b98160;color:#10b981;border-radius:5px;cursor:pointer">Repair not required</button>' +
+          '<button type="button" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Repair declined by customer — tool to be returned as assessed.\')" style="padding:3px 8px;font-size:11px;background:#1a1a0a;border:1px solid #f59e0b60;color:#f59e0b;border-radius:5px;cursor:pointer">Repair declined</button>' +
+          '<button type="button" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Tool written off — uneconomical to repair. Recommend replacement.\')" style="padding:3px 8px;font-size:11px;background:#2a0a0a;border:1px solid #ef444460;color:#ef4444;border-radius:5px;cursor:pointer">Written off</button>' +
+        '</div>' +
+        '<textarea id="rec_' + t._tempId + '" oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
         '<div class="field full"><label>Work Completed</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'work_completed\',this.value)" placeholder="Describe all work carried out..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.work_completed||'') + '</textarea></div>' +
         '<div class="field"><label>Service Fee ($)</label><input type="number" step="0.01" min="0" value="' + (t.service_fee||'') + '" placeholder="400.00" oninput="setToolField(\'' + t._tempId + '\',\'service_fee\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #f97316;background:#0f1923;color:#f97316;font-size:13px;outline:none;font-weight:700"></div>' +
       '</div>' +
