@@ -4799,33 +4799,47 @@ function renderAssessmentReport(j, tools, jparts) {
   var today = new Date().toLocaleDateString('en-AU', { day:'2-digit', month:'long', year:'numeric' });
   var mLookup = function(id) { var m = machines.find(function(x){return x.id===id;}); return m ? m.name : (id || ''); };
 
+  // Detect tools where repair is not proceeding
+  function isNoRepairTool(t) {
+    var rec = (t.recommendation||'').toLowerCase();
+    return rec.indexOf('not required') !== -1 || rec.indexOf('declined') !== -1 || rec.indexOf('written off') !== -1;
+  }
+
   var toolSections = tools.map(function(t) {
     var mName = mLookup(t.machine_id);
+    var noRepair = isNoRepairTool(t);
     var toolParts = jparts.filter(function(p) { return p.tool_number === t.tool_number || (!p.tool_number && t.tool_number === 1); });
     var partsRows = toolParts.map(function(p, ri) {
       var partData = p.part_id ? allParts.find(function(x) { return x.id === p.part_id; }) : null;
       var sell = partData && partData.sell_price ? parseFloat(partData.sell_price) : 0;
       var total = sell * (p.quantity || 1);
-      return '<tr' + (ri%2?'':' style="background:#f8fafc"') + '>' +
+      var rowStyle = noRepair ? 'color:#999;text-decoration:line-through;background:#fafafa' : (ri%2?'':'background:#f8fafc');
+      return '<tr style="' + rowStyle + '">' +
         '<td style="word-break:break-all">' + (p.part_key_no||'') + '</td>' +
         '<td>' + (p.part_description||'') + '</td>' +
         '<td style="text-align:center">' + (p.quantity||1) + '</td>' +
-        '<td style="text-align:right;font-family:monospace">' + (sell > 0 ? '$' + sell.toFixed(2) : '&#8212;') + '</td><td style="text-align:right;font-family:monospace' + (total>0?';font-weight:700':'') + '">' + (total > 0 ? '$' + total.toFixed(2) : '&#8212;') + '</td></tr>';
+        '<td style="text-align:right;font-family:monospace">' + (sell > 0 ? '$' + sell.toFixed(2) : '&#8212;') + '</td>' +
+        '<td style="text-align:right;font-family:monospace">' + (noRepair ? '<span style="font-size:8pt;text-decoration:none;font-style:italic">Not fitted</span>' : (total > 0 ? '<strong>$' + total.toFixed(2) + '</strong>' : '&#8212;')) + '</td></tr>';
     }).join('');
+    var partsHeaderNote = noRepair ? ' <span style="font-size:8pt;font-weight:400;color:#e87722;text-decoration:none;margin-left:8px">— identified, not fitted</span>' : '';
     var partsTable = toolParts.length ? '<table class="parts-tbl"><colgroup><col style="width:18%"><col style="width:47%"><col style="width:5%"><col style="width:15%"><col style="width:15%"></colgroup><thead><tr><th>Part No.</th><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead><tbody>' + partsRows + '</tbody></table>' : '<p style="color:#666;font-style:italic;font-size:11pt">No parts recorded for this tool.</p>';
+    var toolHeaderStyle = noRepair ? 'background:#6b7280' : '';
     return '<div class="tool-section">' +
-      '<div class="tool-header"><span class="tool-num">TOOL ' + t.tool_number + '</span>' + (mName ? '<span class="tool-model">' + mName + '</span>' : '') + (t.serial_number ? '<span class="tool-sn">S/N: ' + t.serial_number + '</span>' : '') + (t.cycle_count_in != null ? '<span class="tool-sn" style="margin-left:auto;opacity:0.9">⟳ ' + parseInt(t.cycle_count_in).toLocaleString() + ' cycles</span>' : '') + '</div>' +
+      '<div class="tool-header" style="' + toolHeaderStyle + '"><span class="tool-num">TOOL ' + t.tool_number + '</span>' + (mName ? '<span class="tool-model">' + mName + '</span>' : '') + (t.serial_number ? '<span class="tool-sn">S/N: ' + t.serial_number + '</span>' : '') + (noRepair ? '<span class="tool-sn" style="margin-left:auto;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:4px;font-size:9pt">Not proceeding</span>' : (t.cycle_count_in != null ? '<span class="tool-sn" style="margin-left:auto;opacity:0.9">&#x27F3; ' + parseInt(t.cycle_count_in).toLocaleString() + ' cycles</span>' : '')) + '</div>' +
       (t.fault_type ? '<div class="field-block"><div class="field-label">Fault Reported</div><div class="field-val">' + t.fault_type + (t.error_code ? ' &nbsp;|&nbsp; Error Code: ' + t.error_code : '') + '</div></div>' : '') +
-      (t.customer_issue ? '<div class="field-block"><div class="field-label">Customer Description</div><div class="field-val">' + t.customer_issue.replace(/\n/g,'<br>') + '</div></div>' : '') +
-      (t.diagnosis ? '<div class="field-block"><div class="field-label">Assessment / Findings</div><div class="field-val">' + t.diagnosis.replace(/\n/g,'<br>') + '</div></div>' : '') +
-      (t.recommendation ? '<div class="field-block"><div class="field-label">Recommendation</div><div class="field-val">' + t.recommendation.replace(/\n/g,'<br>') + '</div></div>' : '') +
-      '<div class="field-block"><div class="field-label">Parts Required</div>' + partsTable + '</div>' +
-      (t.service_fee ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Service Fee</div><div class="field-val" style="color:#f97316;font-weight:700">$' + parseFloat(t.service_fee).toFixed(2) + '</div></div>' : '') +
+      (t.customer_issue ? '<div class="field-block"><div class="field-label">Customer Description</div><div class="field-val">' + t.customer_issue.split('\n').join('<br>') + '</div></div>' : '') +
+      (t.diagnosis ? '<div class="field-block"><div class="field-label">Assessment / Findings</div><div class="field-val">' + t.diagnosis.split('\n').join('<br>') + '</div></div>' : '') +
+      (t.recommendation ? '<div class="field-block"' + (noRepair ? ' style="background:#fef3cd"' : '') + '><div class="field-label" ' + (noRepair ? 'style="color:#e87722"' : '') + '>Recommendation</div><div class="field-val">' + t.recommendation.split('\n').join('<br>') + '</div></div>' : '') +
+      '<div class="field-block"><div class="field-label">Parts Required' + partsHeaderNote + '</div>' + partsTable + '</div>' +
+      (!noRepair && t.service_fee ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Service Fee</div><div class="field-val" style="color:#f97316;font-weight:700">$' + parseFloat(t.service_fee).toFixed(2) + '</div></div>' : '') +
       '</div>';
   }).join('');
 
-  var partsTotal = jparts.reduce(function(sum, p) { var pd2 = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null; return sum + ((pd2&&pd2.sell_price ? parseFloat(pd2.sell_price) : 0) * (p.quantity||1)); }, 0);
-  var serviceFeeTotal = tools.reduce(function(sum, t) { return sum + (parseFloat(t.service_fee)||0); }, 0);
+  // Only include parts from tools that ARE being repaired in totals
+  var billableToolNums = tools.filter(function(t){ return !isNoRepairTool(t); }).map(function(t){ return t.tool_number; });
+  var billableParts = jparts.filter(function(p){ return billableToolNums.indexOf(p.tool_number||1) !== -1; });
+  var partsTotal = billableParts.reduce(function(sum, p) { var pd2 = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null; return sum + ((pd2&&pd2.sell_price ? parseFloat(pd2.sell_price) : 0) * (p.quantity||1)); }, 0);
+  var serviceFeeTotal = tools.filter(function(t){ return !isNoRepairTool(t); }).reduce(function(sum, t) { return sum + (parseFloat(t.service_fee)||0); }, 0);
   var grandTotal = partsTotal + serviceFeeTotal;
 
   var w = window.open('', '_blank');
