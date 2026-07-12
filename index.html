@@ -21,8 +21,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .tab.parts-tab:hover,.tab.parts-tab.active{background:#64b5c8;border-color:#64b5c8;color:#0f1923}
 .tab.tools-tab{border-color:#10b981;color:#10b981}
 .tab.tools-tab:hover,.tab.tools-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
-.tab.order-tab{border-color:#10b981;color:#10b981}
-.tab.order-tab:hover,.tab.order-tab.active{background:#10b981;border-color:#10b981;color:#0f1923}
 .tab.loan-tab{border-color:#a78bfa;color:#a78bfa}
 .tab.loan-tab:hover,.tab.loan-tab.active{background:#a78bfa;border-color:#a78bfa;color:#0f1923}
 .tab.agr-tab{border-color:#f59e0b;color:#f59e0b}
@@ -179,21 +177,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .bca-btn.report:hover{background:#1a2e20}
 .bca-btn.quote{background:#1e3048;color:#f97316}
 .bca-btn.quote:hover{background:#2e1e0a}
-/* Order list */
-.order-section{padding:0 14px 20px}
-.order-group{margin-bottom:20px}
-.order-group-header{font-size:12px;font-weight:700;color:#64b5c8;padding:8px 12px;background:#0d1a28;border-radius:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
-.order-row{background:#141f2d;border-radius:8px;padding:10px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px;border-left:3px solid #2a4060}
-.order-row.to_order{border-left-color:#f97316}
-.order-row.ordered{border-left-color:#eab308}
-.order-row.arrived{border-left-color:#10b981;opacity:0.6}
-.order-row.use_stock{border-left-color:#10b981}
-.order-part-no{font-size:12px;font-weight:700;color:#00c8e0;font-family:'Courier New',monospace;min-width:90px}
-.order-desc{font-size:12px;color:#c8d8e8;flex:1}
-.order-job{font-size:10px;color:#5a8090;margin-top:2px}
-.order-qty{font-size:13px;font-weight:700;color:#e2e8f0;min-width:30px;text-align:center}
-.order-status-badge{font-size:10px;font-weight:700;border-radius:8px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
-.order-actions{display:flex;gap:5px;flex-shrink:0}
 .btn-sm{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #2a4060;background:#1e3048;color:#8aa8c0;white-space:nowrap}
 .btn-sm:hover{border-color:#00c8e0;color:#00c8e0}
 .btn-sm.green{border-color:#10b981;color:#10b981}
@@ -654,38 +637,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   <div class="board-wrap"><div class="board" id="boardCols"></div></div>
 </div>
 
-<!-- Order list toolbar -->
-<div class="toolbar" id="orderToolbar" style="display:none">
-  <div style="display:flex;gap:6px;flex-shrink:0">
-    <button class="btn-sm" id="btnOrderTabJobs" onclick="setOrderTab('jobs')" style="padding:7px 14px;font-size:12px;border-color:#10b981;color:#10b981">Job Orders</button>
-    <button class="btn-sm" id="btnOrderTabStock" onclick="setOrderTab('stock')" style="padding:7px 14px;font-size:12px">Stock Order</button>
-  </div>
-  <button class="btn-add green" onclick="openDirectOrderModal()" style="margin-right:4px;margin-left:8px">+ Add to Order</button>
-  <button class="btn-sm amber" onclick="printOrderList()" style="padding:9px 14px;font-size:13px">Print / Export</button>
-</div>
-<div class="order-section" id="orderSection" style="display:none">
-  <div id="jobOrderSection">
-    <div id="orderList"></div>
-  </div>
-  <div id="stockOrderSection" style="display:none;padding:0 14px 20px">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
-      <select id="stockOrderMachine" onchange="renderStockOrderBuilder()" style="padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none;flex:1;max-width:280px">
-        <option value="">All Machines</option>
-      </select>
-      <select id="stockOrderSupplier" onchange="renderStockOrderBuilder()" style="padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none;flex:1;max-width:220px">
-        <option value="">All Suppliers</option>
-      </select>
-      <div style="display:flex;gap:6px">
-        <button class="filter-btn" id="soChipAll"  onclick="setStockOrderFilter('all',this)"  style="border-color:#10b981;color:#10b981">All</button>
-        <button class="filter-btn" id="soChipLow"  onclick="setStockOrderFilter('low',this)"  >Low / Zero</button>
-        <button class="filter-btn" id="soChipStar" onclick="setStockOrderFilter('star',this)" >★ Stock Items</button>
-      </div>
-      <button class="btn-add green" onclick="exportStockOrder()" style="margin-left:auto">⬇ Export Excel</button>
-    </div>
-    <div id="stockOrderList"></div>
-  </div>
-</div>
-
 <!-- Loans toolbar -->
 <div class="loan-toolbar" id="loanToolbar" style="display:none">
   <div class="loan-view-toggle">
@@ -817,16 +768,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 
 <!-- Purchasing toolbar -->
 <div class="loan-toolbar" id="poToolbar" style="display:none">
-  <div class="loan-view-toggle">
+  <div class="loan-view-toggle" id="poStatusFilters">
     <button class="loan-view-btn active" id="poBtnDraft"    onclick="setPOFilter('Draft')">Draft</button>
     <button class="loan-view-btn"        id="poBtnSent"     onclick="setPOFilter('Sent')">Sent</button>
     <button class="loan-view-btn"        id="poBtnPartial"  onclick="setPOFilter('Partially Received')">Part Received</button>
     <button class="loan-view-btn"        id="poBtnReceived" onclick="setPOFilter('Received')">Received</button>
     <button class="loan-view-btn"        id="poBtnAll"      onclick="setPOFilter('All')">All</button>
   </div>
-  <button class="btn-add" style="background:#60a5fa;margin-left:auto;color:#0f1923;font-weight:700" onclick="openNewPOModal()">+ New PO</button>
+  <button class="btn-sm" id="poBtnStockBuilder" onclick="togglePOStockBuilder()" style="margin-left:8px;padding:7px 14px;font-size:12px">📦 Stock Order Builder</button>
+  <button class="btn-add" id="btnNewPO" style="background:#60a5fa;margin-left:auto;color:#0f1923;font-weight:700" onclick="openNewPOModal()">+ New PO</button>
 </div>
 <div class="loan-section" id="poSection" style="display:none"><div id="poList"></div></div>
+<div id="poStockOrderSection" style="display:none;padding:0 14px 20px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+    <select id="stockOrderMachine" onchange="renderStockOrderBuilder()" style="padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none;flex:1;max-width:280px">
+      <option value="">All Machines</option>
+    </select>
+    <select id="stockOrderSupplier" onchange="renderStockOrderBuilder()" style="padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none;flex:1;max-width:220px">
+      <option value="">All Suppliers</option>
+    </select>
+    <div style="display:flex;gap:6px">
+      <button class="filter-btn" id="soChipAll"  onclick="setStockOrderFilter('all',this)"  style="border-color:#10b981;color:#10b981">All</button>
+      <button class="filter-btn" id="soChipLow"  onclick="setStockOrderFilter('low',this)"  >Low / Zero</button>
+      <button class="filter-btn" id="soChipStar" onclick="setStockOrderFilter('star',this)" >★ Stock Items</button>
+    </div>
+    <button class="btn-add green" onclick="exportStockOrder()" style="margin-left:auto">⬇ Export Excel</button>
+  </div>
+  <div id="stockOrderList"></div>
+</div>
 
 <!-- New PO Modal -->
 <div class="overlay" id="newPOOverlay" onclick="if(event.target===this)closeNewPOModal()">
@@ -1430,32 +1399,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
   </div>
 </div>
 
-<!-- Direct Order Modal -->
-<div class="overlay" id="directOrderOverlay" onclick="if(event.target===this)closeDirectOrderModal()">
-  <div class="modal green">
-    <div class="modal-header"><div class="modal-title">Add Parts to Order</div><button class="modal-close" onclick="closeDirectOrderModal()">x</button></div>
-    <div style="font-size:11px;color:#5a8090;margin-bottom:10px">Add parts for stock replenishment — not linked to a specific case.</div>
-    <div class="parts-search-area">
-      <div class="parts-search-row">
-        <input id="doPartSearch" placeholder="Search by part number or description..." oninput="searchPartsForDirectOrder()" autocomplete="off">
-      </div>
-      <div class="parts-search-results" id="doPartResults"></div>
-    </div>
-    <div id="doPartsList" class="job-parts-list"></div>
-    <div style="margin-top:4px;margin-bottom:10px">
-      <div style="font-size:11px;color:#5a8090;margin-bottom:6px">Or type a part not in the database yet:</div>
-      <div class="g2">
-        <div class="field"><label>Part Number</label><input id="doFreeKeyno" placeholder="e.g. 32XX-3N"></div>
-        <div class="field"><label>Description</label><input id="doFreeDesc" placeholder="e.g. Gripper Foot"></div>
-        <div class="field"><label>Machine / Supplier</label><input id="doFreeMachine" placeholder="e.g. Zapak ZP-CT32B"></div>
-        <div class="field"><label>Qty</label><input id="doFreeQty" type="number" min="1" value="1" placeholder="1"></div>
-      </div>
-      <button class="btn-sm" onclick="addFreeTextToOrder()" style="width:100%;padding:9px;font-size:13px;margin-top:2px">+ Add Free Text Part</button>
-    </div>
-    <button class="btn-save green" id="btnSaveDirectOrder" onclick="saveDirectOrder()">Save Order Items</button>
-  </div>
-</div>
-
 <!-- Supplier modal -->
 <div class="overlay" id="supplierOverlay" onclick="if(event.target===this)closeSupplierModal()">
   <div class="modal">
@@ -1611,7 +1554,6 @@ var ACT_ST   = ['WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
 var FOL_ST   = ['INVOICED AND SENT'];
 
 var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981', 'NEW JOB':'#f59e0b', 'IN PROGRESS':'#64b5c8', 'WAITING ON PARTS':'#f97316', 'AWAITING ASSESSMENT':'#a78bfa', 'WAITING FOR TOOLS':'#f97316', 'QUOTED - AWAITING APPROVAL':'#a78bfa', COMPLETED:'#10b981', 'ON HOLD':'#5a8090' };
-var STATUS_LABELS  = { to_order:'To Order', ordered:'Ordered', arrived:'Arrived', use_stock:'Use Stock' };
 
 async function db(method, path, body) {
   var r = await fetch(BASE + '/' + path, { method: method, headers: H, body: body ? JSON.stringify(body) : undefined });
@@ -1647,7 +1589,7 @@ function renderSuppliersList() {
  
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
-  var overlays = ['overlay','jobOverlay','loanOverlay','loanToolOverlay','agrOverlay','agrPeriodOverlay','machineOverlay','directOrderOverlay'];
+  var overlays = ['overlay','jobOverlay','loanOverlay','loanToolOverlay','agrOverlay','agrPeriodOverlay','machineOverlay'];
   for (var i=0; i<overlays.length; i++) {
     var el = document.getElementById(overlays[i]);
     if (el && el.classList.contains('show')) { el.classList.remove('show'); return; }
@@ -1716,8 +1658,6 @@ function hideAllViews() {
   document.getElementById('jobsToolbar').style.display = 'none';
   document.getElementById('jobsListSection').style.display = 'none';
   document.getElementById('jobsBoardSection').style.display = 'none';
-  document.getElementById('orderToolbar').style.display = 'none';
-  document.getElementById('orderSection').style.display = 'none';
   var lt = document.getElementById('loanToolbar'); if(lt) lt.style.display = 'none';
   var ls = document.getElementById('loanSection'); if(ls) ls.style.display = 'none';
   var at = document.getElementById('agrToolbar'); if(at) at.style.display = 'none';
@@ -1740,6 +1680,7 @@ function hideAllViews() {
   var sks = document.getElementById('stockSection'); if(sks) sks.style.display = 'none';
   var pot = document.getElementById('poToolbar'); if(pot) pot.style.display = 'none';
   var pos = document.getElementById('poSection'); if(pos) pos.style.display = 'none';
+  var posb = document.getElementById('poStockOrderSection'); if(posb) posb.style.display = 'none';
   var wv = document.getElementById('weeklyView'); if(wv) wv.style.display = 'none';
 }
 
@@ -1751,17 +1692,7 @@ function switchToJobs() {
   setJobView(jobViewMode); loadJobs();
 }
 
-function switchToOrder() {
-  currentView = 'order'; hideAllViews(); renderTabs();
-  document.getElementById('orderToolbar').style.display = 'flex';
-  document.getElementById('orderSection').style.display = 'block';
-  document.getElementById('hSub').textContent = 'Parts to Order';
-  document.getElementById('lowBadge').innerHTML = '';
-  setOrderTab('jobs');
-}
-
-// ── ORDER TABS ────────────────────────────────────────────────────
-var _currentOrderTab = 'jobs';
+// ── STOCK ORDER BUILDER ──────────────────────────────────────────────
 var _stockOrderFilter = 'low';
 var _stockOrderMachine = '';
 var _stockOrderSupplier = '';
@@ -1776,28 +1707,6 @@ function clearStockOrderDraft() {
   var sS=document.getElementById('stockOrderSupplier'); if(sS) sS.value='';
   renderStockOrderBuilder();
   showToast('Draft order cleared');
-}
-
-function setOrderTab(tab) {
-  _currentOrderTab = tab;
-  var jobSec   = document.getElementById('jobOrderSection');
-  var stockSec = document.getElementById('stockOrderSection');
-  var btnJobs  = document.getElementById('btnOrderTabJobs');
-  var btnStock = document.getElementById('btnOrderTabStock');
-  if (!jobSec || !stockSec) { loadOrderList(); return; }
-  if (tab === 'jobs') {
-    jobSec.style.display = 'block';
-    stockSec.style.display = 'none';
-    if (btnJobs)  { btnJobs.style.borderColor  = '#10b981'; btnJobs.style.color  = '#10b981'; btnJobs.style.background  = '#0d1f12'; }
-    if (btnStock) { btnStock.style.borderColor = '#2a4060'; btnStock.style.color = '#8aa8c0'; btnStock.style.background = 'transparent'; }
-    loadOrderList();
-  } else {
-    jobSec.style.display = 'none';
-    stockSec.style.display = 'block';
-    if (btnStock) { btnStock.style.borderColor = '#10b981'; btnStock.style.color = '#10b981'; btnStock.style.background = '#0d1f12'; }
-    if (btnJobs)  { btnJobs.style.borderColor  = '#2a4060'; btnJobs.style.color  = '#8aa8c0'; btnJobs.style.background  = 'transparent'; }
-    initStockOrderBuilder();
-  }
 }
 
 function setStockOrderFilter(f, btn) {
@@ -2673,7 +2582,6 @@ function renderTabs() {
     html2 += '<div class="tab-divider"></div>';
     html2 += '<span class="tab-group-label">Technical</span>';
     html2 += '<button class="tab tools-tab' + (v==='tools'?' active':'') + '" onclick="' + (v==='tools'?'':'switchToTools()')  + '">Tools</button>';
-    html2 += '<button class="tab order-tab' + (v==='order'?' active':'') + '" onclick="' + (v==='order'?'':'switchToOrder()')  + '">Orders</button>';
     html2 += '<button class="tab supplier-tab' + (v==='suppliers'?' active':'') + '" onclick="' + (v==='suppliers'?'':'switchToSuppliers()') + '">Suppliers</button>';
     html2 += '<button class="tab po-tab' + (v==='purchasing'?' active':'') + '" onclick="' + (v==='purchasing'?'':'switchToPurchasing()') + '">Purchasing</button>';
   }
@@ -3041,117 +2949,6 @@ async function selectMachine(m) {
     parts = await db('GET', 'parts?machine_id=eq.' + m.id + '&select=*,stock(*)&is_deleted=neq.true&order=key_no.asc');
     selectedMachine = machines.find(function(x) { return x.id === m.id; }) || m; partsFilter = 'all'; renderParts();
   } catch(e) { showToast('Failed to load parts', 'error'); }
-}
-
-// ── ORDER LIST ────────────────────────────────────────────────────
-
-async function loadOrderList() {
-  document.getElementById('orderList').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
-  try {
-    var rows = await db('GET', 'job_parts?status=in.(to_order,ordered)&select=*&order=created_at.asc');
-    renderOrderList(rows);
-  } catch(e) {
-    document.getElementById('orderList').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load order list. Run SQL to create job_parts table first.</div></div>';
-  }
-}
-
-function renderOrderList(rows) {
-  if (!rows.length) {
-    document.getElementById('orderList').innerHTML = '<div class="center"><div class="icon">&#10003;</div><div style="color:#10b981">No parts to order - all clear!</div></div>';
-    return;
-  }
-  var grouped = {};
-  rows.forEach(function(r) {
-    var key = r.machine_name || 'Unknown Machine';
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(r);
-  });
-  var html = '';
-  Object.keys(grouped).sort().forEach(function(machine) {
-    var grpRows = grouped[machine];
-    var col = STATUS_COLOURS['to_order'];
-    html += '<div class="order-group"><div class="order-group-header"><span>' + machine + '</span><span style="font-size:11px;color:#5a8090">' + grpRows.length + ' item' + (grpRows.length !== 1 ? 's' : '') + '</span></div>';
-    grpRows.forEach(function(r) {
-      var sc = STATUS_COLOURS[r.status] || '#4a6080';
-      var sl = STATUS_LABELS[r.status] || r.status;
-      var jobRef = r.job_id ? r.job_id.substring(0,8) : 'Stock Order';
-      html += '<div class="order-row ' + r.status + '">' +
-        '<div style="flex:1;min-width:0">' +
-          '<div style="display:flex;align-items:center;gap:8px">' +
-            '<span class="order-part-no">' + (r.part_key_no || '-') + '</span>' +
-            '<span class="order-desc">' + (r.part_description || '-') + '</span>' +
-            '<span class="order-qty">x' + r.quantity + '</span>' +
-            '<span class="order-status-badge" style="background:' + sc + '20;color:' + sc + ';border:1px solid ' + sc + '40">' + sl + '</span>' +
-          '</div>' +
-          '<div class="order-job">' + (r.job_id ? 'Job: ' + r.job_id.substring(0,8) : 'Stock Order') + (r.notes && r.notes !== 'Stock order' ? ' | ' + r.notes : '') + '</div>' +
-        '</div>' +
-        '<div class="order-actions">' +
-          (r.status === 'to_order' ? '<button class="btn-sm amber" onclick="markOrdered(\'' + r.id + '\')">Mark Ordered</button>' : '') +
-          (r.status === 'ordered' ? '<button class="btn-sm green" onclick="markArrived(\'' + r.id + '\',' + r.quantity + ',\'' + (r.part_id || '') + '\')">Mark Arrived</button>' : '') +
-        '</div>' +
-        '</div>';
-    });
-    html += '</div>';
-  });
-  document.getElementById('orderList').innerHTML = html;
-}
-
-async function markOrdered(id) {
-  var scrollPos = document.getElementById('orderSection').scrollTop;
-  try {
-    await db('PATCH', 'job_parts?id=eq.' + id, { status: 'ordered', updated_at: new Date().toISOString() });
-    showToast('Marked as ordered');
-    await loadOrderList();
-    document.getElementById('orderSection').scrollTop = scrollPos;
-  } catch(e) { showToast('Failed', 'error'); }
-}
-
-async function markArrived(id, qty, partId) {
-  try {
-    await db('PATCH', 'job_parts?id=eq.' + id, { status: 'arrived', updated_at: new Date().toISOString() });
-    if (partId) {
-      var stockRows = await db('GET', 'stock?part_id=eq.' + partId + '&select=*');
-      if (stockRows.length) {
-        var newQty = (stockRows[0].quantity || 0) + qty;
-        await db('PATCH', 'stock?id=eq.' + stockRows[0].id, { quantity: newQty, updated_at: new Date().toISOString() });
-        await loadAllParts();
-      }
-    }
-    showToast('Arrived - stock updated'); loadOrderList();
-  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
-}
-
-function printOrderList() {
-  var el = document.getElementById('orderList');
-  var w = window.open('', '_blank');
-  w.document.write('<html><head><title>X-Pak Parts Order List - ' + new Date().toLocaleDateString('en-AU') + '</title>');
-  w.document.write('<style>body{font-family:Arial,sans-serif;font-size:12px;color:#000;padding:20px}');
-  w.document.write('h1{font-size:16px;margin-bottom:4px}h2{font-size:13px;margin:16px 0 6px;border-bottom:1px solid #ccc;padding-bottom:3px}');
-  w.document.write('table{width:100%;border-collapse:collapse;margin-bottom:10px}');
-  w.document.write('th{text-align:left;padding:5px 8px;background:#f0f0f0;border:1px solid #ddd;font-size:11px}');
-  w.document.write('td{padding:5px 8px;border:1px solid #ddd;font-size:11px}');
-  w.document.write('.status{font-weight:700}');
-  w.document.write('</style></head><body>');
-  w.document.write('<h1>X-Pak Global - Parts Order List</h1>');
-  w.document.write('<p style="color:#666;margin-bottom:16px">Generated: ' + new Date().toLocaleString('en-AU') + '</p>');
-  var groups = el.querySelectorAll('.order-group');
-  groups.forEach(function(g) {
-    var title = g.querySelector('.order-group-header span').textContent;
-    w.document.write('<h2>' + title + '</h2>');
-    w.document.write('<table><tr><th>Part No.</th><th>Description</th><th>Qty</th><th>Status</th><th>Case</th></tr>');
-    g.querySelectorAll('.order-row').forEach(function(row) {
-      var pno = row.querySelector('.order-part-no').textContent;
-      var desc = row.querySelector('.order-desc').textContent;
-      var qty = row.querySelector('.order-qty').textContent;
-      var status = row.querySelector('.order-status-badge').textContent;
-      var jobRef = row.querySelector('.order-job').textContent.replace('Case: ', '');
-      w.document.write('<tr><td>' + pno + '</td><td>' + desc + '</td><td>' + qty + '</td><td class="status">' + status + '</td><td>' + jobRef + '</td></tr>');
-    });
-    w.document.write('</table>');
-  });
-  w.document.write('</body></html>');
-  w.document.close();
-  setTimeout(function() { w.print(); }, 300);
 }
 
 // ── PARTS SEARCH IN JOB ───────────────────────────────────────────
@@ -4300,112 +4097,6 @@ function doPrint() {
   var pa = document.getElementById('printArea');
   pa.innerHTML = labelQueue.map(function(d) { return '<div class="print-label">' + makeLabelInner(d, 'pl') + '</div>'; }).join('');
     requestAnimationFrame(function() { requestAnimationFrame(function() { window.print(); }); });
-}
-
-// ── DIRECT ORDER ──────────────────────────────────────────────────
-
-var directOrderParts = [];
-
-function openDirectOrderModal() {
-  directOrderParts = [];
-  document.getElementById('doPartSearch').value = '';
-  document.getElementById('doPartResults').innerHTML = '';
-  document.getElementById('doPartsList').innerHTML = '';
-  document.getElementById('doFreeKeyno').value = '';
-  document.getElementById('doFreeDesc').value = '';
-  document.getElementById('doFreeMachine').value = '';
-  document.getElementById('doFreeQty').value = '1';
-  document.getElementById('directOrderOverlay').classList.add('show');
-  setTimeout(function() { document.getElementById('doPartSearch').focus(); }, 100);
-}
-
-function closeDirectOrderModal() { document.getElementById('directOrderOverlay').classList.remove('show'); }
-
-function searchPartsForDirectOrder() {
-  var q = document.getElementById('doPartSearch').value.toLowerCase().trim();
-  var res = document.getElementById('doPartResults');
-  if (!q) { res.innerHTML = ''; return; }
-  var matches = allParts.filter(function(p) {
-    return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.diagram_ref && p.diagram_ref.toLowerCase().includes(q));
-  }).slice(0, 8);
-  if (!matches.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found - use free text below</div>'; return; }
-  res.innerHTML = matches.map(function(p) {
-    var s = p.stock && p.stock[0], qty = s ? s.quantity : null;
-    var st = qty === null ? 'unset' : qty === 0 ? 'empty' : qty <= (s.reorder_threshold || 1) ? 'low' : 'ok';
-    return '<div class="part-search-item" onclick="addPartToDirectOrder(\'' + p.id + '\')">' +
-      '<div class="psi-left"><div class="psi-keyno">' + p.key_no + '</div><div class="psi-desc">' + p.description + '</div><div class="psi-machine">' + (p.machineName || '') + '</div></div>' +
-      '<div class="psi-stock ' + st + '">' + (qty !== null ? 'Stock: ' + qty : 'No stock data') + '</div></div>';
-  }).join('');
-}
-
-function addPartToDirectOrder(partId) {
-  var p = allParts.find(function(x) { return x.id === partId; }); if (!p) return;
-  if (directOrderParts.find(function(x) { return x.part_id === partId; })) { showToast('Already added', 'error'); return; }
-  directOrderParts.push({ _tempId: 'do_' + Date.now(), part_id: partId, part_key_no: p.key_no, part_description: p.description, machine_name: p.machineName || '', quantity: 1, status: 'to_order' });
-  document.getElementById('doPartSearch').value = '';
-  document.getElementById('doPartResults').innerHTML = '';
-  renderDirectOrderList();
-}
-
-function addFreeTextToOrder() {
-  var keyno = document.getElementById('doFreeKeyno').value.trim();
-  var desc  = document.getElementById('doFreeDesc').value.trim();
-  if (!keyno && !desc) { showToast('Enter at least a part number or description', 'error'); return; }
-  directOrderParts.push({ _tempId: 'do_' + Date.now(), part_id: null, part_key_no: keyno || '-', part_description: desc || '-', machine_name: document.getElementById('doFreeMachine').value.trim(), quantity: parseInt(document.getElementById('doFreeQty').value) || 1, status: 'to_order' });
-  document.getElementById('doFreeKeyno').value = '';
-  document.getElementById('doFreeDesc').value = '';
-  document.getElementById('doFreeMachine').value = '';
-  document.getElementById('doFreeQty').value = '1';
-  renderDirectOrderList();
-}
-
-function removeDirectOrderPart(tempId) {
-  directOrderParts = directOrderParts.filter(function(x) { return x._tempId !== tempId; });
-  renderDirectOrderList();
-}
-
-function setDirectOrderQty(tempId, val) {
-  var p = directOrderParts.find(function(x) { return x._tempId === tempId; });
-  if (p) p.quantity = Math.max(1, parseInt(val) || 1);
-}
-
-function renderDirectOrderList() {
-  var el = document.getElementById('doPartsList');
-  if (!directOrderParts.length) { el.innerHTML = ''; return; }
-  el.innerHTML = directOrderParts.map(function(jp) {
-    return '<div class="job-part-row to_order">' +
-      '<span class="jpr-keyno">' + jp.part_key_no + '</span>' +
-      '<span class="jpr-desc">' + jp.part_description + (jp.machine_name ? ' (' + jp.machine_name + ')' : '') + '</span>' +
-      '<input type="number" min="1" value="' + jp.quantity + '" onchange="setDirectOrderQty(\'' + jp._tempId + '\',this.value)" style="width:48px;padding:4px 6px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;text-align:center">' +
-      '<span class="jpr-status" style="background:#f9731620;color:#f97316;border:1px solid #f9731640">To Order</span>' +
-      '<button class="jpr-remove" onclick="removeDirectOrderPart(\'' + jp._tempId + '\')">x</button>' +
-      '</div>';
-  }).join('');
-}
-
-async function saveDirectOrder() {
-  if (!directOrderParts.length) { showToast('Add at least one part', 'error'); return; }
-  var btn = document.getElementById('btnSaveDirectOrder'); btn.disabled = true; btn.textContent = 'Saving...';
-  try {
-    for (var i = 0; i < directOrderParts.length; i++) {
-      var jp = directOrderParts[i];
-      await db('POST', 'job_parts', {
-        job_id: null,
-        part_id: jp.part_id || null,
-        part_key_no: jp.part_key_no,
-        part_description: jp.part_description,
-        machine_name: jp.machine_name,
-        quantity: jp.quantity,
-        status: 'to_order',
-        notes: 'Stock order',
-        updated_at: new Date().toISOString()
-      });
-    }
-    showToast(directOrderParts.length + ' item' + (directOrderParts.length !== 1 ? 's' : '') + ' added to order list');
-    closeDirectOrderModal();
-    loadOrderList();
-  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
-  finally { btn.disabled = false; btn.textContent = 'Save Order Items'; }
 }
 
 function printCaseLabel(jobId) {
@@ -5562,8 +5253,7 @@ async function renderHome() {
   var draftSv    = (siteVisits||[]).filter(function(v){ return v.status==='Draft'; }).length;
 
   // Pending parts - fetch fresh
-  var pendingParts = 0;
-  try { var op = await db('GET','job_parts?status=eq.to_order&select=id'); pendingParts = op.length; } catch(e){}
+  var draftPOCount = (purchaseOrders||[]).filter(function(po){ return po.status === 'Draft'; }).length;
 
   // Recent jobs (last 5)
   var recentJobs = jobs.slice(0,5);
@@ -5582,7 +5272,7 @@ async function renderHome() {
       '<div class="home-tile agr"     onclick="switchToAgreements()"><div class="home-tile-icon">📋</div><div class="home-tile-label">Agreements</div><div class="home-tile-sub">Service contracts</div></div>' +
       '<div class="home-tile sv"      onclick="switchToSiteVisits()"><div class="home-tile-icon">🚗</div><div class="home-tile-label">Site Visits</div><div class="home-tile-sub">Field service</div></div>' +
       (!window._adminMode ? '<div class="home-tile tools"   onclick="switchToTools()"><div class="home-tile-icon">⚙️</div><div class="home-tile-label">Tools & Parts</div><div class="home-tile-sub">Machine database</div></div>' : '') +
-      (!window._adminMode ? '<div class="home-tile orders"  onclick="switchToOrder()"><div class="home-tile-icon">📦</div><div class="home-tile-label">Order List</div><div class="home-tile-sub">' + (pendingParts>0?pendingParts+' pending':'All clear') + '</div></div>' : '') +
+      (!window._adminMode ? '<div class="home-tile orders"  onclick="switchToPurchasing()"><div class="home-tile-icon">📦</div><div class="home-tile-label">Purchasing</div><div class="home-tile-sub">' + (draftPOCount>0?draftPOCount+' draft PO'+(draftPOCount!==1?'s':''):'All clear') + '</div></div>' : '') +
       (!window._adminMode ? '<div class="home-tile suppliers" onclick="switchToSuppliers()"><div class="home-tile-icon">🏢</div><div class="home-tile-label">Suppliers</div><div class="home-tile-sub">Contacts & brands</div></div>' : '') +
     '</div>';
 
@@ -6300,13 +5990,30 @@ async function loadPurchaseOrders() {
   });
 }
 
+var _poShowingStockBuilder = false;
+
 function switchToPurchasing() {
   currentView = 'purchasing'; hideAllViews(); renderTabs();
+  _poShowingStockBuilder = false;
   document.getElementById('poToolbar').style.display = 'flex';
   document.getElementById('poSection').style.display = 'block';
+  document.getElementById('poStockOrderSection').style.display = 'none';
+  document.getElementById('poStatusFilters').style.display = 'flex';
+  document.getElementById('btnNewPO').style.display = 'inline-flex';
+  document.getElementById('poBtnStockBuilder').textContent = '📦 Stock Order Builder';
   document.getElementById('hSub').textContent = 'Purchasing';
   document.getElementById('lowBadge').innerHTML = '';
   renderPurchaseOrders();
+}
+
+function togglePOStockBuilder() {
+  _poShowingStockBuilder = !_poShowingStockBuilder;
+  document.getElementById('poSection').style.display = _poShowingStockBuilder ? 'none' : 'block';
+  document.getElementById('poStockOrderSection').style.display = _poShowingStockBuilder ? 'block' : 'none';
+  document.getElementById('poStatusFilters').style.display = _poShowingStockBuilder ? 'none' : 'flex';
+  document.getElementById('btnNewPO').style.display = _poShowingStockBuilder ? 'none' : 'inline-flex';
+  document.getElementById('poBtnStockBuilder').textContent = _poShowingStockBuilder ? '← Purchase Orders' : '📦 Stock Order Builder';
+  if (_poShowingStockBuilder) initStockOrderBuilder();
 }
 
 function setPOFilter(f) {
