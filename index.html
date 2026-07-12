@@ -2620,10 +2620,7 @@ function switchToWeekly() {
   renderWeeklyReport();
 }
 
-async function renderWeeklyReport() {
-  var el = document.getElementById('weeklyView');
-  el.innerHTML = '<div style="color:#8aa8c0;padding:40px;text-align:center">Loading report...</div>';
-
+async function getWeeklyReportData() {
   // ── Date windows ─────────────────────────────────────────────────
   var now = new Date();
   var dayOfWeek = now.getDay(); // 0=Sun
@@ -2635,24 +2632,15 @@ async function renderWeeklyReport() {
   lastMon.setDate(lastFri.getDate() - 4);
   // Normalise to midnight
   lastMon.setHours(0,0,0,0); lastFri.setHours(23,59,59,999);
-  var monISO = lastMon.toISOString();
-  var friISO = lastFri.toISOString();
   // This week Mon-Sun
   var thisWeekMon = new Date(now); thisWeekMon.setDate(now.getDate() - ((dayOfWeek+6)%7)); thisWeekMon.setHours(0,0,0,0);
   var thisWeekSun = new Date(thisWeekMon); thisWeekSun.setDate(thisWeekMon.getDate()+6); thisWeekSun.setHours(23,59,59,999);
 
-  function fmtDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('en-AU',{day:'2-digit',month:'short'}); }
-  function fmtMoney(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
-  function wkRange(a,b) { return fmtDate(a.toISOString()) + ' – ' + fmtDate(b.toISOString()); }
-
   // ── Fetch data ───────────────────────────────────────────────────
-  var wJobs, wLoans, wVisits, wLoanTools;
-  try {
-    wJobs      = jobs && jobs.length ? jobs : await db('GET','jobs?select=*,job_tools(*),job_parts(*)&order=updated_at.desc');
-    wLoans     = loans && loans.length ? loans : await db('GET','loans?select=*&order=loan_number.desc');
-    wLoanTools = loanTools && loanTools.length ? loanTools : await db('GET','loan_tools?select=*');
-    wVisits    = siteVisits && siteVisits.length ? siteVisits : await db('GET','site_visits?select=*&order=visit_date.desc');
-  } catch(e) { el.innerHTML = '<div style="color:#f87171;padding:40px;text-align:center">Failed to load data: ' + e.message + '</div>'; return; }
+  var wJobs      = jobs && jobs.length ? jobs : await db('GET','jobs?select=*,job_tools(*),job_parts(*)&order=updated_at.desc');
+  var wLoans     = loans && loans.length ? loans : await db('GET','loans?select=*&order=loan_number.desc');
+  var wLoanTools = loanTools && loanTools.length ? loanTools : await db('GET','loan_tools?select=*');
+  var wVisits    = siteVisits && siteVisits.length ? siteVisits : await db('GET','site_visits?select=*&order=visit_date.desc');
 
   // ── Jobs: open by status ─────────────────────────────────────────
   var openStatuses = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
@@ -2696,6 +2684,28 @@ async function renderWeeklyReport() {
     var vd = new Date(v.visit_date); return vd >= thisWeekMon && vd <= thisWeekSun;
   });
 
+  return { now: now, lastMon: lastMon, lastFri: lastFri, thisWeekMon: thisWeekMon, thisWeekSun: thisWeekSun,
+    openJobs: openJobs, statusOrder: statusOrder, statusLabels: statusLabels, statusColors: statusColors, byStatus: byStatus,
+    billedJobs: billedJobs, jobRevenue: jobRevenue, totalRevenue: totalRevenue,
+    activeLoans: activeLoans, wLoanTools: wLoanTools, lastWeekVisits: lastWeekVisits, thisWeekVisits: thisWeekVisits };
+}
+
+async function renderWeeklyReport() {
+  var el = document.getElementById('weeklyView');
+  el.innerHTML = '<div style="color:#8aa8c0;padding:40px;text-align:center">Loading report...</div>';
+
+  var d;
+  try { d = await getWeeklyReportData(); }
+  catch(e) { el.innerHTML = '<div style="color:#f87171;padding:40px;text-align:center">Failed to load data: ' + e.message + '</div>'; return; }
+  var now = d.now, lastMon = d.lastMon, lastFri = d.lastFri, thisWeekMon = d.thisWeekMon, thisWeekSun = d.thisWeekSun,
+      openJobs = d.openJobs, statusOrder = d.statusOrder, statusLabels = d.statusLabels, statusColors = d.statusColors, byStatus = d.byStatus,
+      billedJobs = d.billedJobs, jobRevenue = d.jobRevenue, totalRevenue = d.totalRevenue,
+      activeLoans = d.activeLoans, wLoanTools = d.wLoanTools, lastWeekVisits = d.lastWeekVisits, thisWeekVisits = d.thisWeekVisits;
+
+  function fmtDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('en-AU',{day:'2-digit',month:'short'}); }
+  function fmtMoney(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+  function wkRange(a,b) { return fmtDate(a.toISOString()) + ' – ' + fmtDate(b.toISOString()); }
+
   // ── Build HTML ───────────────────────────────────────────────────
   function sectionHead(title, subtitle, color) {
     return '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:28px 0 12px">'
@@ -2711,8 +2721,10 @@ async function renderWeeklyReport() {
   var html = '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #00c8e0;padding-bottom:16px;margin-bottom:4px">'
     + '<div><div style="font-size:22px;font-weight:900;color:#e2e8f0">Weekly Service Report</div>'
     + '<div style="font-size:13px;color:#5a7090;margin-top:2px">Generated ' + now.toLocaleDateString('en-AU',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) + '</div></div>'
-    + '<div style="font-size:13px;color:#5a7090;text-align:right">X-Pak Global — Service Division<br>'
-    + '<span style="color:#8aa8c0">Reporting week: ' + wkRange(lastMon, lastFri) + '</span></div></div>';
+    + '<div style="text-align:right">'
+    + '<button onclick="printWeeklyReport()" style="background:#1e3048;border:1px solid #00c8e0;color:#00c8e0;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">🖨 Print Report</button>'
+    + '<div style="font-size:13px;color:#5a7090">X-Pak Global — Service Division<br>'
+    + '<span style="color:#8aa8c0">Reporting week: ' + wkRange(lastMon, lastFri) + '</span></div></div></div>';
 
   // ── Revenue card ─────────────────────────────────────────────────
   html += sectionHead('Revenue Billed', wkRange(lastMon, lastFri), '#10b981');
@@ -2827,6 +2839,121 @@ async function renderWeeklyReport() {
 
   html += '<div style="height:40px"></div>';
   el.innerHTML = html;
+}
+
+async function printWeeklyReport() {
+  var d;
+  try { d = await getWeeklyReportData(); }
+  catch(e) { showToast('Failed to load report data: ' + e.message, 'error'); return; }
+  var now = d.now, lastMon = d.lastMon, lastFri = d.lastFri, thisWeekMon = d.thisWeekMon, thisWeekSun = d.thisWeekSun,
+      openJobs = d.openJobs, statusOrder = d.statusOrder, statusLabels = d.statusLabels, statusColors = d.statusColors, byStatus = d.byStatus,
+      billedJobs = d.billedJobs, jobRevenue = d.jobRevenue, totalRevenue = d.totalRevenue,
+      activeLoans = d.activeLoans, wLoanTools = d.wLoanTools, lastWeekVisits = d.lastWeekVisits, thisWeekVisits = d.thisWeekVisits;
+
+  function fmtDate(dt) { if(!dt) return '—'; return new Date(dt).toLocaleDateString('en-AU',{day:'2-digit',month:'short'}); }
+  function fmtMoney(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+  function wkRange(a,b) { return fmtDate(a.toISOString()) + ' – ' + fmtDate(b.toISOString()); }
+
+  var w = window.open('', '_blank');
+  if (!w) { showToast('Allow pop-ups to print the report', 'error'); return; }
+  var today = now.toLocaleDateString('en-AU', {day:'2-digit', month:'long', year:'numeric'});
+
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Weekly Service Report - ' + today + '</title><style>');
+  w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+  w.document.write('body{font-family:Arial,sans-serif;color:#1a1a1a;padding:16mm 14mm;font-size:10.5pt}');
+  w.document.write('@media print{body{padding:10mm 12mm}@page{size:A4 portrait;margin:0}button{display:none}}');
+  w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1A2F4A;padding-bottom:10px;margin-bottom:16px}');
+  w.document.write('.brand{font-size:20pt;font-weight:900;color:#1A2F4A}.brand-sub{font-size:9.5pt;color:#666;margin-top:2px}');
+  w.document.write('.rhs{text-align:right}.rhs-title{font-size:15pt;font-weight:800;color:#1A2F4A}.rhs-sub{font-size:9.5pt;color:#555;margin-top:2px}');
+  w.document.write('.stat-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}');
+  w.document.write('.stat-card{background:#f5f7fa;border-radius:8px;padding:12px 18px;min-width:120px}');
+  w.document.write('.stat-label{font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#888}');
+  w.document.write('.stat-val{font-size:20pt;font-weight:900;color:#1A2F4A;margin-top:3px}');
+  w.document.write('.section-title{font-size:11pt;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1A2F4A;border-bottom:2px solid #1A2F4A;padding-bottom:4px;margin:18px 0 8px}');
+  w.document.write('table{width:100%;border-collapse:collapse;margin-bottom:4px}');
+  w.document.write('th{background:#1A2F4A;color:#fff;padding:6px 8px;font-size:8.5pt;text-align:left}');
+  w.document.write('th.r{text-align:right}');
+  w.document.write('td{padding:5px 8px;border-bottom:1px solid #e8ecf0;font-size:9.5pt}');
+  w.document.write('td.r{text-align:right;font-weight:600}');
+  w.document.write('.empty{color:#999;font-style:italic;font-size:9.5pt;padding:6px 0}');
+  w.document.write('.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:8px}');
+  w.document.write('.status-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dotted #ddd;font-size:9.5pt}');
+  w.document.write('.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}');
+  w.document.write('.footer{margin-top:20px;padding-top:8px;border-top:1px solid #ddd;text-align:center;font-size:8.5pt;color:#999}');
+  w.document.write('</style></head><body>');
+
+  w.document.write('<div class="hdr"><div><div class="brand">X-PAK GLOBAL</div><div class="brand-sub">Service Division — Weekly Report</div></div>'
+    + '<div class="rhs"><div class="rhs-title">' + today + '</div><div class="rhs-sub">Reporting week: ' + wkRange(lastMon, lastFri) + '</div></div></div>');
+
+  w.document.write('<div class="stat-cards">'
+    + '<div class="stat-card"><div class="stat-label">Total Invoiced</div><div class="stat-val">' + fmtMoney(totalRevenue) + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Jobs Invoiced</div><div class="stat-val">' + billedJobs.length + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Open Cases</div><div class="stat-val">' + openJobs.length + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Loans Out</div><div class="stat-val">' + activeLoans.length + '</div></div>'
+    + '</div>');
+
+  w.document.write('<div class="section-title">Revenue Billed — ' + wkRange(lastMon, lastFri) + '</div>');
+  if (billedJobs.length) {
+    w.document.write('<table><tr><th>Job</th><th>Customer</th><th class="r">Amount</th></tr>');
+    billedJobs.forEach(function(j) {
+      w.document.write('<tr><td>' + xpsNum(j.job_number) + '</td><td>' + (j.customer||'—') + '</td><td class="r">' + fmtMoney(jobRevenue(j)) + '</td></tr>');
+    });
+    w.document.write('</table>');
+  } else {
+    w.document.write('<div class="empty">No jobs invoiced last week.</div>');
+  }
+
+  w.document.write('<div class="section-title">Open Service Cases — ' + openJobs.length + ' open</div>');
+  w.document.write('<div class="status-grid">');
+  statusOrder.forEach(function(s) {
+    var list = byStatus[s];
+    w.document.write('<div><div style="font-weight:700;font-size:9.5pt;color:' + statusColors[s] + ';margin-bottom:3px">' + statusLabels[s] + ' (' + list.length + ')</div>');
+    if (list.length) {
+      list.forEach(function(j) {
+        w.document.write('<div class="status-row"><span>' + xpsNum(j.job_number) + ' — ' + (j.customer||'—') + '</span></div>');
+      });
+    } else {
+      w.document.write('<div class="empty">None</div>');
+    }
+    w.document.write('</div>');
+  });
+  w.document.write('</div>');
+
+  w.document.write('<div class="section-title">Loan Tools Out — ' + activeLoans.length + ' active</div>');
+  if (activeLoans.length) {
+    w.document.write('<table><tr><th>Loan #</th><th>Tool</th><th>Customer</th><th>Loaned</th><th>Due Back</th><th>Type</th></tr>');
+    activeLoans.forEach(function(l) {
+      var tool = wLoanTools.find(function(t){ return t.id === l.loan_tool_id; });
+      var isOD = l.expected_return && new Date(l.expected_return) < now;
+      w.document.write('<tr><td>' + xplNum(l.loan_number) + '</td><td>' + (tool?tool.name:'Unknown') + '</td><td>' + (l.customer||'—') + '</td><td>'
+        + fmtDate(l.loaned_date) + '</td><td' + (isOD?' style="color:#c0392b;font-weight:700"':'') + '>' + (l.expected_return ? fmtDate(l.expected_return) + (isOD?' (overdue)':'') : '—')
+        + '</td><td>' + (l.is_trial?'Trial':'Loan') + '</td></tr>');
+    });
+    w.document.write('</table>');
+  } else {
+    w.document.write('<div class="empty">No tools currently on loan.</div>');
+  }
+
+  w.document.write('<div class="section-title">Site Visits</div><div class="two-col">');
+  w.document.write('<div><div style="font-weight:700;font-size:9.5pt;color:#b45309;margin-bottom:4px">COMPLETED LAST WEEK — ' + wkRange(lastMon,lastFri) + '</div>');
+  if (lastWeekVisits.length) {
+    lastWeekVisits.forEach(function(v) {
+      w.document.write('<div class="status-row"><span>' + (v.visit_number?xsvNum(v.visit_number)+' — ':'') + (v.customer||'—') + '</span><span>' + fmtDate(v.visit_date) + '</span></div>');
+    });
+  } else { w.document.write('<div class="empty">No visits last week.</div>'); }
+  w.document.write('</div>');
+  w.document.write('<div><div style="font-weight:700;font-size:9.5pt;color:#166534;margin-bottom:4px">THIS WEEK — ' + wkRange(thisWeekMon,thisWeekSun) + '</div>');
+  if (thisWeekVisits.length) {
+    thisWeekVisits.forEach(function(v) {
+      w.document.write('<div class="status-row"><span>' + (v.visit_number?xsvNum(v.visit_number)+' — ':'') + (v.customer||'—') + '</span><span>' + fmtDate(v.visit_date) + '</span></div>');
+    });
+  } else { w.document.write('<div class="empty">No visits scheduled this week.</div>'); }
+  w.document.write('</div></div>');
+
+  w.document.write('<div class="footer">X-Pak Global Service Division &nbsp;·&nbsp; Generated by MainFlow &nbsp;·&nbsp; ' + today + '</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 400);
 }
 
 function switchToParts() {
