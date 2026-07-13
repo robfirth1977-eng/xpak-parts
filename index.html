@@ -659,11 +659,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <button class="loan-view-btn"        id="btnStockSold"      onclick="setStockFilter('Sold')">Sold</button>
     <button class="loan-view-btn"        id="btnStockWritten"   onclick="setStockFilter('Written Off')">Written Off</button>
   </div>
+  <div id="stockSupplierChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
   <button class="btn-add" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;font-size:12px" onclick="printAllStockLabels()">🖨 Print All Labels</button>
   <button class="btn-add" style="background:#1e3048;border:1px solid #217346;color:#4caf74;font-size:12px" onclick="exportStockReport()">⬇ Export Report</button>
   <button class="btn-add" style="background:#10b981;margin-left:auto;color:#0f1923;font-weight:700" onclick="openStockModal()">+ Add Tool</button>
 </div>
-<div class="loan-section" id="stockSection" style="display:none"><div id="stockList"></div></div>
+<div class="loan-section" id="stockSection" style="display:none">
+  <div class="parts-breadcrumb" id="stockBreadcrumb" style="display:none" onclick="backToStockModelList()">
+    <span style="color:#5a8090;font-size:11px">&#9664; Stock /</span>
+    <span class="parts-breadcrumb-name" id="stockBreadcrumbName"></span>
+    <button class="btn-add" style="background:#10b981;margin-left:auto;color:#0f1923;font-weight:700;padding:5px 12px;font-size:12px" onclick="event.stopPropagation();openStockModal(null,_stockDrilldownModel)">+ Add Unit</button>
+  </div>
+  <div id="stockList"></div>
+</div>
 
 <!-- Stock Tool Modal -->
 <div class="overlay" id="stockOverlay" onclick="if(event.target===this)closeStockModal()">
@@ -686,13 +694,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     </div>
     <div class="field"><label>Description</label><input id="stDescription" placeholder="e.g. Plastic strapping tool, 19mm PP"></div>
     <div class="g2">
-      <div class="field"><label>Condition</label>
-        <select id="stCondition" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
-          <option value="">-- Select --</option>
-          <option value="As New">As New</option>
-          <option value="Excellent">Excellent</option>
-          <option value="Good">Good</option>
-          <option value="Minor Wear">Minor Wear</option>
+      <div class="field"><label>Supplier</label>
+        <select id="stSupplierId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <option value="">-- None --</option>
         </select>
       </div>
       <div class="field"><label>Date Received</label><input id="stDateReceived" type="date"></div>
@@ -5474,6 +5478,7 @@ function goHome() {
 
 // ═══════════════════ STOCK REGISTER ═══════════════════
 var stockTools = [], editingStockTool = null, _stockFilter = 'Available';
+var _stockSupplierFilter = '', _stockDrilldownModel = null;
 
 async function loadStockTools() {
   stockTools = await db('GET', 'stock_tools?select=*&order=name.asc,date_received.desc');
@@ -5484,6 +5489,7 @@ function switchToStock() {
   document.getElementById('stockToolbar').style.display = 'flex';
   document.getElementById('stockSection').style.display = 'block';
   document.getElementById('hSub').textContent = '';
+  _stockDrilldownModel = null;
   renderStockTools();
 }
 
@@ -5497,15 +5503,92 @@ function setStockFilter(f) {
   renderStockTools();
 }
 
+function setStockSupplierFilter(supplierId, btn) {
+  _stockSupplierFilter = supplierId;
+  document.querySelectorAll('#stockSupplierChips .filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderStockTools();
+}
+
+function backToStockModelList() {
+  _stockDrilldownModel = null;
+  renderStockTools();
+}
+
+function renderStockSupplierChips() {
+  var el = document.getElementById('stockSupplierChips'); if (!el) return;
+  var present = {};
+  stockTools.forEach(function(t){ if (t.supplier_id) present[t.supplier_id] = true; });
+  var ids = Object.keys(present);
+  if (!ids.length) { el.innerHTML = ''; return; }
+  var chips = '<button class="filter-btn' + (!_stockSupplierFilter?' active':'') + '" onclick="setStockSupplierFilter(\'\',this)">All Suppliers</button>';
+  ids.forEach(function(sid) {
+    var s = (_supplierCache||[]).find(function(x){ return x.id === sid; });
+    var name = s ? s.company_name : 'Unknown Supplier';
+    chips += '<button class="filter-btn' + (_stockSupplierFilter===sid?' active':'') + '" onclick="setStockSupplierFilter(\'' + sid + '\',this)">' + name + '</button>';
+  });
+  el.innerHTML = chips;
+}
+
 function renderStockTools() {
-  var list = _stockFilter === 'All' ? stockTools : stockTools.filter(function(t){ return t.status === _stockFilter; });
+  renderStockSupplierChips();
+  var filtered = stockTools.filter(function(t) {
+    if (_stockFilter !== 'All' && t.status !== _stockFilter) return false;
+    if (_stockSupplierFilter && t.supplier_id !== _stockSupplierFilter) return false;
+    return true;
+  });
   var avail = stockTools.filter(function(t){ return t.status === 'Available'; }).length;
   document.getElementById('hSub').textContent = 'Stock — ' + avail + ' available · ' + stockTools.length + ' total';
-  if (!list.length) {
+
+  var breadcrumb = document.getElementById('stockBreadcrumb');
+
+  if (_stockDrilldownModel) {
+    var units = filtered.filter(function(t){ return t.name === _stockDrilldownModel; });
+    breadcrumb.style.display = 'flex';
+    document.getElementById('stockBreadcrumbName').textContent = _stockDrilldownModel;
+    if (!units.length) {
+      document.getElementById('stockList').innerHTML = '<div class="center"><div class="icon">📦</div><div style="color:#5a8090">No ' + _stockDrilldownModel + ' units' + (_stockFilter !== 'All' ? ' with status "' + _stockFilter + '"' : '') + '</div></div>';
+      return;
+    }
+    renderStockUnitCards(units);
+    return;
+  }
+
+  breadcrumb.style.display = 'none';
+  if (!filtered.length) {
     document.getElementById('stockList').innerHTML = '<div class="center"><div class="icon">📦</div><div style="color:#5a8090">No tools' + (_stockFilter !== 'All' ? ' with status "' + _stockFilter + '"' : '') + '</div></div>';
     return;
   }
-  document.getElementById('stockList').innerHTML = list.map(function(t) {
+
+  var groups = {}, order = [];
+  filtered.forEach(function(t) {
+    if (!groups[t.name]) { groups[t.name] = []; order.push(t.name); }
+    groups[t.name].push(t);
+  });
+  order.sort();
+
+  document.getElementById('stockList').innerHTML = order.map(function(name) {
+    var units = groups[name];
+    var availCount = units.filter(function(t){ return t.status === 'Available'; }).length;
+    var soldCount = units.filter(function(t){ return t.status === 'Sold'; }).length;
+    var writtenCount = units.filter(function(t){ return t.status === 'Written Off'; }).length;
+    var supplierId = units[0].supplier_id;
+    var supplier = supplierId ? (_supplierCache||[]).find(function(x){ return x.id === supplierId; }) : null;
+    var metaParts = [];
+    if (availCount) metaParts.push(availCount + ' available');
+    if (soldCount) metaParts.push(soldCount + ' sold');
+    if (writtenCount) metaParts.push(writtenCount + ' written off');
+    return '<div class="machine-card" onclick="_stockDrilldownModel=' + JSON.stringify(name) + ';renderStockTools()">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="machine-card-name">' + name + '</div>' +
+        '<div class="machine-card-meta">' + metaParts.join(' · ') + (supplier ? ' · ' + supplier.company_name : '') + '</div>' +
+      '</div>' +
+      '<span class="machine-card-arrow">&#9654;</span></div>';
+  }).join('');
+}
+
+function renderStockUnitCards(units) {
+  document.getElementById('stockList').innerHTML = units.map(function(t) {
     var col = t.status === 'Sold' ? '#60a5fa' : t.status === 'Written Off' ? '#ef4444' : '#10b981';
     var cls = t.status === 'Sold' ? ' sold' : t.status === 'Written Off' ? ' written-off' : '';
     return '<div class="stock-card' + cls + '" onclick="openStockModal(\'' + t.id + '\')">' +
@@ -5515,7 +5598,6 @@ function renderStockTools() {
         '<span class="stock-status-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + t.status.toUpperCase() + '</span>' +
       '</div>' +
       '<div class="stock-meta">' +
-        (t.condition ? '<span>' + t.condition + '</span>' : '') +
         (t.location ? '<span>\uD83D\uDCCD ' + t.location + '</span>' : '') +
         (t.date_received ? '<span>Received: ' + fmtDate(t.date_received) + '</span>' : '') +
         (t.date_of_manufacture ? '<span>Mfr: ' + t.date_of_manufacture + '</span>' : '') +
@@ -5526,13 +5608,24 @@ function renderStockTools() {
   }).join('');
 }
 
-function openStockModal(id) {
+function populateStockSupplierDropdown(selectedId) {
+  var sel = document.getElementById('stSupplierId'); if (!sel) return;
+  sel.innerHTML = '<option value="">-- None --</option>';
+  (_supplierCache || []).forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s.id; opt.textContent = s.company_name;
+    if (s.id === selectedId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function openStockModal(id, defaultModel) {
   editingStockTool = id ? (stockTools.find(function(t){ return t.id === id; }) || null) : null;
   var t = editingStockTool;
   document.getElementById('stockModalTitle').textContent = t ? 'Edit Stock Tool' : 'Add Stock Tool';
-  document.getElementById('stName').value         = t ? t.name || '' : '';
+  document.getElementById('stName').value         = t ? t.name || '' : (defaultModel || '');
   document.getElementById('stSerial').value       = t ? t.serial_number || '' : '';
-  document.getElementById('stCondition').value    = t ? t.condition || '' : '';
+  populateStockSupplierDropdown(t ? t.supplier_id || null : null);
   document.getElementById('stDateReceived').value = t ? t.date_received || '' : new Date().toISOString().split('T')[0];
   document.getElementById('stManufDate').value    = t ? t.date_of_manufacture || '' : '';
   document.getElementById('stWarranty').value     = t ? t.warranty_period || '' : '';
@@ -5640,6 +5733,15 @@ function exportStockReport() {
     if (t.status === 'Sold') byModel[m].sold++;
   });
 
+  // Sort by model then serial
+  var sorted = stockTools.slice().sort(function(a,b){
+    return (a.name||'').localeCompare(b.name||'') || (a.serial_number||'').localeCompare(b.serial_number||'');
+  });
+  function supplierName(t) {
+    var s = t.supplier_id ? (_supplierCache||[]).find(function(x){ return x.id === t.supplier_id; }) : null;
+    return s ? s.company_name : '';
+  }
+
   // ── Build summary sheet ──
   var summaryRows = [
     ['X-PAK SERVICE — SERVICE DEPARTMENT'],
@@ -5671,15 +5773,10 @@ function exportStockReport() {
 
   // ── Build full register sheet ──
   var regHeader = [
-    'X-Pak Part No.', 'Model', 'Description', 'Supplier Model No.',
+    'X-Pak Part No.', 'Model', 'Description', 'Supplier', 'Supplier Model No.',
     'Serial Number', 'Strap Size', 'Batteries', 'Charger',
     'Warranty (Months)', 'Status', 'Location', 'Date Received', 'Notes'
   ];
-
-  // Sort by model then serial
-  var sorted = stockTools.slice().sort(function(a,b){
-    return (a.name||'').localeCompare(b.name||'') || (a.serial_number||'').localeCompare(b.serial_number||'');
-  });
 
   var regRows = [regHeader];
   sorted.forEach(function(t) {
@@ -5687,6 +5784,7 @@ function exportStockReport() {
       t.xpak_part_no     || '',
       t.name             || '',
       t.description      || '',
+      supplierName(t),
       t.model_number     || '',
       t.serial_number    || '',
       t.strap_size       || '',
@@ -5713,7 +5811,7 @@ function exportStockReport() {
   // Full register sheet
   var wsReg = XLSX.utils.aoa_to_sheet(regRows);
   wsReg['!cols'] = [
-    {wch:14},{wch:12},{wch:32},{wch:16},
+    {wch:14},{wch:12},{wch:32},{wch:20},{wch:16},
     {wch:14},{wch:10},{wch:9},{wch:8},
     {wch:10},{wch:12},{wch:16},{wch:14},{wch:28}
   ];
@@ -5725,7 +5823,7 @@ function exportStockReport() {
     var modelRows  = [regHeader];
     modelTools.forEach(function(t) {
       modelRows.push([
-        t.xpak_part_no||'', t.name||'', t.description||'', t.model_number||'',
+        t.xpak_part_no||'', t.name||'', t.description||'', supplierName(t), t.model_number||'',
         t.serial_number||'', t.strap_size||'',
         t.battery_count!=null?t.battery_count:'',
         t.charger_included?'Yes':'No',
@@ -5734,7 +5832,7 @@ function exportStockReport() {
       ]);
     });
     var wsModel = XLSX.utils.aoa_to_sheet(modelRows);
-    wsModel['!cols'] = [{wch:14},{wch:12},{wch:32},{wch:16},{wch:14},{wch:10},{wch:9},{wch:8},{wch:10},{wch:12},{wch:16},{wch:14},{wch:28}];
+    wsModel['!cols'] = [{wch:14},{wch:12},{wch:32},{wch:20},{wch:16},{wch:14},{wch:10},{wch:9},{wch:8},{wch:10},{wch:12},{wch:16},{wch:14},{wch:28}];
     // Safe sheet name (max 31 chars)
     var sheetName = modelName.substring(0, 31);
     XLSX.utils.book_append_sheet(wb, wsModel, sheetName);
@@ -5925,7 +6023,7 @@ async function saveStockTool() {
   var payload = {
     name: name,
     serial_number: document.getElementById('stSerial').value || null,
-    condition: document.getElementById('stCondition').value || null,
+    supplier_id: document.getElementById('stSupplierId').value || null,
     date_received: document.getElementById('stDateReceived').value || null,
     date_of_manufacture: document.getElementById('stManufDate').value || null,
     warranty_period: document.getElementById('stWarranty').value || null,
