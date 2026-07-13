@@ -5578,7 +5578,8 @@ function renderStockTools() {
     if (availCount) metaParts.push(availCount + ' available');
     if (soldCount) metaParts.push(soldCount + ' sold');
     if (writtenCount) metaParts.push(writtenCount + ' written off');
-    return '<div class="machine-card" onclick="_stockDrilldownModel=' + JSON.stringify(name) + ';renderStockTools()">' +
+    var nameEsc = name.replace(/'/g, "\\'");
+    return '<div class="machine-card" onclick="_stockDrilldownModel=\'' + nameEsc + '\';renderStockTools()">' +
       '<div style="flex:1;min-width:0">' +
         '<div class="machine-card-name">' + name + '</div>' +
         '<div class="machine-card-meta">' + metaParts.join(' · ') + (supplier ? ' · ' + supplier.company_name : '') + '</div>' +
