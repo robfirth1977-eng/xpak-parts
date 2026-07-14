@@ -7272,6 +7272,7 @@ function renderInvoiceNotice(j, tools, jparts) {
   w.document.write('<div class="hdr"><div><div class="co-name">X-PAK GLOBAL</div><div class="co-sub">Service Division</div></div><div class="notice-title"><div class="notice-h">INVOICE NOTICE</div><div class="notice-ref">'+xpsNum(j.job_number)+'&nbsp;&nbsp;·&nbsp;&nbsp;'+today+'</div>' + (j.order_number ? '<div class="notice-ref" style="color:#e879f9;font-weight:700">PO: '+j.order_number+'</div>' : '') + '</div></div>');
   w.document.write('<div class="meta">');
   w.document.write('<div class="meta-box"><div class="meta-label">Bill To</div><div class="meta-val">'+(j.customer||'—')+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Order / PO Number</div><div class="meta-val">'+(j.order_number||'—')+'</div></div>');
   w.document.write('<div class="meta-box"><div class="meta-label">Contact</div><div class="meta-val">'+(j.contact_name||'—')+'</div></div>');
   w.document.write('<div class="meta-box"><div class="meta-label">Phone</div><div class="meta-val">'+(j.mobile||'—')+'</div></div>');
   w.document.write('<div class="meta-box"><div class="meta-label">Email</div><div class="meta-val">'+(j.email||'—')+'</div></div>');
