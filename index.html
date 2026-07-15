@@ -6618,7 +6618,7 @@ async function printAccountReport(custId) {
         '<td style="padding:4px 8px;font-family:monospace;font-size:9pt;color:#1e3799">' + xpsNum(j.job_number) + '</td>' +
         '<td style="padding:4px 8px;font-size:9pt">' + new Date(j.created_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) + '</td>' +
         '<td style="padding:4px 8px;font-size:9pt">' + (tool.fault_type||'—') + '</td>' +
-        '<td style="padding:4px 8px;font-size:9pt">' + (tool.work_completed ? tool.work_completed.substring(0,80)+(tool.work_completed.length>80?'…':'') : '—') + '</td>' +
+        '<td style="padding:4px 8px;font-size:9pt;white-space:pre-wrap">' + (tool.work_completed ? tool.work_completed.split('\n').join('<br>') : '—') + '</td>' +
         '<td style="padding:4px 8px;font-size:9pt;text-align:center">' + j.status + '</td>' +
       '</tr>';
     }).join('') : '<tr><td colspan="5" style="padding:6px 8px;font-size:9pt;color:#888;font-style:italic">No service history found</td></tr>';
@@ -6628,7 +6628,8 @@ async function printAccountReport(custId) {
         '<span style="font-size:12pt;font-weight:700">' + m.name + '</span>' +
         (m.serial ? '<span style="font-size:10pt;opacity:0.85">S/N: ' + m.serial + '</span>' : '') +
       '</div>' +
-      '<table style="width:100%;border-collapse:collapse;border:1px solid #dde3f0;border-top:none">' +
+      '<table style="width:100%;table-layout:fixed;border-collapse:collapse;border:1px solid #dde3f0;border-top:none">' +
+        '<colgroup><col style="width:11%"><col style="width:11%"><col style="width:16%"><col style="width:47%"><col style="width:15%"></colgroup>' +
         '<tr style="background:#f4f7ff"><th style="padding:5px 8px;font-size:8.5pt;text-align:left">Job</th><th style="padding:5px 8px;font-size:8.5pt;text-align:left">Date</th><th style="padding:5px 8px;font-size:8.5pt;text-align:left">Fault</th><th style="padding:5px 8px;font-size:8.5pt;text-align:left">Work Done</th><th style="padding:5px 8px;font-size:8.5pt;text-align:center">Status</th></tr>' +
         jobRows +
       '</table>' +
