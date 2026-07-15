@@ -5944,11 +5944,11 @@ function buildStockLabelHtml(t) {
   // Middle
   h += '<div class="mid">'
     +'<div><div class="mname">'+(t.name||'')+'</div>'+(t.description?'<div class="mdesc">'+t.description+'</div>':'')+'</div>'
-    +'<div class="mid-R"><div class="pnlbl">X-Pak Part No.</div><div class="pnval">'+(t.xpak_part_no||'\u2014')+'</div></div>'
+    +'<div class="mid-R"><div class="pnlbl">Serial Number</div><div class="pnval">'+(t.serial_number||'\u2014')+'</div></div>'
     +'</div>';
   // Fields
   h += '<div class="fields">';
-  h += '<div class="field"><div class="flbl">Serial Number</div><div class="fval">'+(t.serial_number||'\u2014')+'</div></div>';
+  h += '<div class="field"><div class="flbl">X-Pak Part No.</div><div class="fval">'+(t.xpak_part_no||'\u2014')+'</div></div>';
   if(t.model_number)    h += '<div class="field"><div class="flbl">Supplier Model</div><div class="fval">'+t.model_number+'</div></div>';
   if(t.strap_size)      h += '<div class="field"><div class="flbl">Strap Size</div><div class="fval">'+t.strap_size+'</div></div>';
   if(t.warranty_period) h += '<div class="field"><div class="flbl">Warranty</div><div class="fval">'+t.warranty_period+' mo</div></div>';
@@ -5964,7 +5964,12 @@ function buildStockLabelHtml(t) {
 }
 
 function printAllStockLabels() {
-  var list = _stockFilter === 'All' ? stockTools : stockTools.filter(function(t){ return t.status === _stockFilter; });
+  var list = stockTools.filter(function(t) {
+    if (_stockFilter !== 'All' && t.status !== _stockFilter) return false;
+    if (_stockSupplierFilter && t.supplier_id !== _stockSupplierFilter) return false;
+    if (_stockDrilldownModel && t.name !== _stockDrilldownModel) return false;
+    return true;
+  });
   if (!list.length) { showToast('No tools to print for current filter', 'error'); return; }
   var w = window.open('', '_blank');
   if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
