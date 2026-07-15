@@ -1322,7 +1322,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <button id="btnCloseLoan" onclick="closeLoanModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
     </div>
     <button id="btnMarkReturned" onclick="markLoanReturned()" style="display:none;width:100%;padding:11px;background:transparent;color:#10b981;border:1px solid #10b981;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">&#10003; Mark as Returned</button>
-    <button id="btnPrintLoanTag" onclick="printLoanTag()" style="display:none;width:100%;padding:11px;background:transparent;color:#a78bfa;border:1px solid #a78bfa;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Print Loan Tag</button>
+    <div style="display:flex;gap:8px;margin-top:8px">
+    <button id="btnPrintLoanTag" onclick="printLoanTag()" style="display:none;flex:1;padding:11px;background:transparent;color:#a78bfa;border:1px solid #a78bfa;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Print Loan Tag</button>
+    <button id="btnPrintLoanForm" onclick="printLoanForm()" style="display:none;flex:1;padding:11px;background:transparent;color:#a78bfa;border:1px solid #a78bfa;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Print Loan Form</button>
+    </div>
     <button class="btn-delete" id="btnDeleteLoan" onclick="deleteLoan()" style="display:none">Delete This Loan</button>
   </div>
 </div>
@@ -2027,6 +2030,7 @@ function openNewLoanModal(){
   document.getElementById('lReturnSection').style.display='none';
   document.getElementById('btnMarkReturned').style.display='none';
   document.getElementById('btnPrintLoanTag').style.display='none';
+  document.getElementById('btnPrintLoanForm').style.display='none';
   document.getElementById('btnDeleteLoan').style.display='none';
   document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
   var sel=document.getElementById('lToolId');
@@ -2055,6 +2059,7 @@ function openEditLoanModal(loanId){
   document.getElementById('lReturnSection').style.display=isR?'block':'none';
   document.getElementById('btnMarkReturned').style.display=isR?'none':'block';
   document.getElementById('btnPrintLoanTag').style.display='block';
+  document.getElementById('btnPrintLoanForm').style.display='block';
   document.getElementById('btnDeleteLoan').style.display='block';
   document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
   document.getElementById('loanOverlay').classList.add('show');
@@ -2126,6 +2131,55 @@ function printLoanTag(){
   if(l.expected_return) w.document.write('<div class="row"><span class="lbl">Return By</span><span class="val">'+fmtDate(l.expected_return)+'</span></div>');
   if(l.loaned_by) w.document.write('<div class="row"><span class="lbl">Loaned By</span><span class="val">'+l.loaned_by+'</span></div>');
   w.document.write('</div></body></html>'); w.document.close(); setTimeout(function(){w.print();},300);
+}
+
+function printLoanForm(){
+  var l=editingLoan; if(!l) return;
+  var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;});
+  var toolName=tool?tool.name:'Unknown Tool', toolSN=tool&&tool.serial_number?tool.serial_number:'', toolXpakName=tool&&tool.xpak_name?tool.xpak_name:'';
+  var w=window.open('','_blank');
+  if(!w){showToast('Allow pop-ups for this site to print forms','error');return;}
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+xplNum(l.loan_number)+' - '+(l.customer||'')+'</title>');
+  w.document.write('<style>body{font-family:"Segoe UI",sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:30px;font-size:13px}');
+  w.document.write('.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #a78bfa}');
+  w.document.write('.sub{font-size:11px;color:#555;margin-top:2px}');
+  w.document.write('.title-block{text-align:right}.report-title{font-size:18px;font-weight:700;color:#a78bfa}.ref{font-size:12px;color:#555;margin-top:2px}');
+  w.document.write('.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}');
+  w.document.write('.meta-item{background:#f8fafc;padding:8px 12px;border-radius:6px}.meta-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.3px}.meta-val{font-size:13px;font-weight:600;margin-top:2px}');
+  w.document.write('.section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#a78bfa;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid #a78bfa40}');
+  w.document.write('.terms{font-size:11px;color:#444;line-height:1.6;background:#f8fafc;padding:12px 14px;border-radius:6px}');
+  w.document.write('.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px}');
+  w.document.write('.sig-line{border-top:1px solid #333;margin-top:36px;padding-top:6px;font-size:10px;color:#666}');
+  w.document.write('.sig-role{font-size:12px;font-weight:600;color:#1a1a1a}');
+  w.document.write('@media print{body{padding:10px}button{display:none}}</style></head><body>');
+  var dateStr=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+  w.document.write('<div class="header"><div><img src="' + _LOGO_B64 + '" style="height:42px;display:block;margin-bottom:4px"><div class="sub">X-Pak Global &middot; Service Division</div></div><div class="title-block"><div class="report-title">TOOL LOAN AGREEMENT</div><div class="ref">'+xplNum(l.loan_number)+'<br>Date: '+dateStr+'</div></div></div>');
+  w.document.write('<div class="section-title">Tool</div>');
+  w.document.write('<div class="meta-grid">');
+  w.document.write('<div class="meta-item"><div class="meta-label">Tool</div><div class="meta-val">'+toolName+(toolXpakName&&toolXpakName!==toolName?' &middot; '+toolXpakName:'')+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Serial Number</div><div class="meta-val">'+(toolSN||'&mdash;')+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Condition Out</div><div class="meta-val">'+(l.condition_out||'&mdash;')+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Cycle Count Out</div><div class="meta-val">'+(l.cycle_count_out!=null?l.cycle_count_out:'&mdash;')+'</div></div>');
+  w.document.write('</div>');
+  w.document.write('<div class="section-title">Borrower</div>');
+  w.document.write('<div class="meta-grid">');
+  w.document.write('<div class="meta-item"><div class="meta-label">Customer</div><div class="meta-val">'+(l.customer||'')+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Contact</div><div class="meta-val">'+(l.contact_name||'&mdash;')+(l.mobile?' &middot; '+l.mobile:(l.phone?' &middot; '+l.phone:''))+'</div></div>');
+  w.document.write('</div>');
+  w.document.write('<div class="section-title">Loan Details</div>');
+  w.document.write('<div class="meta-grid">');
+  w.document.write('<div class="meta-item"><div class="meta-label">Date Out</div><div class="meta-val">'+fmtDate(l.loaned_date)+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Expected Return</div><div class="meta-val">'+(l.expected_return?fmtDate(l.expected_return):'&mdash;')+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Loaned By</div><div class="meta-val">'+(l.loaned_by||'&mdash;')+'</div></div>');
+  w.document.write('<div class="meta-item"><div class="meta-label">Linked Job</div><div class="meta-val">'+(l.linked_job||'&mdash;')+'</div></div>');
+  w.document.write('</div>');
+  if(l.reason_for_loan) w.document.write('<div class="section-title">Reason for Loan</div><div style="font-size:12px;color:#333;line-height:1.6">'+l.reason_for_loan+'</div>');
+  w.document.write('<div class="section-title">Terms &amp; Conditions</div>');
+  w.document.write('<div class="terms">This tool remains the property of X-Pak Global at all times. The borrower is responsible for the tool while on loan and agrees to return it, in the condition noted above, by the expected return date shown. Any damage or loss beyond fair wear and tear will be assessed and may be charged to the borrower&rsquo;s account. Please contact X-Pak Global immediately if the tool is lost, damaged, or if the loan period needs to be extended.</div>');
+  w.document.write('<div class="sig-grid"><div><div class="sig-line"><div class="sig-role">Borrower Signature &amp; Name</div>Date: ____ / ____ / ______</div></div><div><div class="sig-line"><div class="sig-role">X-Pak Global Representative</div>Date: ____ / ____ / ______</div></div></div>');
+  w.document.write('<div style="margin-top:30px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">X-Pak Global Service Division &middot; rob.firth@xpak.com.au</div>');
+  w.document.write('</body></html>');
+  w.document.close(); setTimeout(function(){w.print();},500);
 }
 
 function generateStockTakeReport(){
