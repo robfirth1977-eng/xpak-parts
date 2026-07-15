@@ -1280,7 +1280,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <div class="field"><label>Photo Out (SharePoint link)</label><input id="lPhotoOut" placeholder="Paste link"></div>
     <div class="section-label">Customer</div>
     <div class="g2">
-      <div class="field full"><label>Customer / Company *</label><input id="lCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour"></div>
+      <div class="field full"><label>Customer / Company *</label>
+        <div class="cust-ta-wrap">
+          <input id="lCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour" autocomplete="off" oninput="custTypeahead(this.value,'l')" onfocus="custTypeahead(this.value,'l')" onblur="setTimeout(function(){hideCustDropdown('l')},200)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <div class="cust-dropdown" id="loanCustDropdown"></div>
+        </div>
+      </div>
       <div class="field"><label>Contact Name</label><input id="lContact" placeholder="e.g. John Smith"></div>
       <div class="field"><label>Phone</label><input id="lPhone" placeholder="e.g. 02 6652 0000"></div>
       <div class="field"><label>Mobile</label><input id="lMobile" placeholder="e.g. 0412 345 678"></div>
@@ -6751,8 +6756,14 @@ async function updateCustomerMachines(customerName, toolsList) {
 }
 
 // ── CUSTOMER TYPEAHEAD ────────────────────────────────────────────────────────
-function custTypeahead(val) {
-  var dd = document.getElementById('custDropdown'); if (!dd) return;
+var CUST_TA_CONTEXTS = {
+  j: { dropdown: 'custDropdown', customer: 'jCustomer', contact: 'jContact', phone: 'jPhone', email: 'jEmail', shipping: 'jShipping' },
+  l: { dropdown: 'loanCustDropdown', customer: 'lCustomer', contact: 'lContact', phone: 'lPhone', email: 'lEmail' }
+};
+
+function custTypeahead(val, ctx) {
+  var cfg = CUST_TA_CONTEXTS[ctx || 'j'];
+  var dd = document.getElementById(cfg.dropdown); if (!dd) return;
   val = (val||'').toLowerCase().trim();
   var pool = _custCache || [];
   if (!val || !pool.length) { dd.classList.remove('show'); return; }
@@ -6761,30 +6772,34 @@ function custTypeahead(val) {
   dd.innerHTML = matches.map(function(c) {
     var primary = c._contacts && c._contacts.find(function(x){ return x.is_primary; });
     var sub = [c.industry, primary ? primary.name : c.contact_name].filter(Boolean).join(' · ');
-    return '<div class="cust-dd-item" onmousedown="selectCustFromDropdown(\'' + c.id + '\')">' +
+    return '<div class="cust-dd-item" onmousedown="selectCustFromDropdown(\'' + c.id + '\',\'' + (ctx || 'j') + '\')">' +
       '<div class="cust-dd-name">' + c.company_name + '</div>' +
       (sub ? '<div class="cust-dd-sub">' + sub + '</div>' : '') +
     '</div>';
   }).join('');
   dd.classList.add('show');
 }
-function hideCustDropdown() { var dd = document.getElementById('custDropdown'); if (dd) dd.classList.remove('show'); }
-function selectCustFromDropdown(custId) {
+function hideCustDropdown(ctx) {
+  var cfg = CUST_TA_CONTEXTS[ctx || 'j'];
+  var dd = document.getElementById(cfg.dropdown); if (dd) dd.classList.remove('show');
+}
+function selectCustFromDropdown(custId, ctx) {
+  var cfg = CUST_TA_CONTEXTS[ctx || 'j'];
   var c = (_custCache||[]).find(function(x){ return x.id === custId; }); if (!c) return;
-  document.getElementById('jCustomer').value = c.company_name;
-  hideCustDropdown();
+  document.getElementById(cfg.customer).value = c.company_name;
+  hideCustDropdown(ctx);
   // Auto-fill contact details from primary contact or customer record
   var primary = c._contacts && c._contacts.find(function(x){ return x.is_primary; });
   var contact = primary || (c._contacts && c._contacts[0]);
   if (contact) {
-    document.getElementById('jContact').value = contact.name || '';
-    if (contact.phone) document.getElementById('jPhone').value = contact.phone;
-    if (contact.email) document.getElementById('jEmail').value = contact.email;
+    document.getElementById(cfg.contact).value = contact.name || '';
+    if (contact.phone) document.getElementById(cfg.phone).value = contact.phone;
+    if (contact.email) document.getElementById(cfg.email).value = contact.email;
   } else {
-    if (c.contact_name) document.getElementById('jContact').value = c.contact_name;
-    if (c.phone) document.getElementById('jPhone').value = c.phone;
+    if (c.contact_name) document.getElementById(cfg.contact).value = c.contact_name;
+    if (c.phone) document.getElementById(cfg.phone).value = c.phone;
   }
-  if (c.address) document.getElementById('jShipping').value = c.address;
+  if (cfg.shipping && c.address) document.getElementById(cfg.shipping).value = c.address;
 }
 
 // ── CUSTOMER ACCOUNT VIEW ─────────────────────────────────────────────────────
