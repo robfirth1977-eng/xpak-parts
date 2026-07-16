@@ -1566,6 +1566,18 @@ var FOL_ST   = ['INVOICED AND SENT'];
 
 var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981', 'NEW JOB':'#f59e0b', 'IN PROGRESS':'#64b5c8', 'WAITING ON PARTS':'#f97316', 'AWAITING ASSESSMENT':'#a78bfa', 'WAITING FOR TOOLS':'#f97316', 'QUOTED - AWAITING APPROVAL':'#a78bfa', COMPLETED:'#10b981', 'ON HOLD':'#5a8090' };
 
+// Sticky job-lifecycle timestamps: captured once, first time a job reaches each stage, never cleared by later status changes.
+// Used by both the Job modal (saveJob) and the board drag-drop, so status changes made either way are tracked consistently.
+function computeJobMilestones(prevJob, newStatus) {
+  var prevStatus = prevJob ? prevJob.status : null;
+  function sticky(existing, reachedNow) { return reachedNow ? (existing || new Date().toISOString()) : (existing || null); }
+  return {
+    quoted_at: sticky(prevJob && prevJob.quoted_at, newStatus === 'QUOTED - AWAITING APPROVAL'),
+    quote_accepted_at: sticky(prevJob && prevJob.quote_accepted_at, prevStatus === 'QUOTED - AWAITING APPROVAL' && newStatus !== 'QUOTED - AWAITING APPROVAL'),
+    completed_at: sticky(prevJob && prevJob.completed_at, newStatus === 'COMPLETED')
+  };
+}
+
 async function db(method, path, body) {
   var r = await fetch(BASE + '/' + path, { method: method, headers: H, body: body ? JSON.stringify(body) : undefined });
   if (!r.ok) throw new Error(await r.text());
@@ -2735,13 +2747,15 @@ async function getWeeklyReportData() {
   }
   var totalRevenue = billedJobs.reduce(function(s,j){ return s + jobRevenue(j); },0);
 
-  // ── Avg turnaround: intake to completion, all completed jobs ─────
-  var completedJobs = wJobs.filter(function(j){ return j.completed_at && j.created_at; });
-  var avgTurnaround = null;
-  if (completedJobs.length) {
-    var totalDays = completedJobs.reduce(function(s,j){ return s + (new Date(j.completed_at) - new Date(j.created_at)) / 86400000; }, 0);
-    avgTurnaround = (totalDays / completedJobs.length).toFixed(1);
+  // ── Turnaround: enquiry to quote, and quote accepted to invoiced ──
+  function avgDays(rows, fromKey, toKey) {
+    var valid = rows.filter(function(j){ return j[fromKey] && j[toKey]; });
+    if (!valid.length) return { avg: null, count: 0 };
+    var total = valid.reduce(function(s,j){ return s + (new Date(j[toKey]) - new Date(j[fromKey])) / 86400000; }, 0);
+    return { avg: (total / valid.length).toFixed(1), count: valid.length };
   }
+  var enquiryToQuote = avgDays(wJobs, 'created_at', 'quoted_at');
+  var acceptedToInvoiced = avgDays(wJobs, 'quote_accepted_at', 'invoiced_at');
 
   // ── Loans out ────────────────────────────────────────────────────
   var activeLoans = wLoans.filter(function(l){ return l.status === 'ACTIVE'; });
@@ -2758,7 +2772,7 @@ async function getWeeklyReportData() {
     openJobs: openJobs, statusOrder: statusOrder, statusLabels: statusLabels, statusColors: statusColors, byStatus: byStatus,
     billedJobs: billedJobs, jobRevenue: jobRevenue, totalRevenue: totalRevenue,
     activeLoans: activeLoans, wLoanTools: wLoanTools, lastWeekVisits: lastWeekVisits, thisWeekVisits: thisWeekVisits,
-    completedJobs: completedJobs, avgTurnaround: avgTurnaround };
+    enquiryToQuote: enquiryToQuote, acceptedToInvoiced: acceptedToInvoiced };
 }
 
 async function renderWeeklyReport() {
@@ -2920,7 +2934,7 @@ async function printWeeklyReport() {
       openJobs = d.openJobs, statusOrder = d.statusOrder, statusLabels = d.statusLabels, statusColors = d.statusColors, byStatus = d.byStatus,
       billedJobs = d.billedJobs, jobRevenue = d.jobRevenue, totalRevenue = d.totalRevenue,
       activeLoans = d.activeLoans, wLoanTools = d.wLoanTools, lastWeekVisits = d.lastWeekVisits, thisWeekVisits = d.thisWeekVisits,
-      completedJobs = d.completedJobs, avgTurnaround = d.avgTurnaround;
+      enquiryToQuote = d.enquiryToQuote, acceptedToInvoiced = d.acceptedToInvoiced;
 
   function fmtDate(dt) { if(!dt) return '—'; return new Date(dt).toLocaleDateString('en-AU',{day:'2-digit',month:'short'}); }
   function fmtMoney(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
@@ -2962,7 +2976,8 @@ async function printWeeklyReport() {
     + '<div class="stat-card"><div class="stat-label">Jobs Invoiced</div><div class="stat-val">' + billedJobs.length + '</div></div>'
     + '<div class="stat-card"><div class="stat-label">Open Cases</div><div class="stat-val">' + openJobs.length + '</div></div>'
     + '<div class="stat-card"><div class="stat-label">Loans Out</div><div class="stat-val">' + activeLoans.length + '</div></div>'
-    + '<div class="stat-card"><div class="stat-label">Avg Turnaround</div><div class="stat-val">' + (avgTurnaround !== null ? avgTurnaround + 'd' : '—') + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Avg Enquiry to Quote</div><div class="stat-val">' + (enquiryToQuote.avg !== null ? enquiryToQuote.avg + 'd' : '—') + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Avg Accepted to Invoiced</div><div class="stat-val">' + (acceptedToInvoiced.avg !== null ? acceptedToInvoiced.avg + 'd' : '—') + '</div></div>'
     + '</div>');
 
   w.document.write('<div class="section-title">Revenue Billed — ' + wkRange(lastMon, lastFri) + '</div>');
@@ -3502,18 +3517,27 @@ function initBoardDrag() {
         var capturedDragId = dragId;
         var capturedJob = j;
         showInvoicePrompt(capturedJob, function(invDate, invAmount) {
+          var milestones = computeJobMilestones(capturedJob, newStatus);
           capturedJob.status = newStatus;
           capturedJob.invoiced_at = invDate;
           capturedJob.invoice_amount = invAmount;
-          var dragPatch = { status: newStatus, invoiced_at: invDate, invoice_amount: invAmount || null };
+          capturedJob.quoted_at = milestones.quoted_at;
+          capturedJob.quote_accepted_at = milestones.quote_accepted_at;
+          capturedJob.completed_at = milestones.completed_at;
+          var dragPatch = { status: newStatus, invoiced_at: invDate, invoice_amount: invAmount || null,
+            quoted_at: milestones.quoted_at, quote_accepted_at: milestones.quote_accepted_at, completed_at: milestones.completed_at };
           db('PATCH', 'jobs?id=eq.' + capturedDragId, dragPatch).catch(function(err){ showToast('Update failed: ' + err.message, 'error'); });
           renderBoard();
         });
         dragId = null;
         return;
       }
+      var milestones = computeJobMilestones(j, newStatus);
       j.status = newStatus;
-      var dragPatch = { status: newStatus };
+      j.quoted_at = milestones.quoted_at;
+      j.quote_accepted_at = milestones.quote_accepted_at;
+      j.completed_at = milestones.completed_at;
+      var dragPatch = { status: newStatus, quoted_at: milestones.quoted_at, quote_accepted_at: milestones.quote_accepted_at, completed_at: milestones.completed_at };
       db('PATCH', 'jobs?id=eq.' + dragId, dragPatch).catch(function(err){ showToast('Update failed: ' + err.message, 'error'); });
       renderBoard();
       dragId = null;
@@ -3723,11 +3747,15 @@ async function saveJob() {
   var customer = document.getElementById('jCustomer').value.trim();
   if (!customer) { showToast('Customer name is required', 'error'); return; }
   var btn = document.getElementById('btnSaveJob'); btn.disabled = true; btn.textContent = 'Saving...';
+  var newStatus = document.getElementById('jStatus').value;
+  var milestones = computeJobMilestones(editingJob, newStatus);
   var payload = {
-    status: document.getElementById('jStatus').value,
+    status: newStatus,
     order_number: document.getElementById('jOrderNum').value.trim() || null,
-    invoiced_at: document.getElementById('jStatus').value === 'INVOICED AND SENT' ? (editingJob ? (editingJob.invoiced_at || new Date().toISOString()) : new Date().toISOString()) : null,
-    completed_at: document.getElementById('jStatus').value === 'COMPLETED' ? (editingJob ? (editingJob.completed_at || new Date().toISOString()) : new Date().toISOString()) : null,
+    invoiced_at: newStatus === 'INVOICED AND SENT' ? (editingJob ? (editingJob.invoiced_at || new Date().toISOString()) : new Date().toISOString()) : (editingJob ? (editingJob.invoiced_at || null) : null),
+    quoted_at: milestones.quoted_at,
+    quote_accepted_at: milestones.quote_accepted_at,
+    completed_at: milestones.completed_at,
     invoice_amount: editingJob ? (editingJob.invoice_amount || null) : null,
     customer: customer,
     contact_name: document.getElementById('jContact').value || null,
@@ -5463,19 +5491,22 @@ async function renderHome() {
   // Recent site visits (last 3)
   var recentSv = (siteVisits||[]).slice(0,3);
 
-  var completedJobs = jobs.filter(function(j){ return j.completed_at && j.created_at; });
-  var avgTurnaround = null;
-  if (completedJobs.length) {
-    var totalDays = completedJobs.reduce(function(s,j){ return s + (new Date(j.completed_at) - new Date(j.created_at)) / 86400000; }, 0);
-    avgTurnaround = (totalDays / completedJobs.length).toFixed(1);
+  function avgDays(rows, fromKey, toKey) {
+    var valid = rows.filter(function(j){ return j[fromKey] && j[toKey]; });
+    if (!valid.length) return { avg: null, count: 0 };
+    var total = valid.reduce(function(s,j){ return s + (new Date(j[toKey]) - new Date(j[fromKey])) / 86400000; }, 0);
+    return { avg: (total / valid.length).toFixed(1), count: valid.length };
   }
+  var enquiryToQuote = avgDays(jobs, 'created_at', 'quoted_at');
+  var acceptedToInvoiced = avgDays(jobs, 'quote_accepted_at', 'invoiced_at');
 
   var statsHtml =
     '<div class="stat-cards">' +
       '<div class="stat-card"><div class="stat-label">Open Jobs</div><div class="stat-val cyan">' + openJobs + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Awaiting Payment</div><div class="stat-val amber">' + followUp + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Tools On Loan</div><div class="stat-val">' + onLoan + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Avg Turnaround' + (completedJobs.length ? ' (' + completedJobs.length + ' job' + (completedJobs.length!==1?'s':'') + ')' : '') + '</div><div class="stat-val green">' + (avgTurnaround !== null ? avgTurnaround + 'd' : '—') + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Avg Enquiry &rarr; Quote' + (enquiryToQuote.count ? ' (' + enquiryToQuote.count + ')' : '') + '</div><div class="stat-val green">' + (enquiryToQuote.avg !== null ? enquiryToQuote.avg + 'd' : '—') + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Avg Accepted &rarr; Invoiced' + (acceptedToInvoiced.count ? ' (' + acceptedToInvoiced.count + ')' : '') + '</div><div class="stat-val green">' + (acceptedToInvoiced.avg !== null ? acceptedToInvoiced.avg + 'd' : '—') + '</div></div>' +
     '</div>';
 
   var tilesHtml =
