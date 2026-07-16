@@ -2735,6 +2735,14 @@ async function getWeeklyReportData() {
   }
   var totalRevenue = billedJobs.reduce(function(s,j){ return s + jobRevenue(j); },0);
 
+  // ── Avg turnaround: intake to completion, all completed jobs ─────
+  var completedJobs = wJobs.filter(function(j){ return j.completed_at && j.created_at; });
+  var avgTurnaround = null;
+  if (completedJobs.length) {
+    var totalDays = completedJobs.reduce(function(s,j){ return s + (new Date(j.completed_at) - new Date(j.created_at)) / 86400000; }, 0);
+    avgTurnaround = (totalDays / completedJobs.length).toFixed(1);
+  }
+
   // ── Loans out ────────────────────────────────────────────────────
   var activeLoans = wLoans.filter(function(l){ return l.status === 'ACTIVE'; });
 
@@ -2749,7 +2757,8 @@ async function getWeeklyReportData() {
   return { now: now, lastMon: lastMon, lastFri: lastFri, thisWeekMon: thisWeekMon, thisWeekSun: thisWeekSun,
     openJobs: openJobs, statusOrder: statusOrder, statusLabels: statusLabels, statusColors: statusColors, byStatus: byStatus,
     billedJobs: billedJobs, jobRevenue: jobRevenue, totalRevenue: totalRevenue,
-    activeLoans: activeLoans, wLoanTools: wLoanTools, lastWeekVisits: lastWeekVisits, thisWeekVisits: thisWeekVisits };
+    activeLoans: activeLoans, wLoanTools: wLoanTools, lastWeekVisits: lastWeekVisits, thisWeekVisits: thisWeekVisits,
+    completedJobs: completedJobs, avgTurnaround: avgTurnaround };
 }
 
 async function renderWeeklyReport() {
@@ -2910,7 +2919,8 @@ async function printWeeklyReport() {
   var now = d.now, lastMon = d.lastMon, lastFri = d.lastFri, thisWeekMon = d.thisWeekMon, thisWeekSun = d.thisWeekSun,
       openJobs = d.openJobs, statusOrder = d.statusOrder, statusLabels = d.statusLabels, statusColors = d.statusColors, byStatus = d.byStatus,
       billedJobs = d.billedJobs, jobRevenue = d.jobRevenue, totalRevenue = d.totalRevenue,
-      activeLoans = d.activeLoans, wLoanTools = d.wLoanTools, lastWeekVisits = d.lastWeekVisits, thisWeekVisits = d.thisWeekVisits;
+      activeLoans = d.activeLoans, wLoanTools = d.wLoanTools, lastWeekVisits = d.lastWeekVisits, thisWeekVisits = d.thisWeekVisits,
+      completedJobs = d.completedJobs, avgTurnaround = d.avgTurnaround;
 
   function fmtDate(dt) { if(!dt) return '—'; return new Date(dt).toLocaleDateString('en-AU',{day:'2-digit',month:'short'}); }
   function fmtMoney(n) { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
@@ -2952,6 +2962,7 @@ async function printWeeklyReport() {
     + '<div class="stat-card"><div class="stat-label">Jobs Invoiced</div><div class="stat-val">' + billedJobs.length + '</div></div>'
     + '<div class="stat-card"><div class="stat-label">Open Cases</div><div class="stat-val">' + openJobs.length + '</div></div>'
     + '<div class="stat-card"><div class="stat-label">Loans Out</div><div class="stat-val">' + activeLoans.length + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Avg Turnaround</div><div class="stat-val">' + (avgTurnaround !== null ? avgTurnaround + 'd' : '—') + '</div></div>'
     + '</div>');
 
   w.document.write('<div class="section-title">Revenue Billed — ' + wkRange(lastMon, lastFri) + '</div>');
@@ -3716,6 +3727,7 @@ async function saveJob() {
     status: document.getElementById('jStatus').value,
     order_number: document.getElementById('jOrderNum').value.trim() || null,
     invoiced_at: document.getElementById('jStatus').value === 'INVOICED AND SENT' ? (editingJob ? (editingJob.invoiced_at || new Date().toISOString()) : new Date().toISOString()) : null,
+    completed_at: document.getElementById('jStatus').value === 'COMPLETED' ? (editingJob ? (editingJob.completed_at || new Date().toISOString()) : new Date().toISOString()) : null,
     invoice_amount: editingJob ? (editingJob.invoice_amount || null) : null,
     customer: customer,
     contact_name: document.getElementById('jContact').value || null,
@@ -5450,7 +5462,20 @@ async function renderHome() {
   // Recent site visits (last 3)
   var recentSv = (siteVisits||[]).slice(0,3);
 
-  var statsHtml = '';
+  var completedJobs = jobs.filter(function(j){ return j.completed_at && j.created_at; });
+  var avgTurnaround = null;
+  if (completedJobs.length) {
+    var totalDays = completedJobs.reduce(function(s,j){ return s + (new Date(j.completed_at) - new Date(j.created_at)) / 86400000; }, 0);
+    avgTurnaround = (totalDays / completedJobs.length).toFixed(1);
+  }
+
+  var statsHtml =
+    '<div class="stat-cards">' +
+      '<div class="stat-card"><div class="stat-label">Open Jobs</div><div class="stat-val cyan">' + openJobs + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Awaiting Payment</div><div class="stat-val amber">' + followUp + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Tools On Loan</div><div class="stat-val">' + onLoan + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Avg Turnaround' + (completedJobs.length ? ' (' + completedJobs.length + ' job' + (completedJobs.length!==1?'s':'') + ')' : '') + '</div><div class="stat-val green">' + (avgTurnaround !== null ? avgTurnaround + 'd' : '—') + '</div></div>' +
+    '</div>';
 
   var tilesHtml =
     '<div class="home-section-title">Quick Access</div>' +
