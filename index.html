@@ -4682,7 +4682,8 @@ function renderAssessmentReport(j, tools, jparts) {
     var toolParts = jparts.filter(function(p) { return p.tool_number === t.tool_number || (!p.tool_number && t.tool_number === 1); });
     var partsRows = toolParts.map(function(p, ri) {
       var partData = p.part_id ? allParts.find(function(x) { return x.id === p.part_id; }) : null;
-      var sell = partData && partData.sell_price ? parseFloat(partData.sell_price) : 0;
+      var stdSell = partData && partData.sell_price ? parseFloat(partData.sell_price) : 0;
+      var sell = p.unit_price != null ? parseFloat(p.unit_price) : stdSell;
       var total = sell * (p.quantity || 1);
       var rowStyle = noRepair ? 'color:#999;text-decoration:line-through;background:#fafafa' : (ri%2?'':'background:#f8fafc');
       return '<tr style="' + rowStyle + '">' +
@@ -4709,7 +4710,7 @@ function renderAssessmentReport(j, tools, jparts) {
   // Only include parts from tools that ARE being repaired in totals
   var billableToolNums = tools.filter(function(t){ return !isNoRepairTool(t); }).map(function(t){ return t.tool_number; });
   var billableParts = jparts.filter(function(p){ return billableToolNums.indexOf(p.tool_number||1) !== -1; });
-  var partsTotal = billableParts.reduce(function(sum, p) { var pd2 = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null; return sum + ((pd2&&pd2.sell_price ? parseFloat(pd2.sell_price) : 0) * (p.quantity||1)); }, 0);
+  var partsTotal = billableParts.reduce(function(sum, p) { var pd2 = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null; var stdSell2 = pd2&&pd2.sell_price ? parseFloat(pd2.sell_price) : 0; var sell2 = p.unit_price != null ? parseFloat(p.unit_price) : stdSell2; return sum + (sell2 * (p.quantity||1)); }, 0);
   var serviceFeeTotal = tools.filter(function(t){ return !isNoRepairTool(t); }).reduce(function(sum, t) { return sum + (parseFloat(t.service_fee)||0); }, 0);
   var grandTotal = partsTotal + serviceFeeTotal;
 
@@ -7322,7 +7323,8 @@ function renderInvoiceNotice(j, tools, jparts) {
   var serviceFeeTotal = tools.reduce(function(s,t){ return s+parseFloat(t.service_fee||0); },0);
   var partsTotal = jparts.reduce(function(s,p){
     var pd = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null;
-    var sell = pd && pd.sell_price ? parseFloat(pd.sell_price) : parseFloat(p.sell_price||0);
+    var stdSell = pd && pd.sell_price ? parseFloat(pd.sell_price) : 0;
+    var sell = p.unit_price != null ? parseFloat(p.unit_price) : stdSell;
     return s + (sell * parseInt(p.quantity||1));
   },0);
   var grandTotal = serviceFeeTotal + partsTotal;
@@ -7334,7 +7336,9 @@ function renderInvoiceNotice(j, tools, jparts) {
     var toolParts = jparts.filter(function(p){ return p.tool_number === t.tool_number; });
     var partsRows = toolParts.length ? '<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:10pt"><tr style="background:#f0f4f8;font-size:9pt"><th style="text-align:left;padding:4px 6px">Part No.</th><th style="text-align:left;padding:4px 6px">Description</th><th style="padding:4px 6px;text-align:center">Qty</th><th style="padding:4px 6px;text-align:right">Unit</th><th style="padding:4px 6px;text-align:right">Total</th></tr>' +
       toolParts.map(function(p){
-        var unit = parseFloat(p.sell_price||0) || (p.part_id ? (function(){ var pd=allParts.find(function(x){return x.id===p.part_id;}); return pd&&pd.sell_price?parseFloat(pd.sell_price):0; })() : 0);
+        var pdRow = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null;
+        var stdSellRow = pdRow&&pdRow.sell_price ? parseFloat(pdRow.sell_price) : 0;
+        var unit = p.unit_price != null ? parseFloat(p.unit_price) : stdSellRow;
         var qty = parseInt(p.quantity||1);
         return '<tr style="border-bottom:1px solid #eee"><td style="padding:4px 6px;font-family:monospace;font-size:9pt">'+p.part_key_no+'</td><td style="padding:4px 6px">'+p.part_description+'</td><td style="padding:4px 6px;text-align:center">'+qty+'</td><td style="padding:4px 6px;text-align:right">'+fmt(unit)+'</td><td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(unit*qty)+'</td></tr>';
       }).join('') + '</table>' : '';
