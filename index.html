@@ -1202,8 +1202,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 
     <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
       <span>Tools</span>
-      <button onclick="addTool()" style="padding:3px 10px;background:#1e3048;border:1px solid #2a4060;border-radius:6px;color:#64b5c8;cursor:pointer;font-size:11px;font-weight:600">+ Add Tool</button>
+      <div style="display:flex;gap:6px">
+        <button id="btnSplitJob" onclick="splitSelectedTools()" style="padding:3px 10px;background:#1e3048;border:1px solid #f59e0b60;border-radius:6px;color:#f59e0b;cursor:pointer;font-size:11px;font-weight:600">✂ Split Ticked Into New Job</button>
+        <button onclick="addTool()" style="padding:3px 10px;background:#1e3048;border:1px solid #2a4060;border-radius:6px;color:#64b5c8;cursor:pointer;font-size:11px;font-weight:600">+ Add Tool</button>
+      </div>
     </div>
+    <div style="font-size:10px;color:#5a7090;margin:-4px 0 8px">Tick the tools below that need to split off (e.g. different pace, parts wait, or on hold), then Split.</div>
     <div id="jobToolsList"></div>
 
     <div class="section-label" style="display:flex;justify-content:space-between;align-items:center"><span>Parts Required</span><button onclick="pushPartsToStockOrder()" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #10b98170;color:#10b981;border-radius:6px;cursor:pointer;font-weight:600">📦 Push To Order</button></div>
@@ -3598,6 +3602,38 @@ function openNewJobModal() {
   setTimeout(function() { document.getElementById('jCustomer').focus(); }, 100);
 }
 
+// Repeat-service shortcut from the Account view: opens a New Job pre-filled with this
+// customer's contact details, and optionally a specific machine they already own (for
+// "same tool comes back in" repeat visits).
+function openNewJobForAccount(custId, machineName, machineSerial) {
+  var c = customers.find(function(x) { return x.id === custId; }) || (_custCache||[]).find(function(x) { return x.id === custId; });
+  if (!c) { showToast('Account not found', 'error'); return; }
+  switchToJobs();
+  setTimeout(function() {
+    openNewJobModal();
+    document.getElementById('jCustomer').value = c.company_name || '';
+    var primary = c._contacts && c._contacts.find(function(x) { return x.is_primary; });
+    var contact = primary || (c._contacts && c._contacts[0]);
+    if (contact) {
+      document.getElementById('jContact').value = contact.name || '';
+      if (contact.phone) document.getElementById('jPhone').value = contact.phone;
+      if (contact.email) document.getElementById('jEmail').value = contact.email;
+    } else if (c.contact_name) {
+      document.getElementById('jContact').value = c.contact_name;
+      if (c.phone) document.getElementById('jPhone').value = c.phone;
+    }
+    if (c.address) document.getElementById('jShipping').value = c.address;
+    if (machineName) {
+      var m = (window.machines||[]).find(function(x) { return x.name === machineName; });
+      if (m && jobToolsLocal[0]) {
+        jobToolsLocal[0].machine_id = m.id;
+        if (machineSerial) jobToolsLocal[0].serial_number = machineSerial;
+        renderToolsList();
+      }
+    }
+  }, 300);
+}
+
 async function openEditJobModal(jobId) {
   var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
   editingJob = j;
@@ -4388,6 +4424,88 @@ function removeTool(tempId) {
   renderToolsList();
 }
 
+function toggleToolSplitSelect(tempId, checked) {
+  var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; });
+  if (t) t._splitSelected = checked;
+}
+
+// Moves ticked tools (and their parts) out of the current job into a brand new job for the
+// same customer - for the "customer approves some tools now, holds others" scenario, so each
+// group of tools gets its own honest status/timeline instead of one job hiding mixed progress.
+async function splitSelectedTools() {
+  if (!editingJob) { showToast('Save this job first, then split tools into a new job', 'error'); return; }
+  var selected = jobToolsLocal.filter(function(t) { return t._splitSelected; });
+  if (!selected.length) { showToast('Tick at least one tool to split off', 'error'); return; }
+  if (selected.length === jobToolsLocal.length) { showToast('At least one tool must stay on this job', 'error'); return; }
+  var unsaved = selected.filter(function(t) { return !t._existingId; });
+  if (unsaved.length) { showToast('Save this job first — some ticked tools haven\'t been saved yet', 'error'); return; }
+
+  var remaining = jobToolsLocal.length - selected.length;
+  if (!confirm('Split ' + selected.length + ' tool' + (selected.length!==1?'s':'') + ' into a new job for ' + (editingJob.customer||'') + '?\n\nThis job will keep ' + remaining + ' tool' + (remaining!==1?'s':'') + '.')) return;
+
+  var btn = document.getElementById('btnSplitJob');
+  if (btn) { btn.disabled = true; btn.textContent = 'Splitting...'; }
+  try {
+    var newJobPayload = {
+      status: editingJob.status || 'NEW JOB',
+      order_number: editingJob.order_number || null,
+      customer: editingJob.customer,
+      contact_name: editingJob.contact_name || null,
+      phone: editingJob.phone || null,
+      mobile: editingJob.mobile || null,
+      email: editingJob.email || null,
+      shipping_address: editingJob.shipping_address || null,
+      agreement_id: editingJob.agreement_id || null,
+      labour_rate: editingJob.labour_rate || 120,
+      links: '[]',
+      updated_at: new Date().toISOString()
+    };
+    var res = await db('POST', 'jobs', newJobPayload);
+    var newJob = res[0];
+
+    // Move each selected tool (and its parts) to the new job, renumbered from 1
+    for (var i = 0; i < selected.length; i++) {
+      var t = selected[i];
+      var newToolNumber = i + 1;
+      await db('PATCH', 'job_tools?id=eq.' + t._existingId, { job_id: newJob.id, tool_number: newToolNumber, updated_at: new Date().toISOString() });
+      var toolParts = jobPartsLocal.filter(function(p) { return p._toolTempId === t._tempId && p._existingId; });
+      for (var pi = 0; pi < toolParts.length; pi++) {
+        await db('PATCH', 'job_parts?id=eq.' + toolParts[pi]._existingId, { job_id: newJob.id, tool_number: newToolNumber, updated_at: new Date().toISOString() });
+      }
+      t.tool_number = newToolNumber;
+    }
+
+    // Remove the moved tools/parts from this job's working state, then close the gap
+    // left behind (matches the same renumbering removeTool() already does).
+    var movedTempIds = selected.map(function(t) { return t._tempId; });
+    jobToolsLocal = jobToolsLocal.filter(function(t) { return movedTempIds.indexOf(t._tempId) === -1; });
+    jobPartsLocal = jobPartsLocal.filter(function(p) { return movedTempIds.indexOf(p._toolTempId) === -1; });
+    for (var ri = 0; ri < jobToolsLocal.length; ri++) {
+      var rt = jobToolsLocal[ri];
+      var newNum = ri + 1;
+      if (rt.tool_number !== newNum) {
+        if (rt._existingId) await db('PATCH', 'job_tools?id=eq.' + rt._existingId, { tool_number: newNum, updated_at: new Date().toISOString() });
+        jobPartsLocal.forEach(function(p) {
+          if (p._toolTempId === rt._tempId) {
+            p.tool_number = newNum;
+            if (p._existingId) db('PATCH', 'job_parts?id=eq.' + p._existingId, { tool_number: newNum, updated_at: new Date().toISOString() }).catch(function(){});
+          }
+        });
+        rt.tool_number = newNum;
+      }
+    }
+
+    renderToolsList();
+    jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
+    await loadJobs();
+    showToast('Split into new job ' + xpsNum(newJob.job_number));
+  } catch(e) {
+    showToast('Split failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✂ Split Ticked Into New Job'; }
+  }
+}
+
 function setToolRecommendation(tempId, text) {
   setToolField(tempId, 'recommendation', text);
   var ta = document.getElementById('rec_' + tempId);
@@ -4424,7 +4542,10 @@ function renderToolsList() {
   var mName = t.machine_id ? (machines.find(function(m){return m.id===t.machine_id;})||{}).name || '' : '';
     return '<div class="tool-card" id="tc_' + t._tempId + '">' +
       '<div class="tool-card-header">' +
-        '<span class="tool-card-title">Tool ' + t.tool_number + (mName ? ' — ' + mName : '') + '</span>' +
+        '<span class="tool-card-title">' +
+          (jobToolsLocal.length > 1 ? '<label style="cursor:pointer;margin-right:8px;font-weight:400"><input type="checkbox" ' + (t._splitSelected?'checked':'') + ' onchange="toggleToolSplitSelect(\'' + t._tempId + '\',this.checked)" style="vertical-align:middle;margin-right:4px;accent-color:#f59e0b;cursor:pointer">Split</label>' : '') +
+          'Tool ' + t.tool_number + (mName ? ' — ' + mName : '') +
+        '</span>' +
         '<div style="display:flex;gap:6px">' +
         '<button style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer" onclick="printReturnSlip(\'' + t._tempId + '\')">🏷 Return Slip</button>' +
         (jobToolsLocal.length > 1 ? '<button class="tool-remove-btn" onclick="removeTool(\'' + t._tempId + '\')">Remove</button>' : '') +
@@ -7009,7 +7130,13 @@ function renderAccountView(c, cJobs, cLoans, cActs, cPurchases) {
 
   // JOBS panel
   var jobsHtml = '<div class="acct-panel">' +
-    '<div class="acct-panel-hdr"><span class="acct-panel-title">⚙ Jobs</span><span class="acct-panel-count">' + cJobs.length + '</span></div>';
+    '<div class="acct-panel-hdr" style="justify-content:space-between">' +
+      '<span class="acct-panel-title">⚙ Jobs</span>' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span class="acct-panel-count">' + cJobs.length + '</span>' +
+        '<button onclick="openNewJobForAccount(\'' + c.id + '\')" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid #10b98160;background:transparent;color:#10b981;cursor:pointer">+ New Job</button>' +
+      '</div>' +
+    '</div>';
   if (cJobs.length) {
     jobsHtml += cJobs.slice(0,10).map(function(j) {
       var col = SC[j.status] || '#3a5070';
@@ -7058,12 +7185,14 @@ function renderAccountView(c, cJobs, cLoans, cActs, cPurchases) {
   if (machineList.length) {
     machinesHtml += '<div style="padding:8px 14px">' + machineList.map(function(m, mi) {
       var clickFn = m.serial ? 'openToolSearch();setTimeout(function(){var i=document.getElementById(\'toolSearchInput\');i.value=\''+m.serial+'\';runToolSearch(\''+m.serial+'\')},200)' : '';
+      var mNameEsc = m.name.replace(/'/g, "\\'"), mSerialEsc = (m.serial||'').replace(/'/g, "\\'");
       return '<div class="acct-machine-row">' +
         '<div style="flex:1;cursor:pointer" onclick="' + clickFn + '">' +
           '<div class="acct-machine-name">' + m.name + '</div>' +
           (m.serial ? '<div class="acct-machine-sn">S/N: ' + m.serial + '</div>' : '') +
         '</div>' +
         (m.serial ? '<span style="font-size:10px;color:#3a5070;flex-shrink:0">&#128269;</span>' : '') +
+        '<button onclick="openNewJobForAccount(\'' + c.id + '\',\'' + mNameEsc + '\',\'' + mSerialEsc + '\')" style="background:none;border:1px solid #10b98160;color:#10b981;border-radius:5px;cursor:pointer;font-size:10px;font-weight:700;padding:2px 7px;flex-shrink:0" title="New service job for this machine">+ Job</button>' +
         '<button onclick="deleteMachineFromAccount(\'' + c.id + '\',' + mi + ')" style="background:none;border:none;color:#4a6080;cursor:pointer;font-size:16px;padding:0 2px;flex-shrink:0;line-height:1" title="Remove">×</button>' +
       '</div>';
     }).join('') + '</div>';
