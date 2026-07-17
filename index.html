@@ -3742,7 +3742,7 @@ async function pushPartsToStockOrder(toolTempId) {
     if (p && p.suppliers) {
       var sups = Array.isArray(p.suppliers)?p.suppliers:[];
       try { if(!Array.isArray(sups)) sups=JSON.parse(p.suppliers); } catch(e){}
-      var pref = sups.find(function(s){ return s.is_preferred; })||sups[0];
+      var pref = sups.find(function(s){ return s.preferred; })||sups[0];
       if (pref && pref.name) supplier = pref.name;
     }
     (groups[supplier] = groups[supplier] || []).push(jp);
