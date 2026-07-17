@@ -1555,6 +1555,9 @@ function filterAllParts() {
 }
 var agreements = [], editingAgr = null, viewingAgr = null, viewingPeriod = null;
 var jobLinks = [], jobPartsLocal = [], jobToolsLocal = [], machineModalFromJob = false;
+// Set true if a job's tools/parts fail to fetch when opening it - blocks Save so a transient
+// network failure can never silently overwrite real tool/part data with an empty fallback.
+var _jobDataLoadFailed = false;
 var partsFilter = 'all';
 
 var SC = {
@@ -3573,6 +3576,7 @@ function renderLinksList() {
 // ── JOB MODAL ─────────────────────────────────────────────────────
 
 function clearJobForm() {
+  _jobDataLoadFailed = false;
   ['jCustomer','jContact','jPhone','jMobile','jEmail','jShipping',
    'jInternalNotes'].forEach(function(id) {
     document.getElementById(id).value = '';
@@ -3637,6 +3641,7 @@ function openNewJobForAccount(custId, machineName, machineSerial) {
 async function openEditJobModal(jobId) {
   var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
   editingJob = j;
+  _jobDataLoadFailed = false;
   document.getElementById('jobModalTitle').textContent = xpsNum(j.job_number) + ' - ' + (j.customer || '');
   document.getElementById('jStatus').value = j.status || 'NEW JOB';
   document.getElementById('jOrderNum').value = j.order_number || '';
@@ -3670,7 +3675,11 @@ async function openEditJobModal(jobId) {
       // Migrate legacy single-tool job fields into Tool 1
       jobToolsLocal = [{ _tempId: 'tool_legacy', tool_number: 1, machine_id: j.machine_id || '', serial_number: j.serial_number || '', fault_type: j.fault_type || '', error_code: j.error_code || '', date_of_manufacture: j.date_of_manufacture || '', warranty_period: j.warranty_period || '', customer_issue: j.customer_issue || '', workshop_notes: j.workshop_notes || '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(j.machine_id||''), service_fee: j.labour_cost || '' }];
     }
-  } catch(e) { jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: 'All components inspected for wear and damage. Motor and mechanisms checked for correct operation. Sealing and cutting assemblies inspected and adjusted. Electrical circuit tested. All fasteners checked and tightened. Unit fully cleaned and lubricated. Tool function tested under load and operation confirmed satisfactory.', service_fee: '' }]; }
+  } catch(e) {
+    _jobDataLoadFailed = true;
+    showToast('Failed to load this job\'s tool data - close and reopen before saving, or real data could be overwritten', 'error');
+    jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: 'All components inspected for wear and damage. Motor and mechanisms checked for correct operation. Sealing and cutting assemblies inspected and adjusted. Electrical circuit tested. All fasteners checked and tightened. Unit fully cleaned and lubricated. Tool function tested under load and operation confirmed satisfactory.', service_fee: '' }];
+  }
   renderToolsList();
   // Auto-check serial history for existing tools
   setTimeout(function() {
@@ -3688,7 +3697,11 @@ async function openEditJobModal(jobId) {
       var matchTool = jobToolsLocal.find(function(t) { return t.tool_number === ep.tool_number; });
       return Object.assign({ _tempId: 'tmp_' + ep.id, _existingId: ep.id, _toolTempId: matchTool ? matchTool._tempId : (jobToolsLocal[0]?jobToolsLocal[0]._tempId:null) }, ep);
     });
-  } catch(e) { jobPartsLocal = []; }
+  } catch(e) {
+    _jobDataLoadFailed = true;
+    showToast('Failed to load this job\'s parts data - close and reopen before saving, or real data could be overwritten', 'error');
+    jobPartsLocal = [];
+  }
   jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
   document.getElementById('btnDeleteJob').style.display = 'block';
   // Load activity history for this job
@@ -3780,6 +3793,7 @@ async function pushPartsToStockOrder() {
 function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); }
 
 async function saveJob() {
+  if (_jobDataLoadFailed) { showToast('This job\'s tool/part data failed to load - close this job and reopen it before saving, to avoid overwriting real data', 'error'); return; }
   var customer = document.getElementById('jCustomer').value.trim();
   if (!customer) { showToast('Customer name is required', 'error'); return; }
   var btn = document.getElementById('btnSaveJob'); btn.disabled = true; btn.textContent = 'Saving...';
