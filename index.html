@@ -3592,14 +3592,14 @@ function clearJobForm() {
   renderToolsList();
 }
 
-function openNewJobModal() {
+function openNewJobModal(skipFocus) {
   editingJob = null;
   document.getElementById('jobModalTitle').textContent = 'New Service Case';
   clearJobForm();
   document.getElementById('btnDeleteJob').style.display = 'none';
   var jas = document.getElementById('jobActivitySection'); if(jas) jas.style.display = 'none';
   document.getElementById('jobOverlay').classList.add('show');
-  setTimeout(function() { document.getElementById('jCustomer').focus(); }, 100);
+  if (!skipFocus) setTimeout(function() { document.getElementById('jCustomer').focus(); }, 100);
 }
 
 // Repeat-service shortcut from the Account view: opens a New Job pre-filled with this
@@ -3610,7 +3610,7 @@ function openNewJobForAccount(custId, machineName, machineSerial) {
   if (!c) { showToast('Account not found', 'error'); return; }
   switchToJobs();
   setTimeout(function() {
-    openNewJobModal();
+    openNewJobModal(true);
     document.getElementById('jCustomer').value = c.company_name || '';
     var primary = c._contacts && c._contacts.find(function(x) { return x.is_primary; });
     var contact = primary || (c._contacts && c._contacts[0]);
