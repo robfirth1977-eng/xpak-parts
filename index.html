@@ -1210,7 +1210,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
     <div style="font-size:10px;color:#5a7090;margin:-4px 0 8px">Tick the tools below that need to split off (e.g. different pace, parts wait, or on hold), then Split.</div>
     <div id="jobToolsList"></div>
 
-    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center"><span>Parts Required</span><button onclick="pushPartsToStockOrder()" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #10b98170;color:#10b981;border-radius:6px;cursor:pointer;font-weight:600">📦 Push To Order</button></div>
     <div class="section-label">Costs</div>
     <div class="g2">
       
@@ -3725,70 +3724,79 @@ function populateMachineDropdown(selId) {
 }
 
 
-async function pushPartsToStockOrder() {
-  var toOrder = jobPartsLocal.filter(function(jp){ return jp.status==='to_order'; });
-  if (!toOrder.length) { showToast('No parts marked To Order','error'); return; }
+// Pushes To Order parts for a single tool onto the correct supplier's Draft PO(s).
+// Scoped per tool (rather than the whole job) because different tools on the same
+// job are often sourced from different suppliers - grouping by each part's own
+// preferred supplier (instead of one dominant supplier for the whole batch) keeps
+// items off the wrong supplier's order.
+async function pushPartsToStockOrder(toolTempId) {
+  var toOrder = jobPartsLocal.filter(function(jp){
+    return jp.status==='to_order' && (!toolTempId || jp._toolTempId===toolTempId);
+  });
+  if (!toOrder.length) { showToast('No parts marked To Order for this tool','error'); return; }
 
-  // Detect supplier from parts
-  var supplierCounts = {};
+  var groups = {};
   toOrder.forEach(function(jp) {
     var p = allParts.find(function(x){ return x.id===jp.part_id; });
+    var supplier = 'Unknown';
     if (p && p.suppliers) {
       var sups = Array.isArray(p.suppliers)?p.suppliers:[];
       try { if(!Array.isArray(sups)) sups=JSON.parse(p.suppliers); } catch(e){}
-      var pref = sups.find(function(s){ return s.is_preferred; })||sups[0];
-      if (pref && pref.name) supplierCounts[pref.name] = (supplierCounts[pref.name]||0)+1;
+      var pref = sups.find(function(s){ return s.preferred; })||sups[0];
+      if (pref && pref.name) supplier = pref.name;
     }
+    (groups[supplier] = groups[supplier] || []).push(jp);
   });
-  var supplier = Object.keys(supplierCounts).sort(function(a,b){ return supplierCounts[b]-supplierCounts[a]; })[0] || 'Unknown';
 
-  // Find existing Draft PO for this supplier or create new one
-  var existingPO = purchaseOrders.find(function(po){ return po.status==='Draft' && po.supplier===supplier; });
-  var poId, poNum;
-  if (existingPO) {
-    poId = existingPO.id; poNum = existingPO.po_number;
-  } else {
-    var maxNum = 0;
-    purchaseOrders.forEach(function(po){ var m=po.po_number?po.po_number.match(/XPO-(\d+)/):null; if(m) maxNum=Math.max(maxNum,parseInt(m[1])); });
-    poNum = 'XPO-' + String(maxNum+1).padStart(3,'0');
-    var newPO = await db('POST','purchase_orders',{po_number:poNum,supplier:supplier,status:'Draft',updated_at:new Date().toISOString()});
-    poId = newPO[0].id; newPO[0]._items=[]; purchaseOrders.unshift(newPO[0]);
+  var jobNum = editingJob ? xpsNum(editingJob.job_number) : '';
+  var jobId  = editingJob ? editingJob.id : null;
+  var summaries = [];
+
+  for (var supplier in groups) {
+    var parts = groups[supplier];
+
+    var existingPO = purchaseOrders.find(function(po){ return po.status==='Draft' && po.supplier===supplier; });
+    var poId, poNum;
+    if (existingPO) {
+      poId = existingPO.id; poNum = existingPO.po_number;
+    } else {
+      var maxNum = 0;
+      purchaseOrders.forEach(function(po){ var m=po.po_number?po.po_number.match(/XPO-(\d+)/):null; if(m) maxNum=Math.max(maxNum,parseInt(m[1])); });
+      poNum = 'XPO-' + String(maxNum+1).padStart(3,'0');
+      var newPO = await db('POST','purchase_orders',{po_number:poNum,supplier:supplier,status:'Draft',updated_at:new Date().toISOString()});
+      poId = newPO[0].id; newPO[0]._items=[]; purchaseOrders.unshift(newPO[0]);
+    }
+
+    var itemPromises = parts.map(function(jp) {
+      var p = allParts.find(function(x){ return x.id===jp.part_id; });
+      return db('POST','purchase_order_items',{
+        purchase_order_id: poId,
+        part_id: jp.part_id||null,
+        job_id: jobId,
+        job_number: jobNum,
+        key_no: jp.part_key_no,
+        description: jp.part_description,
+        qty: jp.quantity||1,
+        unit_cost: p&&p.cost_price?parseFloat(p.cost_price):null,
+        status: 'Ordered',
+        updated_at: new Date().toISOString()
+      });
+    });
+    await Promise.all(itemPromises);
+
+    var patches = [];
+    parts.forEach(function(jp) {
+      jp.status='ordered';
+      if (jp.id) patches.push(db('PATCH','job_parts?id=eq.'+jp.id,{status:'ordered',updated_at:new Date().toISOString()}).catch(function(){}));
+    });
+    if (patches.length) await Promise.all(patches);
+
+    summaries.push(parts.length+' → '+poNum+' ('+supplier+(existingPO?', existing draft':', new')+')');
   }
 
-  // Add items to PO
-  var jobNum = editingJob ? xplNum(editingJob.job_number) : '';
-  var jobId  = editingJob ? editingJob.id : null;
-  var itemPromises = toOrder.map(function(jp) {
-    var p = allParts.find(function(x){ return x.id===jp.part_id; });
-    return db('POST','purchase_order_items',{
-      purchase_order_id: poId,
-      part_id: jp.part_id||null,
-      job_id: jobId,
-      job_number: jobNum,
-      key_no: jp.part_key_no,
-      description: jp.part_description,
-      qty: jp.quantity||1,
-      unit_cost: p&&p.cost_price?parseFloat(p.cost_price):null,
-      status: 'Ordered',
-      updated_at: new Date().toISOString()
-    });
-  });
-  await Promise.all(itemPromises);
-
-  // Mark job parts as Ordered
-  var patches = [];
-  toOrder.forEach(function(jp) {
-    jp.status='ordered';
-    if (jp.id) patches.push(db('PATCH','job_parts?id=eq.'+jp.id,{status:'ordered',updated_at:new Date().toISOString()}).catch(function(){}));
-  });
-  if (patches.length) await Promise.all(patches);
   renderJobPartsList();
-
   await loadPurchaseOrders();
-  var isNew = !existingPO;
-  showToast(toOrder.length+' part'+(toOrder.length>1?'s':'')+' added to '+poNum+(isNew?' (new PO)':' (existing draft)'));
-  closeJobModal();
-  setTimeout(function(){ switchToPurchasing(); setPOFilter('Draft'); }, 250);
+  showToast(toOrder.length+' part'+(toOrder.length>1?'s':'')+' pushed — '+summaries.join('; '));
 }
 function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); }
 
@@ -4587,7 +4595,10 @@ function renderToolsList() {
         '<div class="field"><label>Service Fee ($)</label><input type="number" step="0.01" min="0" value="' + (t.service_fee||'') + '" placeholder="400.00" oninput="setToolField(\'' + t._tempId + '\',\'service_fee\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #f97316;background:#0f1923;color:#f97316;font-size:13px;outline:none;font-weight:700"></div>' +
       '</div>' +
       '<div style="margin-top:10px;border-top:1px solid #1e3048;padding-top:10px">' +
-        '<div style="font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Parts Required — Tool ' + t.tool_number + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+          '<div style="font-size:10px;font-weight:700;color:#3a5070;text-transform:uppercase;letter-spacing:1px">Parts Required — Tool ' + t.tool_number + '</div>' +
+          '<button onclick="pushPartsToStockOrder(\'' + t._tempId + '\')" style="font-size:11px;padding:3px 9px;background:transparent;border:1px solid #10b98170;color:#10b981;border-radius:6px;cursor:pointer;font-weight:600">📦 Push To Order</button>' +
+        '</div>' +
         '<div class="parts-search-area" style="margin-bottom:6px">' +
           '<div class="parts-search-row">' +
             '<input id="psi_' + t._tempId + '" placeholder="Search part number or description..." oninput="searchPartsForJob(\'' + t._tempId + '\')" autocomplete="off">' +
