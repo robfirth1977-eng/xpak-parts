@@ -1174,6 +1174,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
           <option value="NEW JOB">New Job</option>
           <option value="AWAITING ASSESSMENT">Awaiting Assessment</option>
           <option value="WAITING FOR TOOLS">Waiting for Tools</option>
+          <option value="AWAITING SUPPLIER QUOTE">Awaiting Supplier Quote</option>
           <option value="QUOTED - AWAITING APPROVAL">Quote Sent — Awaiting Approval</option>
           <option value="WAITING ON PARTS">WAITING ON PARTS</option>
           <option value="IN WORKSHOP">IN WORKSHOP</option>
@@ -1562,16 +1563,17 @@ var partsFilter = 'all';
 
 var SC = {
   'NEW JOB':'#3b82f6','AWAITING ASSESSMENT':'#8b5cf6','WAITING FOR TOOLS':'#f59e0b',
+  'AWAITING SUPPLIER QUOTE':'#ec4899',
   'QUOTED - AWAITING APPROVAL':'#eab308','WAITING ON PARTS':'#f97316','IN WORKSHOP':'#06b6d4',
   'WAITING TO BE INVOICED':'#10b981','INVOICED AND SENT':'#00c8e0','COMPLETED':'#4a6080'
 };
-var ALL_ST = ['NEW JOB','WAITING FOR TOOLS','AWAITING ASSESSMENT','QUOTED - AWAITING APPROVAL',
+var ALL_ST = ['NEW JOB','WAITING FOR TOOLS','AWAITING ASSESSMENT','AWAITING SUPPLIER QUOTE','QUOTED - AWAITING APPROVAL',
   'WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED','INVOICED AND SENT','COMPLETED'];
-var OPEN_ST  = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','QUOTED - AWAITING APPROVAL'];
+var OPEN_ST  = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','AWAITING SUPPLIER QUOTE','QUOTED - AWAITING APPROVAL'];
 var ACT_ST   = ['WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
 var FOL_ST   = ['INVOICED AND SENT'];
 
-var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981', 'NEW JOB':'#f59e0b', 'IN PROGRESS':'#64b5c8', 'WAITING ON PARTS':'#f97316', 'AWAITING ASSESSMENT':'#a78bfa', 'WAITING FOR TOOLS':'#f97316', 'QUOTED - AWAITING APPROVAL':'#a78bfa', COMPLETED:'#10b981', 'ON HOLD':'#5a8090' };
+var STATUS_COLOURS = { to_order:'#f97316', ordered:'#eab308', arrived:'#10b981', use_stock:'#10b981', 'NEW JOB':'#f59e0b', 'IN PROGRESS':'#64b5c8', 'WAITING ON PARTS':'#f97316', 'AWAITING ASSESSMENT':'#a78bfa', 'WAITING FOR TOOLS':'#f97316', 'AWAITING SUPPLIER QUOTE':'#ec4899', 'QUOTED - AWAITING APPROVAL':'#a78bfa', COMPLETED:'#10b981', 'ON HOLD':'#5a8090' };
 
 // Sticky job-lifecycle timestamps: captured once, first time a job reaches each stage, never cleared by later status changes.
 // Used by both the Job modal (saveJob) and the board drag-drop, so status changes made either way are tracked consistently.
@@ -2725,12 +2727,12 @@ async function getWeeklyReportData() {
   var wVisits    = siteVisits && siteVisits.length ? siteVisits : await db('GET','site_visits?select=*&order=visit_date.desc');
 
   // ── Jobs: open by status ─────────────────────────────────────────
-  var openStatuses = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
+  var openStatuses = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','AWAITING SUPPLIER QUOTE','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
   var openJobs = wJobs.filter(function(j){ return openStatuses.indexOf(j.status) !== -1; });
 
-  var statusOrder = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
-  var statusLabels = {'NEW JOB':'New Job','AWAITING ASSESSMENT':'Awaiting Assessment','WAITING FOR TOOLS':'Waiting for Tools','QUOTED - AWAITING APPROVAL':'Quote Sent','WAITING ON PARTS':'Waiting on Parts','IN WORKSHOP':'In Workshop','WAITING TO BE INVOICED':'To Be Invoiced'};
-  var statusColors = {'NEW JOB':'#3a5070','AWAITING ASSESSMENT':'#f59e0b','WAITING FOR TOOLS':'#a78bfa','QUOTED - AWAITING APPROVAL':'#00c8e0','WAITING ON PARTS':'#f97316','IN WORKSHOP':'#10b981','WAITING TO BE INVOICED':'#e879f9'};
+  var statusOrder = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','AWAITING SUPPLIER QUOTE','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
+  var statusLabels = {'NEW JOB':'New Job','AWAITING ASSESSMENT':'Awaiting Assessment','WAITING FOR TOOLS':'Waiting for Tools','AWAITING SUPPLIER QUOTE':'Awaiting Supplier Quote','QUOTED - AWAITING APPROVAL':'Quote Sent','WAITING ON PARTS':'Waiting on Parts','IN WORKSHOP':'In Workshop','WAITING TO BE INVOICED':'To Be Invoiced'};
+  var statusColors = {'NEW JOB':'#3a5070','AWAITING ASSESSMENT':'#f59e0b','WAITING FOR TOOLS':'#a78bfa','AWAITING SUPPLIER QUOTE':'#ec4899','QUOTED - AWAITING APPROVAL':'#00c8e0','WAITING ON PARTS':'#f97316','IN WORKSHOP':'#10b981','WAITING TO BE INVOICED':'#e879f9'};
 
   var byStatus = {};
   statusOrder.forEach(function(s){ byStatus[s] = openJobs.filter(function(j){ return j.status === s; }); });
