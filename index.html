@@ -1493,7 +1493,7 @@ function updateAuthHeader(session) {
 }
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
-var jobs = [], editingJob = null, jobFilter = 'OPEN', currentView = 'home', jobViewMode = 'board';
+var jobs = [], jobTools = [], editingJob = null, jobFilter = 'OPEN', currentView = 'home', jobViewMode = 'board';
 var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
 var openBrandGroups = {};
 var allPartsFilter = 'all';
@@ -1654,6 +1654,7 @@ async function init() {
     try { await loadStockTools(); } catch(e) {}
     try { await loadPurchaseOrders(); } catch(e) {}
     try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) {}
+    try { jobTools = await db('GET','job_tools?select=id,job_id'); } catch(e) { jobTools = []; }
     try { var visits = await db('GET','site_visits?select=*&order=visit_date.desc'); var svM = await db('GET','site_visit_machines?select=*'); var svP = await db('GET','site_visit_parts?select=*'); svM.forEach(function(m){m.site_visit_parts=svP.filter(function(p){return p.site_visit_id===m.site_visit_id;});}); visits.forEach(function(v){v.site_visit_machines=svM.filter(function(m){return m.site_visit_id===v.id;});}); siteVisits=visits; } catch(e) {}
     try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
   } catch(e) {
@@ -5635,6 +5636,28 @@ async function renderHome() {
   var enquiryToQuote = avgDays(jobs, 'created_at', 'quoted_at');
   var acceptedToInvoiced = avgDays(jobs, 'quote_accepted_at', 'invoiced_at');
 
+  // Lifetime service activity - tools serviced via workshop jobs + field site visits
+  var svToolsServiced = (siteVisits||[]).reduce(function(s,v){ return s + (v.site_visit_machines||[]).length; }, 0);
+  var toolsServiced = jobTools.length + svToolsServiced;
+  var customerSet = {};
+  jobs.forEach(function(j){ if (j.customer) customerSet[j.customer] = true; });
+  (siteVisits||[]).forEach(function(v){ if (v.customer) customerSet[v.customer] = true; });
+  var customersServiced = Object.keys(customerSet).length;
+
+  var activityHtml =
+    '<div class="home-section-title">Service Activity</div>' +
+    '<div style="display:flex;align-items:baseline;gap:16px;background:linear-gradient(155deg,rgba(47,182,234,0.1),rgba(47,182,234,0.02) 60%);border:1px solid rgba(47,182,234,0.3);border-radius:8px;padding:16px 20px;margin-bottom:12px">' +
+      '<div style="font-family:monospace;font-weight:700;font-size:40px;color:#00c8e0;line-height:1">' + toolsServiced + '</div>' +
+      '<div><div style="font-size:14px;font-weight:700;color:#e0f0ff">Tools Serviced</div>' +
+      '<div style="font-size:11px;color:#5a7090;margin-top:2px">' + jobTools.length + ' through workshop jobs, ' + svToolsServiced + ' through field site visits</div></div>' +
+    '</div>' +
+    '<div class="stat-cards">' +
+      '<div class="stat-card"><div class="stat-label">Service Jobs</div><div class="stat-val">' + jobs.length + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Site Visits</div><div class="stat-val">' + (siteVisits||[]).length + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Customers Serviced</div><div class="stat-val">' + customersServiced + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Loan Tools Issued</div><div class="stat-val">' + loans.length + '</div></div>' +
+    '</div>';
+
   var statsHtml =
     '<div class="stat-cards">' +
       '<div class="stat-card"><div class="stat-label">Open Jobs</div><div class="stat-val cyan">' + openJobs + '</div></div>' +
@@ -5685,7 +5708,7 @@ async function renderHome() {
       }).join('');
   }
 
-  el.innerHTML = statsHtml + tilesHtml + recentJobsHtml + recentSvHtml;
+  el.innerHTML = statsHtml + activityHtml + tilesHtml + recentJobsHtml + recentSvHtml;
 }
 
 
