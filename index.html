@@ -4500,12 +4500,12 @@ async function splitSelectedTools() {
       var newNum = ri + 1;
       if (rt.tool_number !== newNum) {
         if (rt._existingId) await db('PATCH', 'job_tools?id=eq.' + rt._existingId, { tool_number: newNum, updated_at: new Date().toISOString() });
-        jobPartsLocal.forEach(function(p) {
-          if (p._toolTempId === rt._tempId) {
-            p.tool_number = newNum;
-            if (p._existingId) db('PATCH', 'job_parts?id=eq.' + p._existingId, { tool_number: newNum, updated_at: new Date().toISOString() }).catch(function(){});
-          }
-        });
+        var partsToRenumber = jobPartsLocal.filter(function(p) { return p._toolTempId === rt._tempId; });
+        for (var pj = 0; pj < partsToRenumber.length; pj++) {
+          var pRenum = partsToRenumber[pj];
+          pRenum.tool_number = newNum;
+          if (pRenum._existingId) await db('PATCH', 'job_parts?id=eq.' + pRenum._existingId, { tool_number: newNum, updated_at: new Date().toISOString() });
+        }
         rt.tool_number = newNum;
       }
     }
