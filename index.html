@@ -2737,7 +2737,15 @@ async function getWeeklyReportData() {
   var thisWeekSun = new Date(thisWeekMon); thisWeekSun.setDate(thisWeekMon.getDate()+6); thisWeekSun.setHours(23,59,59,999);
 
   // ── Fetch data ───────────────────────────────────────────────────
-  var wJobs      = jobs && jobs.length ? jobs : await db('GET','jobs?select=*,job_tools(*),job_parts(*)&order=updated_at.desc');
+  var wJobs;
+  if (jobs && jobs.length) { wJobs = jobs; }
+  else {
+    wJobs = await db('GET','jobs?select=*,job_tools(*)&order=updated_at.desc');
+    var wPartRows = await db('GET','job_parts?select=*');
+    var wPartsByJob = {};
+    wPartRows.forEach(function(p) { (wPartsByJob[p.job_id] = wPartsByJob[p.job_id] || []).push(p); });
+    wJobs.forEach(function(j) { j.job_parts = wPartsByJob[j.id] || []; });
+  }
   var wLoans     = loans && loans.length ? loans : await db('GET','loans?select=*&order=loan_number.desc');
   var wLoanTools = loanTools && loanTools.length ? loanTools : await db('GET','loan_tools?select=*');
   var wVisits    = siteVisits && siteVisits.length ? siteVisits : await db('GET','site_visits?select=*&order=visit_date.desc');
@@ -3367,7 +3375,15 @@ function xsaNum(n) { return 'XSA-' + String(n).padStart(3, '0'); }
 function xsvNum(n) { return 'XSV-' + String(n).padStart(3, '0'); }
 
 async function loadJobs() {
-  try { jobs = await db('GET', 'jobs?select=*,job_tools(*),job_parts(*)&order=created_at.desc'); renderJobs(); }
+  try {
+    var jRows = await db('GET', 'jobs?select=*,job_tools(*)&order=created_at.desc');
+    var partRows = await db('GET', 'job_parts?select=*');
+    var partsByJob = {};
+    partRows.forEach(function(p) { (partsByJob[p.job_id] = partsByJob[p.job_id] || []).push(p); });
+    jRows.forEach(function(j) { j.job_parts = partsByJob[j.id] || []; });
+    jobs = jRows;
+    renderJobs();
+  }
   catch(e) { document.getElementById('jobsList').innerHTML = '<div class="center"><div style="color:#ef4444">Could not load jobs.</div></div>'; }
 }
 
