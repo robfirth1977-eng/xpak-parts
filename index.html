@@ -5065,7 +5065,6 @@ async function renderHome() {
 
   // Stats
   var openJobs   = jobs.filter(function(j){ return OPEN_ST.concat(ACT_ST).includes(j.status); }).length;
-  var followUp   = jobs.filter(function(j){ return FOL_ST.includes(j.status); }).length;
   var onLoan     = (loanTools||[]).filter(function(t){ return !t.is_available; }).length;
   var draftSv    = (siteVisits||[]).filter(function(v){ return v.status==='Draft'; }).length;
 
@@ -5112,7 +5111,6 @@ async function renderHome() {
   var statsHtml =
     '<div class="stat-cards">' +
       '<div class="stat-card"><div class="stat-label">Open Jobs</div><div class="stat-val cyan">' + openJobs + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Awaiting Payment</div><div class="stat-val amber">' + followUp + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Tools On Loan</div><div class="stat-val">' + onLoan + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Avg Enquiry &rarr; Quote' + (enquiryToQuote.count ? ' (' + enquiryToQuote.count + ')' : '') + '</div><div class="stat-val green">' + (enquiryToQuote.avg !== null ? enquiryToQuote.avg + 'd' : '—') + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">Avg Accepted &rarr; Invoiced' + (acceptedToInvoiced.count ? ' (' + acceptedToInvoiced.count + ')' : '') + '</div><div class="stat-val green">' + (acceptedToInvoiced.avg !== null ? acceptedToInvoiced.avg + 'd' : '—') + '</div></div>' +
