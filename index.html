@@ -1664,17 +1664,17 @@ function getDefaultWorkCompleted(machineId) {
 async function init() {
   try {
     machines = await db('GET', 'machines?select=*&order=brand_order.asc,name.asc');
-    try { if (!_supplierCache) { _supplierCache = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order'); } } catch(e) {}
+    try { if (!_supplierCache) { _supplierCache = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order'); } } catch(e) { console.error('init: suppliers load failed', e); }
     renderTabs(); await loadAllParts();
     // Pre-load data for home page stats
-    try { await loadJobs(); } catch(e) {}
-    try { await loadCustomers(); } catch(e) {}
-    try { await loadStockTools(); } catch(e) {}
-    try { await loadPurchaseOrders(); } catch(e) {}
-    try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) {}
-    try { jobTools = await db('GET','job_tools?select=id,job_id'); } catch(e) { jobTools = []; }
-    try { var visits = await db('GET','site_visits?select=*&order=visit_date.desc'); var svM = await db('GET','site_visit_machines?select=*'); var svP = await db('GET','site_visit_parts?select=*'); svM.forEach(function(m){m.site_visit_parts=svP.filter(function(p){return p.site_visit_id===m.site_visit_id;});}); visits.forEach(function(v){v.site_visit_machines=svM.filter(function(m){return m.site_visit_id===v.id;});}); siteVisits=visits; } catch(e) {}
-    try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){}
+    try { await loadJobs(); } catch(e) { console.error('init: loadJobs failed', e); }
+    try { await loadCustomers(); } catch(e) { console.error('init: loadCustomers failed', e); }
+    try { await loadStockTools(); } catch(e) { console.error('init: loadStockTools failed', e); }
+    try { await loadPurchaseOrders(); } catch(e) { console.error('init: loadPurchaseOrders failed', e); }
+    try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) { console.error('init: loans load failed', e); }
+    try { jobTools = await db('GET','job_tools?select=id,job_id'); } catch(e) { jobTools = []; console.error('init: jobTools load failed', e); }
+    try { var visits = await db('GET','site_visits?select=*&order=visit_date.desc'); var svM = await db('GET','site_visit_machines?select=*'); var svP = await db('GET','site_visit_parts?select=*'); svM.forEach(function(m){m.site_visit_parts=svP.filter(function(p){return p.site_visit_id===m.site_visit_id;});}); visits.forEach(function(v){v.site_visit_machines=svM.filter(function(m){return m.site_visit_id===v.id;});}); siteVisits=visits; } catch(e) { console.error('init: site visits load failed', e); }
+    try { agreements = await db('GET','service_agreements?status=eq.ACTIVE&select=*'); var sel=document.getElementById('jAgreementId'); if(sel){sel.innerHTML='<option value="">-- None --</option>'+agreements.map(function(a){return '<option value="'+a.id+'">'+a.customer+'</option>';}).join('');}} catch(e){ console.error('init: agreements load failed', e); }
   } catch(e) {
     document.getElementById('hSub').textContent = 'Connection error';
     document.getElementById('partsList').innerHTML = '<div class="center"><div style="color:#ef4444">Cannot connect</div></div>';
@@ -2123,7 +2123,7 @@ async function saveLoan(){
           await db('POST','activities',{ customer_id: custMatch.id, type: 'Note', subject: 'Loan out — ' + toolName, notes: 'Reason: ' + (document.getElementById('lReason').value||'Not specified'), activity_date: lDate, created_by: 'Rob Firth' });
           _custCache = null;
         }
-      } catch(e) {}
+      } catch(e) { console.error('loan activity auto-log failed', e); }
     }
     showToast(editingLoan?'Loan updated':'Loan created');
     await loadLoans();
@@ -2550,7 +2550,7 @@ async function openAgrDetail(agrId){
   document.getElementById('agrPeriodOverlay').classList.add('show');
   // Get jobs linked to this agreement
   var periodJobs=[];
-  try{periodJobs=await db('GET','jobs?agreement_id=eq.'+a.id+'&select=*&order=created_at.desc');}catch(e){}
+  try{periodJobs=await db('GET','jobs?agreement_id=eq.'+a.id+'&select=*&order=created_at.desc');}catch(e){ console.error('agreement period jobs load failed', e); showToast('Could not load jobs for this agreement', 'error'); }
   // Get current month
   var now=new Date(); var monthStart=new Date(now.getFullYear(),now.getMonth(),1);
   var monthEnd=new Date(now.getFullYear(),now.getMonth()+1,0);
@@ -3910,7 +3910,7 @@ async function saveJob() {
       }
     }
     // Auto-update customer machines owned
-    try { await updateCustomerMachines(customer, jobToolsLocal); } catch(e) {}
+    try { await updateCustomerMachines(customer, jobToolsLocal); } catch(e) { console.error('updateCustomerMachines failed', e); }
     if (partErrors.length) {
       showToast('Job saved but ' + partErrors.length + ' part(s) failed: ' + partErrors[0], 'error');
     } else {
@@ -6665,7 +6665,7 @@ async function openNewPOModal() {
       window._supplierCache = await db('GET', 'suppliers?select=name&order=name');
     }
     _supplierCache.forEach(function(s){ if (s.name && names.indexOf(s.name)===-1) names.push(s.name); });
-  } catch(e) {}
+  } catch(e) { console.error('supplier cache load failed', e); }
   purchaseOrders.forEach(function(po){ if (po.supplier && names.indexOf(po.supplier)===-1) names.push(po.supplier); });
   names.sort();
   document.getElementById('newPOSupplierList').innerHTML = names.map(function(n){ return '<option value="'+n+'">'; }).join('');
@@ -6877,7 +6877,7 @@ async function deleteMachineFromAccount(custId, machineIndex) {
       cLoans = await db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; });
       cActs = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc&limit=8').catch(function(){ return []; });
       var cPurchases2 = await db('GET', 'stock_tools?sold_account_id=eq.' + custId + '&select=*&order=sold_date.desc').catch(function(){ return []; });
-    } catch(e2) {}
+    } catch(e2) { console.error('account view reload failed', e2); showToast('Some account data may be incomplete - reload to retry', 'error'); }
     renderAccountView(c, cJobs, cLoans, cActs, cPurchases2);
   } catch(e) { showToast('Remove failed: ' + e.message, 'error'); }
 }
@@ -6900,7 +6900,7 @@ async function printAccountReport(custId) {
       var jt = await db('GET', 'job_tools?job_id=eq.' + custJobs[i].id + '&select=*');
       jobToolsMap[custJobs[i].id] = jt;
     }
-  } catch(e) {}
+  } catch(e) { console.error('printAccountReport: jobs/tools load failed', e); showToast('Report may be incomplete - job data failed to load', 'error'); }
 
   // Build machine sections
   var machineSections = mList.map(function(m) {
@@ -7054,7 +7054,7 @@ async function updateCustomerMachines(customerName, toolsList) {
       await db('PATCH', 'customers?id=eq.' + c.id, { machines_owned: formatMachinesJson(existing) });
       _custCache = null;
     }
-  } catch(e) {}
+  } catch(e) { console.error('updateCustomerMachines failed', e); }
 }
 
 // ── CUSTOMER TYPEAHEAD ────────────────────────────────────────────────────────
@@ -7124,7 +7124,7 @@ async function openCustomerAccount(id) {
       db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc&limit=8').catch(function(){ return []; }),
       db('GET', 'stock_tools?sold_account_id=eq.' + id + '&select=*&order=sold_date.desc').catch(function(){ return []; })
     ]);
-  } catch(e) {}
+  } catch(e) { console.error('openCustAccount load failed', e); showToast('Some account data may be incomplete - reload to retry', 'error'); }
   renderAccountView(c, cJobs, cLoans, cActs, cPurchases);
 }
 
@@ -7421,7 +7421,7 @@ async function openEditCust(id) {
     } else {
       logEl.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:4px">No activities yet.</div>';
     }
-  } catch(e) {}
+  } catch(e) { console.error('activity log load failed', e); }
 }
 
 function closeCustModal() { document.getElementById('custOverlay').classList.remove('show'); }
@@ -7924,13 +7924,13 @@ async function doToolSearch(serial) {
       var j = jobs.find(function(x){ return x.id === t.job_id; });
       if (j) results.jobs.push({ tool: t, job: j });
     });
-  } catch(e) {}
+  } catch(e) { console.error('tool search: job_tools failed', e); }
 
   try {
     // Search loan tools register
     var lt = loanTools.filter(function(t){ return t.serial_number && t.serial_number.toLowerCase().includes(serial.toLowerCase()); });
     results.loans = lt;
-  } catch(e) {}
+  } catch(e) { console.error('tool search: loan tools filter failed', e); }
 
   try {
     // Search site visit machines
@@ -7939,7 +7939,7 @@ async function doToolSearch(serial) {
       var v = siteVisits.find(function(x){ return x.id === m.site_visit_id; });
       if (v) results.sv.push({ machine: m, visit: v });
     });
-  } catch(e) {}
+  } catch(e) { console.error('tool search: site_visit_machines failed', e); }
 
   renderToolSearchResults(serial, results);
 }
