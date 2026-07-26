@@ -65,6 +65,7 @@
 
 <!-- Loans toolbar -->
 <div class="loan-toolbar" id="loanToolbar" style="display:none">
+  <input class="search-input" id="loanSearchBox" placeholder="Search tool, serial, X-Pak code, customer..." oninput="renderLoanView()">
   <div class="loan-view-toggle">
     <button class="loan-view-btn active" id="btnLoanActive" onclick="setLoanView('active')">Active / Overdue</button>
     <button class="loan-view-btn" id="btnLoanTrials" onclick="setLoanView('trials')">🏷️ Trials</button>
@@ -1443,7 +1444,17 @@ function renderActiveLoans(){
   var trials=allActive.filter(function(l){return !!l.is_trial;});
   document.getElementById('hSub').textContent='Loan Tools — '+allActive.length+' active'+(trials.length?' · '+trials.length+' trial':'');
   document.getElementById('lowBadge').innerHTML=overdue.length?'<div class="badge-low">'+overdue.length+' OVERDUE</div>':'';
-  if(!active.length){document.getElementById('loanList').innerHTML='<div class="center"><div class="icon">'+(loanView==='trials'?'🏷️':'✓')+'</div><div style="color:'+(loanView==='trials'?'#f59e0b':'#10b981')+'">'+(loanView==='trials'?'No trial tools out':'No active loans')+'</div></div>';return;}
+  var q=(document.getElementById('loanSearchBox').value||'').toLowerCase();
+  if(q){
+    active=active.filter(function(l){
+      var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;});
+      var hay=((tool?tool.name:'')+' '+(tool?tool.xpak_name||'':'')+' '+(tool?tool.xpak_code||'':'')+' '+(tool?tool.serial_number||'':'')+' '+(l.customer||'')+' '+(l.contact_name||'')+' '+(l.reason_for_loan||'')).toLowerCase();
+      return hay.indexOf(q)!==-1;
+    });
+  }
+  if(!active.length){
+    var emptyMsg=q?'No loans match "'+document.getElementById('loanSearchBox').value+'"':(loanView==='trials'?'No trial tools out':'No active loans');
+    document.getElementById('loanList').innerHTML='<div class="center"><div class="icon">'+(q?'🔍':loanView==='trials'?'🏷️':'✓')+'</div><div style="color:'+(q?'#8aa8c0':loanView==='trials'?'#f59e0b':'#10b981')+'">'+emptyMsg+'</div></div>';return;}
   document.getElementById('loanList').innerHTML=active.map(function(l){
     var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;});
     var toolName=tool?tool.name+(tool.serial_number?' S/N:'+tool.serial_number:''):'Unknown Tool';
@@ -1465,7 +1476,16 @@ function renderActiveLoans(){
 }
 function renderToolRegister(){
   if(!loanTools.length){document.getElementById('loanList').innerHTML='<div class="center"><div class="icon">+</div><div>No loan tools yet.</div></div>';return;}
-  document.getElementById('loanList').innerHTML=loanTools.map(function(t){
+  var q=(document.getElementById('loanSearchBox').value||'').toLowerCase();
+  var reg=loanTools;
+  if(q){
+    reg=loanTools.filter(function(t){
+      var hay=((t.name||'')+' '+(t.xpak_name||'')+' '+(t.xpak_code||'')+' '+(t.serial_number||'')+' '+(t.location||'')+' '+(t.notes||'')).toLowerCase();
+      return hay.indexOf(q)!==-1;
+    });
+  }
+  if(!reg.length){document.getElementById('loanList').innerHTML='<div class="center"><div class="icon">🔍</div><div style="color:#8aa8c0">No tools match "'+document.getElementById('loanSearchBox').value+'"</div></div>';return;}
+  document.getElementById('loanList').innerHTML=reg.map(function(t){
     var al=loans.find(function(l){return l.loan_tool_id===t.id&&l.status!=='RETURNED';});
     var col=!al?'#10b981':'#ef4444'; var sl=!al?'Available':'On Loan — '+(al.customer||'');
     return '<div class="tool-reg-card'+(al?' unavailable':'')+'" onclick="openLoanToolModal(\'' + t.id + '\')">'+
@@ -1823,29 +1843,21 @@ function printAllLoanLabels() {
 }
 function printToolIdLabel() {
   var t = editingLoanTool; if (!t) return;
-  // QR encodes just the serial number — scanning opens tool search in the app
-  var qrData = t.serial_number || t.name;
   var w = window.open('', '_blank');
   if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Labels — ' + t.name + '</title>');
-  w.document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Label — ' + t.name + '</title>');
   w.document.write('<style>');
   w.document.write('@page { size: 89mm 36mm; margin: 2mm 2mm; }');
   w.document.write('* { box-sizing: border-box; margin: 0; padding: 0; }');
   w.document.write('body { font-family: Arial, sans-serif; }');
-  // Each label fits 89×36mm page
+  // Label fits 89×36mm page
   w.document.write('.label { width: 85mm; height: 32mm; display: flex; align-items: stretch; overflow: hidden; page-break-after: always; border: 0.3mm solid #000; border-radius: 1mm; }');
-  // Left text block
-  w.document.write('.lbl-text { flex: 1; padding: 2.5mm 3mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border-right: 0.3mm solid #ccc; }');
+  w.document.write('.lbl-text { flex: 1; padding: 2.5mm 3mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }');
   w.document.write('.property { font-size: 5.5pt; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: 1px; }');
   w.document.write('.tool-name { font-size: 17pt; font-weight: 900; color: #000; line-height: 1; letter-spacing: -0.5px; margin: 1mm 0 0.5mm; word-break: break-word; }');
-  w.document.write('.battery-sub { font-size: 9pt; font-weight: 700; color: #555; letter-spacing: 1px; text-transform: uppercase; margin: 0.5mm 0; }');
   w.document.write('.sn-row { display: flex; align-items: baseline; gap: 2mm; }');
   w.document.write('.sn-lbl { font-size: 6pt; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }');
   w.document.write('.sn-val { font-size: 13pt; font-weight: 900; font-family: "Courier New", monospace; color: #000; line-height: 1; }');
-  // Right QR block
-  w.document.write('.lbl-qr { flex-shrink: 0; width: 28mm; display: flex; align-items: center; justify-content: center; padding: 2mm; background: #fafafa; }');
-  w.document.write('.lbl-qr canvas, .lbl-qr img { width: 24mm !important; height: 24mm !important; }');
   w.document.write('</style></head><body>');
 
   // ── TOOL LABEL ──
@@ -1857,24 +1869,10 @@ function printToolIdLabel() {
     w.document.write('<div class="sn-row"><span class="sn-lbl">S/N</span><span class="sn-val">' + t.serial_number + '</span></div>');
   }
   w.document.write('</div>');
-  w.document.write('<div class="lbl-qr" id="qrTool"></div>');
-  w.document.write('</div>');
-
-  // ── BATTERY LABEL ──
-  w.document.write('<div class="label">');
-  w.document.write('<div class="lbl-text">');
-  w.document.write('<div class="property">Property of X-Pak Service</div>');
-  w.document.write('<div class="tool-name">' + t.name + '</div>');
-  w.document.write('<div class="battery-sub">Battery</div>');
-  w.document.write('</div>');
-  w.document.write('<div class="lbl-qr" id="qrBatt"></div>');
   w.document.write('</div>');
 
   w.document.write('<script>');
-  w.document.write('var qrOpts = { text:' + JSON.stringify(qrData) + ', width:91, height:91, correctLevel:QRCode.CorrectLevel.M };');
-  w.document.write('new QRCode(document.getElementById("qrTool"), qrOpts);');
-  w.document.write('new QRCode(document.getElementById("qrBatt"), qrOpts);');
-  w.document.write('setTimeout(function(){ window.print(); }, 700);');
+  w.document.write('setTimeout(function(){ window.print(); }, 300);');
   w.document.write('<\/script>');
   w.document.write('</body></html>');
   w.document.close();
