@@ -1618,7 +1618,7 @@ function printLoanTag(){
 }
 function printShelfCard(){
   var l=editingLoan; if(!l) return;
-  var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;}), toolName=tool?tool.name:'Unknown Tool';
+  var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;}), toolName=tool?tool.name:'Unknown Tool', toolSN=tool&&tool.serial_number?tool.serial_number:'';
   var today=new Date(); today.setHours(0,0,0,0);
   var isOverdue=l.expected_return&&new Date(l.expected_return)<today;
   var isTrial=!!l.is_trial;
@@ -1628,11 +1628,15 @@ function printShelfCard(){
   if(!w){showToast('Allow pop-ups to print labels','error');return;}
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Shelf Card - '+toolName+'</title><style>');
   w.document.write('@page{size:89mm 60mm;margin:2mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;width:85mm}');
+  // Border still carries the status color for a future colour printer; black text/background below is what guarantees legibility on a monochrome Dymo today
   w.document.write('.card{border:1mm solid '+col+';border-radius:2mm;padding:3mm 4mm;display:flex;flex-direction:column}');
-  w.document.write('.status{background:'+col+';color:#fff;font-size:13pt;font-weight:900;text-align:center;padding:2mm;border-radius:1.5mm;letter-spacing:1px}');
+  w.document.write('.status{background:#000;color:#fff;font-size:13pt;font-weight:900;text-align:center;padding:2mm;border-radius:1.5mm;letter-spacing:1px}');
   w.document.write('.tool-name{font-size:16pt;font-weight:900;color:#000;line-height:1.1;margin-top:2mm;word-break:break-word}');
+  w.document.write('.sn-row{display:flex;align-items:baseline;gap:1.5mm;margin-top:1mm}');
+  w.document.write('.sn-lbl{font-size:6.5pt;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px}');
+  w.document.write('.sn-val{font-size:11pt;font-weight:900;font-family:"Courier New",monospace;color:#000}');
   w.document.write('.cust-lbl{font-size:7pt;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-top:2.5mm}');
-  w.document.write('.cust-val{font-size:15pt;font-weight:900;color:'+col+';line-height:1.1;word-break:break-word}');
+  w.document.write('.cust-val{font-size:15pt;font-weight:900;color:#000;line-height:1.1;word-break:break-word}');
   w.document.write('.meta{display:flex;justify-content:space-between;margin-top:2.5mm;padding-top:2mm;border-top:0.3mm solid #ccc}');
   w.document.write('.meta-item{font-size:8pt;color:#333}');
   w.document.write('.meta-lbl{font-size:6.5pt;color:#888;text-transform:uppercase;font-weight:700}');
@@ -1640,6 +1644,7 @@ function printShelfCard(){
   w.document.write('<div class="card">');
   w.document.write('<div class="status">'+statusLabel+'</div>');
   w.document.write('<div class="tool-name">'+toolName+'</div>');
+  if(toolSN) w.document.write('<div class="sn-row"><span class="sn-lbl">S/N</span><span class="sn-val">'+toolSN+'</span></div>');
   w.document.write('<div class="cust-lbl">Currently With</div>');
   w.document.write('<div class="cust-val">'+(l.customer||'Unknown')+'</div>');
   w.document.write('<div class="meta">');
