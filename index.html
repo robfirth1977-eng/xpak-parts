@@ -758,6 +758,7 @@
     <button id="btnPrintLoanTag" onclick="printLoanTag()" style="display:none;flex:1;padding:11px;background:transparent;color:#a78bfa;border:1px solid #a78bfa;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Print Loan Tag</button>
     <button id="btnPrintLoanForm" onclick="printLoanForm()" style="display:none;flex:1;padding:11px;background:transparent;color:#a78bfa;border:1px solid #a78bfa;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Print Loan Form</button>
     </div>
+    <button id="btnPrintShelfCard" onclick="printShelfCard()" style="display:none;width:100%;padding:11px;background:transparent;color:#00c8e0;border:1px solid #00c8e0;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Print Shelf Card (leave on shelf)</button>
     <button class="btn-delete" id="btnDeleteLoan" onclick="deleteLoan()" style="display:none">Delete This Loan</button>
   </div>
 </div>
@@ -1512,6 +1513,7 @@ function openNewLoanModal(){
   document.getElementById('btnMarkReturned').style.display='none';
   document.getElementById('btnPrintLoanTag').style.display='none';
   document.getElementById('btnPrintLoanForm').style.display='none';
+  document.getElementById('btnPrintShelfCard').style.display='none';
   document.getElementById('btnDeleteLoan').style.display='none';
   document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
   var sel=document.getElementById('lToolId');
@@ -1541,6 +1543,7 @@ function openEditLoanModal(loanId){
   document.getElementById('btnMarkReturned').style.display=isR?'none':'block';
   document.getElementById('btnPrintLoanTag').style.display='block';
   document.getElementById('btnPrintLoanForm').style.display='block';
+  document.getElementById('btnPrintShelfCard').style.display=isR?'none':'block';
   document.getElementById('btnDeleteLoan').style.display='block';
   document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
   document.getElementById('loanOverlay').classList.add('show');
@@ -1612,6 +1615,39 @@ function printLoanTag(){
   if(l.expected_return) w.document.write('<div class="row"><span class="lbl">Return By</span><span class="val">'+fmtDate(l.expected_return)+'</span></div>');
   if(l.loaned_by) w.document.write('<div class="row"><span class="lbl">Loaned By</span><span class="val">'+l.loaned_by+'</span></div>');
   w.document.write('</div></body></html>'); w.document.close(); setTimeout(function(){w.print();},300);
+}
+function printShelfCard(){
+  var l=editingLoan; if(!l) return;
+  var tool=loanTools.find(function(t){return t.id===l.loan_tool_id;}), toolName=tool?tool.name:'Unknown Tool';
+  var today=new Date(); today.setHours(0,0,0,0);
+  var isOverdue=l.expected_return&&new Date(l.expected_return)<today;
+  var isTrial=!!l.is_trial;
+  var col=isOverdue?'#ef4444':isTrial?'#f59e0b':'#a78bfa';
+  var statusLabel=isOverdue?'OVERDUE':isTrial?'ON TRIAL':'ON LOAN';
+  var w=window.open('','_blank');
+  if(!w){showToast('Allow pop-ups to print labels','error');return;}
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Shelf Card - '+toolName+'</title><style>');
+  w.document.write('@page{size:89mm 60mm;margin:2mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;width:85mm}');
+  w.document.write('.card{border:1mm solid '+col+';border-radius:2mm;padding:3mm 4mm;display:flex;flex-direction:column}');
+  w.document.write('.status{background:'+col+';color:#fff;font-size:13pt;font-weight:900;text-align:center;padding:2mm;border-radius:1.5mm;letter-spacing:1px}');
+  w.document.write('.tool-name{font-size:16pt;font-weight:900;color:#000;line-height:1.1;margin-top:2mm;word-break:break-word}');
+  w.document.write('.cust-lbl{font-size:7pt;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-top:2.5mm}');
+  w.document.write('.cust-val{font-size:15pt;font-weight:900;color:'+col+';line-height:1.1;word-break:break-word}');
+  w.document.write('.meta{display:flex;justify-content:space-between;margin-top:2.5mm;padding-top:2mm;border-top:0.3mm solid #ccc}');
+  w.document.write('.meta-item{font-size:8pt;color:#333}');
+  w.document.write('.meta-lbl{font-size:6.5pt;color:#888;text-transform:uppercase;font-weight:700}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="card">');
+  w.document.write('<div class="status">'+statusLabel+'</div>');
+  w.document.write('<div class="tool-name">'+toolName+'</div>');
+  w.document.write('<div class="cust-lbl">Currently With</div>');
+  w.document.write('<div class="cust-val">'+(l.customer||'Unknown')+'</div>');
+  w.document.write('<div class="meta">');
+  w.document.write('<div class="meta-item"><div class="meta-lbl">Out</div>'+fmtDate(l.loaned_date)+'</div>');
+  if(l.expected_return) w.document.write('<div class="meta-item" style="text-align:right"><div class="meta-lbl">Due Back</div>'+fmtDate(l.expected_return)+'</div>');
+  w.document.write('</div>');
+  w.document.write('</div>');
+  w.document.write('</body></html>'); w.document.close(); setTimeout(function(){w.print();},300);
 }
 
 function printLoanForm(){
