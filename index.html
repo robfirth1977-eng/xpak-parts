@@ -1021,7 +1021,7 @@ function jobRevenue(j) {
   if (j.invoice_amount) return parseFloat(j.invoice_amount);
   // Fall back to calculated amount from parts/labour
   var svc = (j.job_tools||[]).reduce(function(s,t){ return s + parseFloat(t.service_fee||0); },0);
-  var pts = (j.job_parts||[]).reduce(function(s,p){ return s + parseFloat(p.line_total||p.unit_price||0); },0);
+  var pts = (j.job_parts||[]).reduce(function(s,p){ return s + parseFloat(p.unit_price||0) * parseFloat(p.quantity||1); },0);
   var lh  = parseFloat(j.hours_spent||0) * parseFloat(j.labour_rate||120);
   var ld  = parseFloat(j.labour_discount||0);
   var pd  = parseFloat(j.parts_discount||0);
