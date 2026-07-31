@@ -639,11 +639,16 @@
     <div id="jobToolsList"></div>
 
     <div class="section-label" style="display:flex;justify-content:space-between;align-items:center"><span>Parts Required</span><button onclick="pushPartsToStockOrder()" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #10b98170;color:#10b981;border-radius:6px;cursor:pointer;font-weight:600">📦 Push To Order</button></div>
-    <div class="section-label">Costs</div>
+
+    <div class="section-label">Job Cost Summary</div>
+    <input id="jParts" type="hidden" value="">
     <div class="g2">
-      
-      <div class="field"><label>Parts ($) <span style="font-size:10px;color:#5a8090;font-weight:400">auto</span></label><input id="jParts" type="number" step="0.01" min="0" placeholder="0.00" readonly style="opacity:0.65;cursor:default;background:#0a1420"></div>
+      <div class="field"><label>Billable Hours</label><input id="jHoursSpent" type="number" step="0.25" min="0" placeholder="e.g. 2.5" oninput="recalcJobCostSummary()"></div>
+      <div class="field"><label>Hourly Rate ($)</label><input id="jLabourRate" type="number" step="1" min="0" value="120" placeholder="120" oninput="recalcJobCostSummary()"></div>
+      <div class="field"><label>Labour Discount ($) <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jLabourDiscount" type="number" step="0.01" min="0" placeholder="0.00" oninput="recalcJobCostSummary()"></div>
+      <div class="field"><label>Parts Discount ($) <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jPartsDiscount" type="number" step="0.01" min="0" placeholder="0.00" oninput="recalcJobCostSummary()"></div>
     </div>
+    <div id="jobCostSummaryBox"></div>
 
     <div class="section-label">Files and Links</div>
     <div class="links-area">
@@ -656,17 +661,13 @@
       <div class="links-list" id="linksList"></div>
     </div>
 
-    <div class="section-label">Agreement &amp; Time</div>
+    <div class="section-label">Agreement</div>
     <div class="g2">
       <div class="field"><label>Linked Agreement</label>
         <select id="jAgreementId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
           <option value="">-- None --</option>
         </select>
       </div>
-      <div class="field"><label>Billable Hours</label><input id="jHoursSpent" type="number" step="0.25" min="0" placeholder="e.g. 2.5"></div>
-      <div class="field"><label>Hourly Rate ($)</label><input id="jLabourRate" type="number" step="1" min="0" value="120" placeholder="120"></div>
-      <div class="field"><label>Labour Discount ($) <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jLabourDiscount" type="number" step="0.01" min="0" placeholder="0.00"></div>
-      <div class="field"><label>Parts Discount ($) <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jPartsDiscount" type="number" step="0.01" min="0" placeholder="0.00"></div>
     </div>
 
     <div class="section-label">Notes</div>
@@ -2750,10 +2751,55 @@ function recalcPartsTotal() {
   var el = document.getElementById('jParts'); if (!el) return;
   var total = jobPartsLocal.reduce(function(sum, jp) {
     var pt = jp.part_id ? allParts.find(function(x){ return x.id === jp.part_id; }) : null;
-    var sell = pt && pt.sell_price ? parseFloat(pt.sell_price) : 0;
+    var stdSell = pt && pt.sell_price ? parseFloat(pt.sell_price) : 0;
+    var sell = jp.unit_price != null ? parseFloat(jp.unit_price) : stdSell;
     return sum + (sell * (jp.quantity || 1));
   }, 0);
   el.value = total > 0 ? total.toFixed(2) : '';
+  recalcJobCostSummary();
+}
+
+function recalcJobCostSummary() {
+  var box = document.getElementById('jobCostSummaryBox'); if (!box) return;
+  var fmt = function(n){ return '$'+parseFloat(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+
+  var serviceFeeTotal = jobToolsLocal.reduce(function(s,t){ return s + parseFloat(t.service_fee||0); },0);
+  var partsTotal      = parseFloat(document.getElementById('jParts').value) || 0;
+  var hours           = parseFloat(document.getElementById('jHoursSpent').value) || 0;
+  var rate             = parseFloat(document.getElementById('jLabourRate').value) || 120;
+  var labourDiscount  = parseFloat(document.getElementById('jLabourDiscount').value) || 0;
+  var partsDiscount   = parseFloat(document.getElementById('jPartsDiscount').value) || 0;
+
+  var labourGross = hours * rate;
+  var labourNet   = Math.max(0, labourGross - labourDiscount);
+  var partsNet    = Math.max(0, partsTotal - partsDiscount);
+  var totalExGst  = serviceFeeTotal + partsNet + labourNet;
+  var gst         = totalExGst * 0.1;
+
+  var rows = '';
+  if (serviceFeeTotal) rows += '<div class="jcs-row"><span>Service Fee</span><span>'+fmt(serviceFeeTotal)+'</span></div>';
+  if (partsTotal) {
+    rows += '<div class="jcs-row"><span>Parts</span><span>'+fmt(partsTotal)+'</span></div>';
+    if (partsDiscount > 0) {
+      rows += '<div class="jcs-row jcs-disc"><span>Parts Discount</span><span>-'+fmt(partsDiscount)+'</span></div>';
+      rows += '<div class="jcs-row"><span>Parts Net</span><span>'+fmt(partsNet)+'</span></div>';
+    }
+  }
+  if (hours > 0) {
+    rows += '<div class="jcs-row"><span>Labour ('+hours+'h &times; $'+rate+'/hr)</span><span>'+fmt(labourGross)+'</span></div>';
+    if (labourDiscount > 0) {
+      rows += '<div class="jcs-row jcs-disc"><span>Labour Discount</span><span>-'+fmt(labourDiscount)+'</span></div>';
+      rows += '<div class="jcs-row"><span>Labour Net</span><span>'+fmt(labourNet)+'</span></div>';
+    }
+  }
+  if (!serviceFeeTotal && !partsTotal && !hours) {
+    box.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:8px 0">Add a service fee, parts, or billable hours to see the cost summary.</div>';
+    return;
+  }
+  rows += '<div class="jcs-row jcs-grand"><span>Total ex GST</span><span>'+fmt(totalExGst)+'</span></div>';
+  rows += '<div class="jcs-row jcs-gst"><span>GST (10%)</span><span>'+fmt(gst)+'</span></div>';
+  rows += '<div class="jcs-row jcs-incgst"><span>Total inc GST</span><span>'+fmt(totalExGst+gst)+'</span></div>';
+  box.innerHTML = '<div class="job-cost-summary">'+rows+'</div>';
 }
 
 function removeJobPart(tempId) {
@@ -3086,6 +3132,7 @@ function clearJobForm() {
   jobPartsLocal = [];
   jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', date_of_manufacture: '', warranty_period: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' }];
   renderToolsList();
+  recalcJobCostSummary();
 }
 
 function openNewJobModal(skipFocus) {
@@ -3195,6 +3242,7 @@ async function openEditJobModal(jobId) {
     jobPartsLocal = [];
   }
   jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
+  recalcPartsTotal();
   document.getElementById('btnDeleteJob').style.display = 'block';
   // Load activity history for this job
   var jobActSec = document.getElementById('jobActivitySection');
@@ -3921,6 +3969,7 @@ function addTool() {
   var num = jobToolsLocal.length + 1;
   jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' });
   renderToolsList();
+  recalcJobCostSummary();
 }
 
 function removeTool(tempId) {
@@ -3928,6 +3977,7 @@ function removeTool(tempId) {
   jobToolsLocal = jobToolsLocal.filter(function(t) { return t._tempId !== tempId; });
   jobToolsLocal.forEach(function(t, i) { t.tool_number = i + 1; });
   renderToolsList();
+  recalcJobCostSummary();
 }
 
 function toggleToolSplitSelect(tempId, checked) {
@@ -4022,6 +4072,7 @@ function setToolField(tempId, field, val) {
   var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; });
   if (!t) return;
   t[field] = val;
+  if (field === 'service_fee') recalcJobCostSummary();
   // When machine changes, update work_completed if still a default value
   if (field === 'machine_id') {
     var powered = getDefaultWorkCompleted('');

@@ -251,6 +251,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .jpr-qty{font-size:12px;font-weight:700;color:#e2e8f0;min-width:25px;text-align:center}
 .jpr-status{font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px;white-space:nowrap;flex-shrink:0}
 .jpr-remove{background:none;border:none;color:#4a6080;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 3px}
+
+.job-cost-summary{margin-top:8px;padding:10px 14px;background:#141f2d;border-radius:8px;border:1px solid #1e3048}
+.jcs-row{display:flex;justify-content:space-between;padding:4px 2px;font-size:13px;color:#c8d8e8}
+.jcs-row span:last-child{font-family:'Courier New',monospace;font-weight:600}
+.jcs-disc{color:#ef4444}
+.jcs-grand{margin-top:6px;padding:8px 10px;background:#e879f918;border:1px solid #e879f950;border-radius:6px;font-size:16px;font-weight:800;color:#e879f9}
+.jcs-gst{color:#5a7090;font-size:11px}
+.jcs-incgst{font-weight:700;color:#e2e8f0;border-top:1px solid #1e3048;margin-top:2px;padding-top:6px}
 .jpr-remove:hover{color:#ef4444}
 /* Links */
 .links-area{margin-bottom:10px}
