@@ -6963,8 +6963,8 @@ async function saveCustomer() {
       await db('DELETE', 'customer_contacts?customer_id=eq.' + cid);
     } else {
       // Auto-assign next XSA number
-      var allAccts = await db('GET', 'customers?select=account_number&order=account_number.desc&limit=1');
-      var nextNum = (allAccts.length && allAccts[0].account_number) ? allAccts[0].account_number + 1 : 1;
+      var allAccts = await db('GET', 'customers?select=account_number&order=account_number.desc.nullslast&limit=1');
+      var nextNum = (allAccts.length && allAccts[0].account_number != null) ? allAccts[0].account_number + 1 : 1;
       payload.account_number = nextNum;
       var res = await db('POST', 'customers', payload); cid = res[0].id;
     }
