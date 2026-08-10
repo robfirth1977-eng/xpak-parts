@@ -4912,6 +4912,7 @@ async function saveSiteVisit() {
 async function deleteSiteVisit() {
   if(!editingSvId||!confirm('Delete this site visit?')) return;
   try {
+    await db('DELETE','site_visit_parts?site_visit_id=eq.'+editingSvId);
     await db('DELETE','site_visit_machines?site_visit_id=eq.'+editingSvId);
     await db('DELETE','site_visits?id=eq.'+editingSvId);
     closeSvModal(); await loadSiteVisits(); showToast('Visit deleted');
