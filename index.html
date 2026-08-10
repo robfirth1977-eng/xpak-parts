@@ -388,7 +388,7 @@
     <div class="modal-header"><div class="modal-title" id="svModalTitle">New Site Visit</div><button class="modal-close" onclick="closeSvModal()">x</button></div>
     <div class="section-label">Visit Details</div>
     <div class="field-row">
-      <div class="field"><label>Customer *</label><input id="svCustomer" placeholder="e.g. Thomas Foods"></div>
+      <div class="field"><label>Customer *</label><input id="svCustomer" placeholder="e.g. Thomas Foods" list="svCustomerList" autocomplete="off" oninput="svCustomerChanged(this.value)"><datalist id="svCustomerList"></datalist></div>
       <div class="field"><label>Date *</label><input id="svDate" type="date"></div>
     </div>
     <div class="field-row">
@@ -4680,7 +4680,34 @@ async function deleteSupplier() {
 }
 
 // ── SITE VISITS ──────────────────────────────────────────────────────────────
-var siteVisits = [], editingSvId = null, svMachines = [];
+var siteVisits = [], editingSvId = null, svMachines = [], svMatchedCustomer = null;
+
+// ── Customer linking (Machines Attended datalists) ──────────────────
+function populateSvCustomerDatalist() {
+  var dl = document.getElementById('svCustomerList');
+  if (!dl || !customers) return;
+  dl.innerHTML = customers.map(function(c) {
+    return '<option value="' + (c.company_name||'').replace(/"/g,'&quot;') + '">';
+  }).join('');
+}
+function svCustomerChanged(val) {
+  svMatchedCustomer = (customers||[]).find(function(c) { return c.company_name && c.company_name.toLowerCase() === (val||'').trim().toLowerCase(); }) || null;
+  renderSvMachines();
+}
+function svGetCustomerMachines(cust) {
+  if (!cust || !cust.machines_owned) return [];
+  try { var list = JSON.parse(cust.machines_owned); return Array.isArray(list) ? list : []; } catch(e) { return []; }
+}
+function svFindSerialElsewhere(serial, excludeCustomerId) {
+  if (!serial) return null;
+  var s = serial.trim().toLowerCase(); if (!s) return null;
+  for (var i = 0; i < (customers||[]).length; i++) {
+    var c = customers[i]; if (c.id === excludeCustomerId) continue;
+    var owned = svGetCustomerMachines(c);
+    if (owned.some(function(m){ return (m.serial||'').trim().toLowerCase() === s; })) return c.company_name;
+  }
+  return null;
+}
 
 function switchToSiteVisits() {
   currentView = 'sitevisits'; hideAllViews(); renderTabs();
@@ -4740,6 +4767,7 @@ function openSvModal() {
   editingSvId = null; svMachines = [];
   document.getElementById('svModalTitle').textContent = 'New Site Visit';
   document.getElementById('svCustomer').value = '';
+  populateSvCustomerDatalist(); svCustomerChanged('');
   document.getElementById('svDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('svTech').value = 'Rob Firth';
   document.getElementById('svHours').value = '';
@@ -4768,6 +4796,7 @@ function openEditSv(id) {
   });
   document.getElementById('svModalTitle').textContent = 'Edit Site Visit' + (v.visit_number ? ' · ' + xsvNum(v.visit_number) : '');
   document.getElementById('svCustomer').value = v.customer||'';
+  populateSvCustomerDatalist(); svCustomerChanged(v.customer||'');
   document.getElementById('svDate').value = v.visit_date||'';
   document.getElementById('svTech').value = v.technician||'Rob Firth';
   document.getElementById('svHours').value = v.hours||'';
@@ -4813,11 +4842,24 @@ function removeSvMachine(idx) { svMachines = svMachines.filter(function(m){retur
 function addSvPart(mIdx) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m.parts.push({_id:_svPartIdx++,db_id:null,description:'',part_no:'',quantity:1,unit_cost:'',line_total:0}); renderSvMachines(); }
 function removeSvPart(mIdx,pIdx) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m.parts=m.parts.filter(function(p){return p._id!==pIdx;}); renderSvMachines(); updateSvTotals(); }
 
+function svPartOptionsFor(machineTypeStr) {
+  var mt = (machineTypeStr||'').trim().toLowerCase(); if (!mt) return [];
+  var mach = (machines||[]).find(function(x){ return (x.name||'').trim().toLowerCase() === mt; });
+  if (!mach) return [];
+  return (allParts||[]).filter(function(p){ return p.machine_id === mach.id; });
+}
 function renderSvMachines() {
+  var knownMachines = svGetCustomerMachines(svMatchedCustomer);
   var html = svMachines.map(function(m) {
+    var machDlId = 'svMachDL_' + m._id, serDlId = 'svSerDL_' + m._id;
+    var machOpts = knownMachines.map(function(km){ return '<option value="' + (km.name||'').replace(/"/g,'&quot;') + '">'; }).join('');
+    var serOpts = knownMachines.map(function(km){ return '<option value="' + (km.serial||'').replace(/"/g,'&quot;') + '">'; }).join('');
+    var partOptions = svPartOptionsFor(m.machine_type);
     var parts = m.parts.map(function(p) {
+      var partDlId = 'svPartDL_' + m._id + '_' + p._id;
+      var partOpts = partOptions.map(function(pt){ return '<option value="' + (pt.description||'').replace(/"/g,'&quot;') + ' — ' + (pt.key_no||'').replace(/"/g,'&quot;') + '">'; }).join('');
       return '<div class="sv-part-row">' +
-        '<input style="flex:2" placeholder="Description" value="' + p.description + '" oninput="svSetPart(' + m._id + ',' + p._id + ',\'description\',this.value)">' +
+        '<input style="flex:2" placeholder="Description" value="' + p.description + '" list="' + partDlId + '" autocomplete="off" oninput="svSetPartDesc(' + m._id + ',' + p._id + ',this.value)"><datalist id="' + partDlId + '">' + partOpts + '</datalist>' +
         '<input style="flex:1" placeholder="Part No." value="' + p.part_no + '" oninput="svSetPart(' + m._id + ',' + p._id + ',\'part_no\',this.value)">' +
         '<input style="width:44px" placeholder="Qty" type="number" min="1" value="' + p.quantity + '" oninput="svSetPart(' + m._id + ',' + p._id + ',\'quantity\',this.value)">' +
         '<input style="width:72px" placeholder="$ Unit" type="number" min="0" value="' + p.unit_cost + '" oninput="svSetPart(' + m._id + ',' + p._id + ',\'unit_cost\',this.value)">' +
@@ -4827,10 +4869,11 @@ function renderSvMachines() {
     }).join('');
     return '<div class="sv-machine-row">' +
       '<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">' +
-        '<input style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none" placeholder="Machine type" value="' + m.machine_type + '" oninput="svSetMachine(' + m._id + ',\'machine_type\',this.value)">' +
-        '<input style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none" placeholder="Serial No." value="' + m.serial_number + '" oninput="svSetMachine(' + m._id + ',\'serial_number\',this.value)">' +
+        '<input style="flex:2;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none" placeholder="Machine type" value="' + m.machine_type + '" list="' + machDlId + '" autocomplete="off" oninput="svSetMachine(' + m._id + ',\'machine_type\',this.value)"><datalist id="' + machDlId + '">' + machOpts + '</datalist>' +
+        '<input style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none" placeholder="Serial No." value="' + m.serial_number + '" list="' + serDlId + '" autocomplete="off" oninput="svSetMachine(' + m._id + ',\'serial_number\',this.value)"><datalist id="' + serDlId + '">' + serOpts + '</datalist>' +
         '<button class="sv-remove-btn" onclick="removeSvMachine(' + m._id + ')">×</button>' +
       '</div>' +
+      (knownMachines.length ? '<div style="font-size:10px;color:#5a8090;margin-bottom:6px">📋 ' + knownMachines.length + ' machine' + (knownMachines.length===1?'':'s') + ' on file for this account — start typing to pick one</div>' : '') +
       '<textarea placeholder="Work performed..." style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:12px;resize:vertical;outline:none;margin-bottom:8px" rows="2" oninput="svSetMachine(' + m._id + ',\'work_performed\',this.value)">' + m.work_performed + '</textarea>' +
       (parts ? '<div style="font-size:10px;color:#5a8090;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px">Parts Used</div>' + parts : '') +
       '<button class="sv-add-btn" onclick="addSvPart(' + m._id + ')">+ Add Part</button>' +
@@ -4839,7 +4882,22 @@ function renderSvMachines() {
   document.getElementById('svMachinesContainer').innerHTML = html;
 }
 
-function svSetMachine(mIdx, field, val) { var m=svMachines.find(function(x){return x._id===mIdx;}); if(m) m[field]=val; }
+function svSetMachine(mIdx, field, val) {
+  var m=svMachines.find(function(x){return x._id===mIdx;}); if(!m) return;
+  m[field]=val;
+  if (field==='machine_type' || field==='serial_number') {
+    var known = svGetCustomerMachines(svMatchedCustomer);
+    var v = (val||'').trim().toLowerCase();
+    var match = known.find(function(km){
+      return field==='machine_type' ? (km.name||'').trim().toLowerCase()===v : (km.serial||'').trim().toLowerCase()===v;
+    });
+    if (match) {
+      if (field==='machine_type' && !m.serial_number) m.serial_number = match.serial||'';
+      if (field==='serial_number' && !m.machine_type) m.machine_type = match.name||'';
+      renderSvMachines(); // refresh cross-filled field + parts datalist now scoped to this machine
+    }
+  }
+}
 function svSetPart(mIdx, pIdx, field, val) {
   var m=svMachines.find(function(x){return x._id===mIdx;}); if(!m) return;
   var p=m.parts.find(function(x){return x._id===pIdx;}); if(!p) return;
@@ -4848,6 +4906,22 @@ function svSetPart(mIdx, pIdx, field, val) {
   updateSvTotals();
   var el = document.querySelector('[data-sv-part-total="'+mIdx+'-'+pIdx+'"]');
   if(el) el.textContent = '$'+parseFloat(p.line_total||0).toFixed(2);
+}
+function svSetPartDesc(mIdx, pIdx, val) {
+  var m=svMachines.find(function(x){return x._id===mIdx;}); if(!m) return;
+  var p=m.parts.find(function(x){return x._id===pIdx;}); if(!p) return;
+  p.description = val;
+  var match = svPartOptionsFor(m.machine_type).find(function(pt){ return ((pt.description||'')+' — '+(pt.key_no||'')) === val; });
+  if (match) {
+    p.description = match.description || val;
+    p.part_no = match.key_no || p.part_no;
+    if (match.sell_price != null) p.unit_cost = match.sell_price;
+    p.line_total = parseFloat(p.quantity||1) * parseFloat(p.unit_cost||0);
+    updateSvTotals();
+    renderSvMachines(); // known part picked - show filled-in Part No. / $ Unit
+    return;
+  }
+  updateSvTotals();
 }
 
 function updateSvTotals() {
@@ -4870,6 +4944,13 @@ async function saveSiteVisit() {
   var customer = document.getElementById('svCustomer').value.trim();
   var date = document.getElementById('svDate').value;
   if (!customer||!date) { showToast('Customer and date required','error'); return; }
+  var matchedCust = (customers||[]).find(function(c){ return c.company_name && c.company_name.toLowerCase()===customer.toLowerCase(); }) || null;
+  for (var si=0; si<svMachines.length; si++) {
+    var svm = svMachines[si];
+    if (!svm.serial_number || !svm.serial_number.trim()) continue;
+    var elsewhere = svFindSerialElsewhere(svm.serial_number, matchedCust ? matchedCust.id : null);
+    if (elsewhere && !confirm('Serial "' + svm.serial_number + '" is already on file under "' + elsewhere + '". Continue saving anyway?')) return;
+  }
   document.getElementById('btnSaveSv').disabled = true;
   try {
     var payload = { customer: customer, visit_date: date,
@@ -4901,6 +4982,19 @@ async function saveSiteVisit() {
       for (var j=0;j<m.parts.length;j++) {
         var p=m.parts[j];
         if(p.description) await db('POST','site_visit_parts',{site_visit_id:vid,machine_ref:m.machine_type||null,part_description:p.description,part_no:p.part_no||null,quantity:parseInt(p.quantity)||1,unit_cost:parseFloat(p.unit_cost)||null,line_total:parseFloat(p.line_total)||null});
+      }
+    }
+    if (matchedCust) {
+      var owned = svGetCustomerMachines(matchedCust);
+      var added = false;
+      svMachines.forEach(function(m) {
+        if (!m.machine_type || !m.serial_number) return;
+        var already = owned.some(function(km){ return (km.name||'').trim().toLowerCase()===m.machine_type.trim().toLowerCase() && (km.serial||'').trim().toLowerCase()===m.serial_number.trim().toLowerCase(); });
+        if (!already) { owned.push({ name: m.machine_type.trim(), serial: m.serial_number.trim() }); added = true; }
+      });
+      if (added) {
+        await db('PATCH','customers?id=eq.'+matchedCust.id,{machines_owned: JSON.stringify(owned)});
+        matchedCust.machines_owned = JSON.stringify(owned);
       }
     }
     closeSvModal(); await loadSiteVisits();
