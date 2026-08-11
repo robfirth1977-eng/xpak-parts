@@ -424,6 +424,9 @@
       </select></div>
       <div class="field"><label>Invoice Ref</label><input id="svInvoiceRef" placeholder="e.g. INV-1042"></div>
     </div>
+    <div class="field-row" style="margin-top:4px">
+      <div class="field"><label>Order Number / PO</label><input id="svOrderNumber" placeholder="e.g. PO-1234"></div>
+    </div>
     <div class="section-label" style="margin-top:8px">Quote Details</div>
     <div class="field-row">
       <div class="field"><label>Callout Fee ($)</label><input id="svCalloutFee" type="number" min="0" step="10" value="400" placeholder="400"></div>
@@ -434,6 +437,7 @@
       <button class="btn-save sv-orange" id="btnSaveSv" onclick="saveSiteVisit()" style="flex:1">Save Visit</button>
       <button onclick="printSvQuote()" style="padding:11px 18px;background:#1e3048;border:1px solid #00c8e0;color:#00c8e0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">📋 Quote</button>
       <button onclick="printSvReport()" style="padding:11px 18px;background:#1e3048;border:1px solid #fb923c;color:#fb923c;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">📄 Report</button>
+      <button onclick="printSvInvoiceNotice()" style="padding:11px 18px;background:#1e3048;border:1px solid #e879f9;color:#e879f9;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🧾 Invoice Notice</button>
     </div>
     <button class="btn-delete" id="btnDeleteSv" onclick="deleteSiteVisit()" style="display:none">Delete This Visit</button>
   </div>
@@ -4780,6 +4784,7 @@ function openSvModal() {
   document.getElementById('svMachineDesc').value = '';
   document.getElementById('svScope').value = '';
   document.getElementById('svInvoiceRef').value = '';
+  document.getElementById('svOrderNumber').value = '';
   document.getElementById('btnDeleteSv').style.display = 'none';
   populateSvAgrDropdown(null);
   renderSvMachines();
@@ -4809,6 +4814,7 @@ function openEditSv(id) {
   document.getElementById('svMachineDesc').value = v.machine_description||'';
   document.getElementById('svScope').value = v.scope_of_work||'';
   document.getElementById('svInvoiceRef').value = v.invoice_ref||'';
+  document.getElementById('svOrderNumber').value = v.order_number||'';
   document.getElementById('btnDeleteSv').style.display = 'block';
   populateSvAgrDropdown(v.agreement_id||null);
   renderSvMachines();
@@ -4966,7 +4972,8 @@ async function saveSiteVisit() {
       machine_description: document.getElementById('svMachineDesc').value.trim()||null,
       scope_of_work: document.getElementById('svScope').value.trim()||null,
       quoted_at: document.getElementById('svStatus').value === 'Quoted' ? (editingSvId ? ((siteVisits.find(function(x){return x.id===editingSvId;})||{}).quoted_at || new Date().toISOString()) : new Date().toISOString()) : null,
-      invoice_ref: document.getElementById('svInvoiceRef').value.trim()||null };
+      invoice_ref: document.getElementById('svInvoiceRef').value.trim()||null,
+      order_number: document.getElementById('svOrderNumber').value.trim()||null };
     var vid;
     if (editingSvId) {
       await db('PATCH','site_visits?id=eq.'+editingSvId,payload); vid=editingSvId;
@@ -5234,6 +5241,105 @@ function printSvReport() {
   w.document.write('<div style="margin-top:30px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">X-Pak Global Service Division · rob.firth@xpak.com.au</div>');
   w.document.write('</body></html>');
   w.document.close(); setTimeout(function(){w.print();},500);
+}
+
+function printSvInvoiceNotice() {
+  var customer = document.getElementById('svCustomer').value || 'Customer';
+  var date     = document.getElementById('svDate').value;
+  var tech     = document.getElementById('svTech').value || 'Rob Firth';
+  var hrs      = parseFloat(document.getElementById('svHours').value || 0);
+  var rate     = parseFloat(document.getElementById('svRate').value || 220);
+  var callout  = parseFloat(document.getElementById('svCalloutFee').value || 0);
+  var travel   = parseFloat(document.getElementById('svTravel').value || 0);
+  var accom    = parseFloat(document.getElementById('svAccom').value || 0);
+  var notes    = document.getElementById('svNotes').value;
+  var invRef   = document.getElementById('svInvoiceRef').value;
+  var orderNum = document.getElementById('svOrderNumber').value;
+  var status   = document.getElementById('svStatus').value;
+  var fmt      = function(n){ return '$'+parseFloat(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+  var today    = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+  var dateStr  = date ? new Date(date).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}) : '';
+
+  var cust = (customers||[]).find(function(c){ return c.company_name && c.company_name.toLowerCase()===customer.toLowerCase(); }) || null;
+
+  var labourTotal = hrs * rate;
+  var partsTotal  = svMachines.reduce(function(s,m){ return s+m.parts.reduce(function(ps,p){ return ps+parseFloat(p.line_total||0); },0); },0);
+  var invoiceTotal = callout + labourTotal + partsTotal + travel + accom;
+  var invoiceGST   = invoiceTotal * 0.1;
+
+  var machineSections = svMachines.map(function(m){
+    var partsRows = m.parts.length ? '<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:10pt"><tr style="background:#f0f4f8;font-size:9pt"><th style="text-align:left;padding:4px 6px">Part No.</th><th style="text-align:left;padding:4px 6px">Description</th><th style="padding:4px 6px;text-align:center">Qty</th><th style="padding:4px 6px;text-align:right">Unit</th><th style="padding:4px 6px;text-align:right">Total</th></tr>' +
+      m.parts.map(function(p){
+        return '<tr style="border-bottom:1px solid #eee"><td style="padding:4px 6px;font-family:monospace;font-size:9pt">'+(p.part_no||'')+'</td><td style="padding:4px 6px">'+p.description+'</td><td style="padding:4px 6px;text-align:center">'+(p.quantity||1)+'</td><td style="padding:4px 6px;text-align:right">'+fmt(p.unit_cost)+'</td><td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(p.line_total)+'</td></tr>';
+      }).join('') + '</table>' : '';
+    return '<div style="margin-bottom:12px;padding:10px 12px;background:#f8fafc;border-radius:6px;border-left:3px solid #10b981">' +
+      '<div style="font-weight:700;font-size:11pt">'+m.machine_type+(m.serial_number?' <span style="font-weight:400;font-size:9pt;color:#555">S/N: '+m.serial_number+'</span>':'')+'</div>' +
+      (m.work_performed ? '<div style="font-size:9pt;color:#333;margin-top:4px">'+m.work_performed+'</div>' : '') +
+      partsRows +
+    '</div>';
+  }).join('');
+
+  var svRef = editingSvId ? (siteVisits.find(function(x){return x.id===editingSvId;})||{}).visit_number : null;
+  var refLabel = svRef ? xsvNum(svRef) : 'DRAFT';
+
+  var w = window.open('','_blank');
+  if (!w) { showToast('Allow pop-ups to generate invoice notice','error'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
+  w.document.write('<title>Invoice Notice - '+customer+' '+refLabel+'</title>');
+  w.document.write('<style>');
+  w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:28px;font-size:11pt}');
+  w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #e879f9}');
+  w.document.write('.co-name{font-size:20px;font-weight:900;color:#0f1923}.co-sub{font-size:10pt;color:#666;margin-top:2px}');
+  w.document.write('.notice-title{text-align:right}.notice-h{font-size:17px;font-weight:800;color:#e879f9}.notice-ref{font-size:10pt;color:#555;margin-top:2px}');
+  w.document.write('.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}');
+  w.document.write('.meta-box{background:#f8fafc;padding:8px 12px;border-radius:6px}.meta-label{font-size:8pt;color:#888;text-transform:uppercase;letter-spacing:.3px}.meta-val{font-size:11pt;font-weight:600;margin-top:2px}');
+  w.document.write('.section-title{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#555;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid #eee}');
+  w.document.write('.totals{margin-top:14px;margin-left:auto;width:280px}');
+  w.document.write('.tot-row{display:flex;justify-content:space-between;padding:5px 10px;font-size:11pt}');
+  w.document.write('.tot-row.grand{background:#e879f910;border:1px solid #e879f940;border-radius:6px;font-size:14pt;font-weight:800;color:#e879f9;margin-top:4px}');
+  w.document.write('.tot-row.gst{color:#888;font-size:10pt}');
+  w.document.write('.note{margin-top:20px;padding:10px 14px;background:#fff8e6;border:1px solid #f59e0b40;border-radius:6px;font-size:10pt;color:#666}');
+  w.document.write('.footer{margin-top:24px;font-size:9pt;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}');
+  w.document.write('@media print{body{padding:12px}button{display:none}}');
+  w.document.write('</style></head><body>');
+  w.document.write('<div class="hdr"><div><div class="co-name">X-PAK GLOBAL</div><div class="co-sub">Service Division</div></div><div class="notice-title"><div class="notice-h">INVOICE NOTICE</div><div class="notice-ref">'+refLabel+'&nbsp;&nbsp;·&nbsp;&nbsp;'+today+'</div>' + (invRef ? '<div class="notice-ref" style="color:#e879f9;font-weight:700">Invoice Ref: '+invRef+'</div>' : '') + (orderNum ? '<div class="notice-ref" style="color:#e879f9;font-weight:700">PO: '+orderNum+'</div>' : '') + '</div></div>');
+  w.document.write('<div class="meta">');
+  w.document.write('<div class="meta-box"><div class="meta-label">Bill To</div><div class="meta-val">'+customer+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Order / PO Number</div><div class="meta-val">'+(orderNum||'—')+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Visit Date</div><div class="meta-val">'+dateStr+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Technician</div><div class="meta-val">'+tech+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Contact</div><div class="meta-val">'+(cust&&cust.contact_name?cust.contact_name:'—')+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Phone</div><div class="meta-val">'+(cust&&cust.phone?cust.phone:'—')+'</div></div>');
+  w.document.write('<div class="meta-box"><div class="meta-label">Email</div><div class="meta-val">'+(cust&&cust.email?cust.email:'—')+'</div></div>');
+  w.document.write('</div>');
+  w.document.write('<div class="section-title">Machines Attended &amp; Work Completed</div>');
+  w.document.write(machineSections || '<div style="color:#888;font-size:10pt">No machines recorded.</div>');
+  w.document.write('<div class="totals">');
+  if (callout) w.document.write('<div class="tot-row"><span>Callout Fee</span><span>'+fmt(callout)+'</span></div>');
+  if (hrs > 0) w.document.write('<div class="tot-row"><span>Labour ('+hrs+'h × '+fmt(rate)+'/hr)</span><span>'+fmt(labourTotal)+'</span></div>');
+  if (partsTotal) w.document.write('<div class="tot-row"><span>Parts</span><span>'+fmt(partsTotal)+'</span></div>');
+  if (travel) w.document.write('<div class="tot-row"><span>Travel</span><span>'+fmt(travel)+'</span></div>');
+  if (accom) w.document.write('<div class="tot-row"><span>Accommodation</span><span>'+fmt(accom)+'</span></div>');
+  w.document.write('<div class="tot-row grand"><span>Total ex GST</span><span>'+fmt(invoiceTotal)+'</span></div>');
+  w.document.write('<div class="tot-row gst"><span>GST (10%)</span><span>'+fmt(invoiceGST)+'</span></div>');
+  w.document.write('<div class="tot-row" style="font-weight:700"><span>Total inc GST</span><span>'+fmt(invoiceTotal+invoiceGST)+'</span></div>');
+  w.document.write('</div>');
+  if (notes) w.document.write('<div class="note">📝 ' + notes + '</div>');
+  w.document.write('<div class="footer">X-Pak Global Service Division &nbsp;·&nbsp; rob.firth@xpak.com.au &nbsp;·&nbsp; Generated by MainFlow</div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  // Auto-update status to Invoiced once the notice has been raised
+  if (editingSvId && (status === 'Completed' || status === 'Confirmed')) {
+    if (confirm('Update this visit\'s status to "Invoiced"?')) {
+      document.getElementById('svStatus').value = 'Invoiced';
+      db('PATCH','site_visits?id=eq.'+editingSvId,{status:'Invoiced'}).then(function(){ loadSiteVisits(); }).catch(function(){});
+    }
+  }
+  // Open mailto to accounts
+  var subject = encodeURIComponent('Invoice Notice — ' + refLabel + ' — ' + customer);
+  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + customer + ' (' + refLabel + ').\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nThanks,\nRob');
+  setTimeout(function(){ window.location.href = 'mailto:info@xpak.com.au?subject=' + subject + '&body=' + body; }, 600);
+  setTimeout(function(){ w.print(); }, 500);
 }
 
 
