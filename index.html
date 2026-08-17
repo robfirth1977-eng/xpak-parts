@@ -403,6 +403,10 @@
       <div class="field"><label>Travel ($, if applicable)</label><input id="svTravel" type="number" min="0" placeholder="0"></div>
       <div class="field"><label>Accommodation ($, if applicable)</label><input id="svAccom" type="number" min="0" placeholder="0"></div>
     </div>
+    <div class="field-row">
+      <div class="field"><label>Other Costs / Consumables ($)</label><input id="svConsumablesCost" type="number" min="0" step="1" placeholder="0"></div>
+    </div>
+    <div class="field" style="margin-top:4px"><label>Consumables Notes</label><textarea id="svConsumablesNotes" rows="2" placeholder="e.g. 3x 12mm strap, tarp, glue given to customer" style="width:100%;padding:8px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;font-size:13px;resize:vertical"></textarea></div>
     <div class="sv-section-hdr">Machines Attended</div>
     <div id="svMachinesContainer"></div>
     <button class="sv-add-btn" onclick="addSvMachine()">+ Add Machine</button>
@@ -410,6 +414,7 @@
     <div class="sv-summary">
       <div class="sv-summary-item"><div class="sv-summary-label">Labour</div><div class="sv-summary-val" id="svLabourTotal">$0</div></div>
       <div class="sv-summary-item"><div class="sv-summary-label">Parts</div><div class="sv-summary-val" id="svPartsTotal">$0</div></div>
+      <div class="sv-summary-item"><div class="sv-summary-label">Consumables</div><div class="sv-summary-val" id="svConsumablesTotal">$0</div></div>
       <div class="sv-summary-item"><div class="sv-summary-label">Travel / Accom</div><div class="sv-summary-val" id="svExtrasTotal">$0</div></div>
       <div class="sv-summary-item" style="border:1px solid #fb923c40"><div class="sv-summary-label">Total ex GST</div><div class="sv-summary-val" style="color:#fb923c" id="svGrandTotal">$0</div></div>
     </div>
@@ -4778,6 +4783,8 @@ function openSvModal() {
   document.getElementById('svRate').value = '220';
   document.getElementById('svTravel').value = '';
   document.getElementById('svAccom').value = '';
+  document.getElementById('svConsumablesCost').value = '';
+  document.getElementById('svConsumablesNotes').value = '';
   document.getElementById('svNotes').value = '';
   document.getElementById('svStatus').value = 'Draft';
   document.getElementById('svCalloutFee').value = '400';
@@ -4808,6 +4815,8 @@ function openEditSv(id) {
   document.getElementById('svRate').value = v.hourly_rate||220;
   document.getElementById('svTravel').value = v.travel_cost||'';
   document.getElementById('svAccom').value = v.accommodation_cost||'';
+  document.getElementById('svConsumablesCost').value = v.consumables_cost||'';
+  document.getElementById('svConsumablesNotes').value = v.consumables_notes||'';
   document.getElementById('svNotes').value = v.notes||'';
   document.getElementById('svStatus').value = v.status||'Draft';
   document.getElementById('svCalloutFee').value = v.callout_fee||400;
@@ -4936,14 +4945,16 @@ function updateSvTotals() {
   var labour=hrs*rate;
   var parts=svMachines.reduce(function(sum,m){return sum+m.parts.reduce(function(s,p){return s+parseFloat(p.line_total||0);},0);},0);
   var extras=parseFloat(document.getElementById('svTravel').value||0)+parseFloat(document.getElementById('svAccom').value||0);
+  var consumables=parseFloat(document.getElementById('svConsumablesCost').value||0);
   document.getElementById('svLabourTotal').textContent='$'+labour.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('svPartsTotal').textContent='$'+parts.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('svConsumablesTotal').textContent='$'+consumables.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('svExtrasTotal').textContent='$'+extras.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
-  document.getElementById('svGrandTotal').textContent='$'+(labour+parts+extras).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('svGrandTotal').textContent='$'+(labour+parts+extras+consumables).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
 document.addEventListener('input', function(e) {
-  if (['svHours','svRate','svTravel','svAccom'].indexOf(e.target.id) > -1) updateSvTotals();
+  if (['svHours','svRate','svTravel','svAccom','svConsumablesCost'].indexOf(e.target.id) > -1) updateSvTotals();
 });
 
 async function saveSiteVisit() {
@@ -4966,6 +4977,8 @@ async function saveSiteVisit() {
       hourly_rate: parseFloat(document.getElementById('svRate').value)||220,
       travel_cost: parseFloat(document.getElementById('svTravel').value)||null,
       accommodation_cost: parseFloat(document.getElementById('svAccom').value)||null,
+      consumables_cost: parseFloat(document.getElementById('svConsumablesCost').value)||null,
+      consumables_notes: document.getElementById('svConsumablesNotes').value.trim()||null,
       notes: document.getElementById('svNotes').value.trim()||null,
       status: document.getElementById('svStatus').value,
       callout_fee: parseFloat(document.getElementById('svCalloutFee').value)||null,
@@ -5032,6 +5045,8 @@ function printSvQuote() {
   var notes      = document.getElementById('svNotes').value || '';
   var travel     = parseFloat(document.getElementById('svTravel').value || 0);
   var accom      = parseFloat(document.getElementById('svAccom').value || 0);
+  var consumables = parseFloat(document.getElementById('svConsumablesCost').value || 0);
+  var consumablesNotes = document.getElementById('svConsumablesNotes').value || '';
 
   var quoteDate  = new Date().toLocaleDateString('en-AU', {day:'2-digit',month:'long',year:'numeric'});
   var visitDate  = date ? new Date(date).toLocaleDateString('en-AU', {day:'2-digit',month:'long',year:'numeric'}) : 'To be confirmed';
@@ -5039,7 +5054,7 @@ function printSvQuote() {
 
   var labourEst  = hrs > 0 ? hrs * rate : null;
   var partsQuoted = svMachines.reduce(function(s,m){return s+m.parts.reduce(function(ps,p){return ps+parseFloat(p.line_total||0);},0);},0);
-  var subtotal   = callout + (labourEst || 0) + partsQuoted + travel + accom;
+  var subtotal   = callout + (labourEst || 0) + partsQuoted + travel + accom + consumables;
   var gst        = subtotal * 0.1;
 
   // Get visit number if saved
@@ -5133,6 +5148,7 @@ function printSvQuote() {
   }
   if (travel) w.document.write('<tr><td>Travel</td><td class="amt">' + fmt(travel) + '</td></tr>');
   if (accom)  w.document.write('<tr><td>Accommodation</td><td class="amt">' + fmt(accom) + '</td></tr>');
+  if (consumables) w.document.write('<tr><td>Other costs / consumables' + (consumablesNotes ? ' <span style="font-size:8.5pt;color:#888">(' + consumablesNotes + ')</span>' : '') + '</td><td class="amt">' + fmt(consumables) + '</td></tr>');
 
   // ── Parts from svMachines ─────────────────────────────────────
   var allQuotedParts = [];
@@ -5189,12 +5205,14 @@ function printSvReport() {
   var labour=hrs*rate;
   var travel=parseFloat(document.getElementById('svTravel').value||0);
   var accom=parseFloat(document.getElementById('svAccom').value||0);
+  var consumables=parseFloat(document.getElementById('svConsumablesCost').value||0);
+  var consumablesNotes=document.getElementById('svConsumablesNotes').value;
   var notes=document.getElementById('svNotes').value;
   var invRef=document.getElementById('svInvoiceRef').value;
   var fmt=function(n){return '$'+parseFloat(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});};
   var dateStr=date?new Date(date).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}):'';
   var partsTotal=svMachines.reduce(function(s,m){return s+m.parts.reduce(function(ps,p){return ps+parseFloat(p.line_total||0);},0);},0);
-  var grand=labour+partsTotal+travel+accom;
+  var grand=labour+partsTotal+travel+accom+consumables;
   var machinesHtml=svMachines.map(function(m){
     var partsHtml='';
     if(m.parts.length){
@@ -5234,6 +5252,7 @@ function printSvReport() {
   if(partsTotal) w.document.write('<tr><td class="label">Parts</td><td class="amount">'+fmt(partsTotal)+'</td></tr>');
   if(travel) w.document.write('<tr><td class="label">Travel</td><td class="amount">'+fmt(travel)+'</td></tr>');
   if(accom) w.document.write('<tr><td class="label">Accommodation</td><td class="amount">'+fmt(accom)+'</td></tr>');
+  if(consumables) w.document.write('<tr><td class="label">Other costs / consumables'+(consumablesNotes?' <span style="font-weight:400;color:#888;font-size:11px">('+consumablesNotes+')</span>':'')+'</td><td class="amount">'+fmt(consumables)+'</td></tr>');
   w.document.write('<tr class="total-row"><td class="label">TOTAL EX GST</td><td class="amount">'+fmt(grand)+'</td></tr>');
   w.document.write('<tr><td class="label" style="color:#888">GST (10%)</td><td class="amount" style="color:#888">'+fmt(grand*0.1)+'</td></tr>');
   w.document.write('<tr><td class="label" style="font-weight:700">TOTAL INC GST</td><td class="amount" style="font-weight:700">'+fmt(grand*1.1)+'</td></tr>');
@@ -5252,6 +5271,8 @@ function printSvInvoiceNotice() {
   var callout  = parseFloat(document.getElementById('svCalloutFee').value || 0);
   var travel   = parseFloat(document.getElementById('svTravel').value || 0);
   var accom    = parseFloat(document.getElementById('svAccom').value || 0);
+  var consumables = parseFloat(document.getElementById('svConsumablesCost').value || 0);
+  var consumablesNotes = document.getElementById('svConsumablesNotes').value;
   var notes    = document.getElementById('svNotes').value;
   var invRef   = document.getElementById('svInvoiceRef').value;
   var orderNum = document.getElementById('svOrderNumber').value;
@@ -5264,7 +5285,7 @@ function printSvInvoiceNotice() {
 
   var labourTotal = hrs * rate;
   var partsTotal  = svMachines.reduce(function(s,m){ return s+m.parts.reduce(function(ps,p){ return ps+parseFloat(p.line_total||0); },0); },0);
-  var invoiceTotal = callout + labourTotal + partsTotal + travel + accom;
+  var invoiceTotal = callout + labourTotal + partsTotal + travel + accom + consumables;
   var invoiceGST   = invoiceTotal * 0.1;
 
   var machineSections = svMachines.map(function(m){
@@ -5320,10 +5341,12 @@ function printSvInvoiceNotice() {
   if (partsTotal) w.document.write('<div class="tot-row"><span>Parts</span><span>'+fmt(partsTotal)+'</span></div>');
   if (travel) w.document.write('<div class="tot-row"><span>Travel</span><span>'+fmt(travel)+'</span></div>');
   if (accom) w.document.write('<div class="tot-row"><span>Accommodation</span><span>'+fmt(accom)+'</span></div>');
+  if (consumables) w.document.write('<div class="tot-row"><span>Other costs / consumables</span><span>'+fmt(consumables)+'</span></div>');
   w.document.write('<div class="tot-row grand"><span>Total ex GST</span><span>'+fmt(invoiceTotal)+'</span></div>');
   w.document.write('<div class="tot-row gst"><span>GST (10%)</span><span>'+fmt(invoiceGST)+'</span></div>');
   w.document.write('<div class="tot-row" style="font-weight:700"><span>Total inc GST</span><span>'+fmt(invoiceTotal+invoiceGST)+'</span></div>');
   w.document.write('</div>');
+  if (consumablesNotes) w.document.write('<div class="note">🧰 <strong>Consumables:</strong> ' + consumablesNotes + '</div>');
   if (notes) w.document.write('<div class="note">📝 ' + notes + '</div>');
   w.document.write('<div class="footer">X-Pak Global Service Division &nbsp;·&nbsp; rob.firth@xpak.com.au &nbsp;·&nbsp; Generated by MainFlow</div>');
   w.document.write('</body></html>');
