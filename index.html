@@ -1038,6 +1038,20 @@ function jobRevenue(j) {
   return svc + Math.max(0,pts-pd) + Math.max(0,lh-ld);
 }
 
+// Shared site visit revenue calc - used by Weekly Report so Site Visits never blend into
+// jobRevenue()'s job-only figure.
+function siteVisitRevenue(v) {
+  var labour = parseFloat(v.hours||0) * parseFloat(v.hourly_rate||220);
+  var callout = parseFloat(v.callout_fee||0);
+  var travel = parseFloat(v.travel_cost||0);
+  var accom = parseFloat(v.accommodation_cost||0);
+  var consumables = parseFloat(v.consumables_cost||0);
+  var parts = (v.site_visit_machines||[]).reduce(function(s,m){
+    return s + (m.site_visit_parts||[]).reduce(function(ps,p){ return ps + parseFloat(p.line_total||0); },0);
+  },0);
+  return labour + callout + travel + accom + consumables + parts;
+}
+
 async function db(method, path, body) {
   var r = await fetch(BASE + '/' + path, { method: method, headers: H, body: body ? JSON.stringify(body) : undefined });
   if (!r.ok) throw new Error(await r.text());
@@ -2220,7 +2234,15 @@ async function getWeeklyReportData() {
   }
   var wLoans     = loans && loans.length ? loans : await db('GET','loans?select=*&order=loan_number.desc');
   var wLoanTools = loanTools && loanTools.length ? loanTools : await db('GET','loan_tools?select=*');
-  var wVisits    = siteVisits && siteVisits.length ? siteVisits : await db('GET','site_visits?select=*&order=visit_date.desc');
+  var wVisits;
+  if (siteVisits && siteVisits.length) { wVisits = siteVisits; }
+  else {
+    wVisits = await db('GET','site_visits?select=*&order=visit_date.desc');
+    var wSvMachines = await db('GET','site_visit_machines?select=*');
+    var wSvParts = await db('GET','site_visit_parts?select=*');
+    wSvMachines.forEach(function(m) { m.site_visit_parts = wSvParts.filter(function(p){ return p.site_visit_id === m.site_visit_id; }); });
+    wVisits.forEach(function(v) { v.site_visit_machines = wSvMachines.filter(function(m){ return m.site_visit_id === v.id; }); });
+  }
 
   // ── Jobs: open by status ─────────────────────────────────────────
   var openStatuses = ['NEW JOB','AWAITING ASSESSMENT','WAITING FOR TOOLS','AWAITING SUPPLIER QUOTE','QUOTED - AWAITING APPROVAL','WAITING ON PARTS','IN WORKSHOP','WAITING TO BE INVOICED'];
@@ -2259,13 +2281,14 @@ async function getWeeklyReportData() {
   var lastWeekVisits = wVisits.filter(function(v){
     var vd = new Date(v.visit_date); return vd >= lastMon && vd <= lastFri;
   });
+  var totalVisitRevenue = lastWeekVisits.reduce(function(s,v){ return s + siteVisitRevenue(v); },0);
   var thisWeekVisits = wVisits.filter(function(v){
     var vd = new Date(v.visit_date); return vd >= thisWeekMon && vd <= thisWeekSun;
   });
 
   return { now: now, lastMon: lastMon, lastFri: lastFri, thisWeekMon: thisWeekMon, thisWeekSun: thisWeekSun,
     openJobs: openJobs, statusOrder: statusOrder, statusLabels: statusLabels, statusColors: statusColors, byStatus: byStatus,
-    billedJobs: billedJobs, jobRevenue: jobRevenue, totalRevenue: totalRevenue,
+    billedJobs: billedJobs, jobRevenue: jobRevenue, totalRevenue: totalRevenue, totalVisitRevenue: totalVisitRevenue,
     activeLoans: activeLoans, wLoanTools: wLoanTools, lastWeekVisits: lastWeekVisits, thisWeekVisits: thisWeekVisits,
     enquiryToQuote: enquiryToQuote, acceptedToInvoiced: acceptedToInvoiced };
 }
@@ -2279,7 +2302,7 @@ async function renderWeeklyReport() {
   catch(e) { el.innerHTML = '<div style="color:#f87171;padding:40px;text-align:center">Failed to load data: ' + e.message + '</div>'; return; }
   var now = d.now, lastMon = d.lastMon, lastFri = d.lastFri, thisWeekMon = d.thisWeekMon, thisWeekSun = d.thisWeekSun,
       openJobs = d.openJobs, statusOrder = d.statusOrder, statusLabels = d.statusLabels, statusColors = d.statusColors, byStatus = d.byStatus,
-      billedJobs = d.billedJobs, jobRevenue = d.jobRevenue, totalRevenue = d.totalRevenue,
+      billedJobs = d.billedJobs, jobRevenue = d.jobRevenue, totalRevenue = d.totalRevenue, totalVisitRevenue = d.totalVisitRevenue,
       activeLoans = d.activeLoans, wLoanTools = d.wLoanTools, lastWeekVisits = d.lastWeekVisits, thisWeekVisits = d.thisWeekVisits;
 
   function fmtDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('en-AU',{day:'2-digit',month:'short'}); }
@@ -2313,6 +2336,10 @@ async function renderWeeklyReport() {
     + '<div style="font-size:11px;color:#10b981;font-weight:700;text-transform:uppercase;letter-spacing:1px">Total Invoiced</div>'
     + '<div style="font-size:36px;font-weight:900;color:#10b981;margin-top:4px">' + fmtMoney(totalRevenue) + '</div>'
     + '<div style="font-size:11px;color:#5a7090;margin-top:4px">ex GST · ' + billedJobs.length + ' job' + (billedJobs.length!==1?'s':'') + '</div></div>';
+  html += '<div style="background:#1a1f0a;border:1px solid #f59e0b33;border-radius:12px;padding:20px 28px;min-width:200px">'
+    + '<div style="font-size:11px;color:#f59e0b;font-weight:700;text-transform:uppercase;letter-spacing:1px">Site Visit Value</div>'
+    + '<div style="font-size:36px;font-weight:900;color:#f59e0b;margin-top:4px">' + fmtMoney(totalVisitRevenue) + '</div>'
+    + '<div style="font-size:11px;color:#5a7090;margin-top:4px">ex GST · ' + lastWeekVisits.length + ' visit' + (lastWeekVisits.length!==1?'s':'') + ' · not included in Total Invoiced</div></div>';
 
   if (billedJobs.length) {
     html += '<div style="flex:1;background:#0f1923;border:1px solid #1e3048;border-radius:12px;padding:16px;min-width:300px"><table style="width:100%;border-collapse:collapse">'
@@ -2427,7 +2454,7 @@ async function printWeeklyReport() {
   catch(e) { showToast('Failed to load report data: ' + e.message, 'error'); return; }
   var now = d.now, lastMon = d.lastMon, lastFri = d.lastFri, thisWeekMon = d.thisWeekMon, thisWeekSun = d.thisWeekSun,
       openJobs = d.openJobs, statusOrder = d.statusOrder, statusLabels = d.statusLabels, statusColors = d.statusColors, byStatus = d.byStatus,
-      billedJobs = d.billedJobs, jobRevenue = d.jobRevenue, totalRevenue = d.totalRevenue,
+      billedJobs = d.billedJobs, jobRevenue = d.jobRevenue, totalRevenue = d.totalRevenue, totalVisitRevenue = d.totalVisitRevenue,
       activeLoans = d.activeLoans, wLoanTools = d.wLoanTools, lastWeekVisits = d.lastWeekVisits, thisWeekVisits = d.thisWeekVisits,
       enquiryToQuote = d.enquiryToQuote, acceptedToInvoiced = d.acceptedToInvoiced;
 
@@ -2469,6 +2496,7 @@ async function printWeeklyReport() {
   w.document.write('<div class="stat-cards">'
     + '<div class="stat-card"><div class="stat-label">Total Invoiced</div><div class="stat-val">' + fmtMoney(totalRevenue) + '</div></div>'
     + '<div class="stat-card"><div class="stat-label">Jobs Invoiced</div><div class="stat-val">' + billedJobs.length + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">Site Visit Value</div><div class="stat-val">' + fmtMoney(totalVisitRevenue) + '</div></div>'
     + '<div class="stat-card"><div class="stat-label">Open Cases</div><div class="stat-val">' + openJobs.length + '</div></div>'
     + '<div class="stat-card"><div class="stat-label">Loans Out</div><div class="stat-val">' + activeLoans.length + '</div></div>'
     + '<div class="stat-card"><div class="stat-label">Avg Enquiry to Quote</div><div class="stat-val">' + (enquiryToQuote.avg !== null ? enquiryToQuote.avg + 'd' : '—') + '</div></div>'
@@ -5208,6 +5236,8 @@ function printSvReport() {
   var consumables=parseFloat(document.getElementById('svConsumablesCost').value||0);
   var consumablesNotes=document.getElementById('svConsumablesNotes').value;
   var notes=document.getElementById('svNotes').value;
+  var machDesc=document.getElementById('svMachineDesc').value;
+  var scope=document.getElementById('svScope').value;
   var invRef=document.getElementById('svInvoiceRef').value;
   var fmt=function(n){return '$'+parseFloat(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});};
   var dateStr=date?new Date(date).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}):'';
@@ -5224,6 +5254,14 @@ function printSvReport() {
       (m.work_performed?'<div style="font-size:12px;color:#333;margin-top:4px">'+m.work_performed+'</div>':'')+
       partsHtml+'</div>';
   }).join('');
+  // Fallback when the visit was logged via Machine/Equipment + Scope of Work instead of
+  // "+ Add Machine" rows — otherwise this section silently vanishes from the report.
+  if (!machinesHtml && (machDesc || scope)) {
+    machinesHtml = '<div style="margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:6px;border-left:3px solid #fb923c">'+
+      (machDesc?'<div style="font-weight:700;font-size:13px">'+machDesc+'</div>':'')+
+      (scope?'<div style="font-size:12px;color:#333;margin-top:4px">'+scope.split('\n').join('<br>')+'</div>':'')+
+    '</div>';
+  }
   var w=window.open('','_blank');
   if(!w){showToast('Allow pop-ups for this site to print reports','error');return;}
   w.document.write('<!DOCTYPE html><html><head><title>Site Visit Report - '+customer+'</title>');
@@ -5245,7 +5283,7 @@ function printSvReport() {
   w.document.write('<div class="meta-item"><div class="meta-label">Labour Total</div><div class="meta-val">'+fmt(labour)+'</div></div>');
   w.document.write('</div>');
   if(notes) w.document.write('<div class="section-title">Visit Notes</div><div style="font-size:12px;color:#333;line-height:1.6;margin-bottom:8px">'+notes+'</div>');
-  if(svMachines.length) { w.document.write('<div class="section-title">Machines Attended</div>'+machinesHtml); }
+  if(machinesHtml) { w.document.write('<div class="section-title">Machines Attended</div>'+machinesHtml); }
   w.document.write('<div class="section-title">Cost Summary</div>');
   w.document.write('<table class="cost-table">');
   w.document.write('<tr><td class="label">Labour ('+hrs+' hrs × '+fmt(rate)+')</td><td class="amount">'+fmt(labour)+'</td></tr>');
@@ -5274,6 +5312,8 @@ function printSvInvoiceNotice() {
   var consumables = parseFloat(document.getElementById('svConsumablesCost').value || 0);
   var consumablesNotes = document.getElementById('svConsumablesNotes').value;
   var notes    = document.getElementById('svNotes').value;
+  var machDesc = document.getElementById('svMachineDesc').value;
+  var scope    = document.getElementById('svScope').value;
   var invRef   = document.getElementById('svInvoiceRef').value;
   var orderNum = document.getElementById('svOrderNumber').value;
   var status   = document.getElementById('svStatus').value;
@@ -5299,6 +5339,16 @@ function printSvInvoiceNotice() {
       partsRows +
     '</div>';
   }).join('');
+
+  // Fallback when the visit was logged via the plain Machine/Equipment + Scope of Work
+  // fields instead of "+ Add Machine" rows — otherwise this section (and the work
+  // description) would silently vanish from the notice.
+  if (!machineSections && (machDesc || scope)) {
+    machineSections = '<div style="margin-bottom:12px;padding:10px 12px;background:#f8fafc;border-radius:6px;border-left:3px solid #10b981">' +
+      (machDesc ? '<div style="font-weight:700;font-size:11pt">'+machDesc+'</div>' : '') +
+      (scope ? '<div style="font-size:9pt;color:#333;margin-top:4px">'+scope.split('\n').join('<br>')+'</div>' : '') +
+    '</div>';
+  }
 
   var svRef = editingSvId ? (siteVisits.find(function(x){return x.id===editingSvId;})||{}).visit_number : null;
   var refLabel = svRef ? xsvNum(svRef) : 'DRAFT';
