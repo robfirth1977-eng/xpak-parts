@@ -376,10 +376,17 @@
 <!-- Site Visits toolbar -->
 <div class="toolbar" id="svToolbar" style="display:none">
   <div style="flex:1;font-size:14px;font-weight:700;color:#fb923c">Site Visits</div>
+  <div class="view-toggle">
+    <button class="view-btn active" id="btnSvListView" onclick="setSvView('list')">List</button>
+    <button class="view-btn" id="btnSvBoardView" onclick="setSvView('board')">Board</button>
+  </div>
   <button class="btn-add" style="background:#fb923c;color:#0f1923;font-weight:700" onclick="openSvModal()">+ New Visit</button>
 </div>
 <div class="sv-section" id="svSection">
   <div id="svList"><div class="center"><span class="spinner"></span> Loading...</div></div>
+</div>
+<div id="svBoardSection" style="display:none">
+  <div class="board-wrap"><div class="board" id="svBoardCols"></div></div>
 </div>
 
 <!-- Site Visit Modal -->
@@ -1170,6 +1177,7 @@ function hideAllViews() {
   var ss = document.getElementById('supplierSection'); if(ss) ss.style.display = 'none';
   var svt = document.getElementById('svToolbar'); if(svt) svt.style.display = 'none';
   var svs = document.getElementById('svSection'); if(svs) svs.style.display = 'none';
+  var svb = document.getElementById('svBoardSection'); if(svb) svb.style.display = 'none';
   var hs = document.getElementById('homeSection'); if(hs) hs.style.display = 'none';
   var ct = document.getElementById('custToolbar'); if(ct) ct.style.display = 'none';
   var cs = document.getElementById('custSection'); if(cs) cs.style.display = 'none';
@@ -4746,13 +4754,25 @@ function svFindSerialElsewhere(serial, excludeCustomerId) {
   return null;
 }
 
+var svViewMode = 'list';
+
 function switchToSiteVisits() {
   currentView = 'sitevisits'; hideAllViews(); renderTabs();
   document.getElementById('svToolbar').style.display = 'flex';
-  document.getElementById('svSection').style.display = 'block';
+  document.getElementById('svSection').style.display = svViewMode === 'list' ? 'block' : 'none';
+  document.getElementById('svBoardSection').style.display = svViewMode === 'board' ? 'block' : 'none';
   document.getElementById('hSub').textContent = 'Site Visits';
   document.getElementById('lowBadge').innerHTML = '';
   loadSiteVisits();
+}
+
+function setSvView(mode) {
+  svViewMode = mode;
+  document.getElementById('btnSvListView').classList.toggle('active', mode === 'list');
+  document.getElementById('btnSvBoardView').classList.toggle('active', mode === 'board');
+  document.getElementById('svSection').style.display = mode === 'list' ? 'block' : 'none';
+  document.getElementById('svBoardSection').style.display = mode === 'board' ? 'block' : 'none';
+  renderSiteVisits();
 }
 
 async function loadSiteVisits() {
@@ -4771,16 +4791,16 @@ async function loadSiteVisits() {
 }
 
 function renderSiteVisits() {
+  if (svViewMode === 'board') renderSvBoard(); else renderSvList();
+}
+
+function renderSvList() {
   if (!siteVisits.length) {
     document.getElementById('svList').innerHTML = '<div class="center"><div class="icon">🔧</div><div>No site visits yet. Click + New Visit.</div></div>';
     return;
   }
   document.getElementById('svList').innerHTML = siteVisits.map(function(v) {
-    var hrs = parseFloat(v.hours||0), rate = parseFloat(v.hourly_rate||220);
-    var labour = hrs * rate;
-    var parts = (v.site_visit_machines||[]).reduce(function(sum,m){ return sum + (m.site_visit_parts||[]).reduce(function(s,p){ return s + parseFloat(p.line_total||0); },0); },0);
-    var extras = parseFloat(v.travel_cost||0) + parseFloat(v.accommodation_cost||0);
-    var total = labour + parts + extras;
+    var total = siteVisitRevenue(v);
     var agrName = '';
     if (v.agreement_id) { var a = agreements.find(function(x){return x.id===v.agreement_id;}); if(a) agrName = a.customer; }
     var machines = (v.site_visit_machines||[]).map(function(m){ return m.machine_type + (m.serial_number?' ('+m.serial_number+')':''); }).join(', ');
@@ -4798,6 +4818,83 @@ function renderSiteVisits() {
       '</div>' +
     '</div>';
   }).join('');
+}
+
+// ── Site Visit board ─────────────────────────────────────────────────
+// Columns are mostly computed, not stored: only Waiting to be Invoiced / Invoiced are
+// real status values (drag between them updates status). Coming Up / In Progress are
+// derived from visit_date so nothing has to be manually flipped as the date arrives.
+var SV_BOARD_COLS = ['Coming Up', 'In Progress', 'Waiting to be Invoiced', 'Invoiced'];
+var SV_BOARD_COLORS = { 'Coming Up': '#00c8e0', 'In Progress': '#f59e0b', 'Waiting to be Invoiced': '#e879f9', 'Invoiced': '#10b981' };
+
+function svBoardColumn(v) {
+  if (v.status === 'Invoiced') return 'Invoiced';
+  if (v.status === 'Completed') return 'Waiting to be Invoiced';
+  var today = new Date(); today.setHours(0,0,0,0);
+  var vd = v.visit_date ? new Date(v.visit_date) : null;
+  if (vd) vd.setHours(0,0,0,0);
+  if (vd && vd > today) return 'Coming Up';
+  return 'In Progress'; // today, overdue, or no date set - still needs attention
+}
+
+function renderSvBoard() {
+  document.getElementById('svBoardCols').innerHTML = SV_BOARD_COLS.map(function(col) {
+    var color = SV_BOARD_COLORS[col];
+    var colVisits = siteVisits.filter(function(v){ return svBoardColumn(v) === col; });
+    var draggable = (col === 'Waiting to be Invoiced' || col === 'Invoiced');
+    var cards = colVisits.length ? colVisits.map(function(v) {
+      var total = siteVisitRevenue(v);
+      var machinesStr = (v.site_visit_machines||[]).map(function(m){ return m.machine_type; }).filter(Boolean).join(', ') || v.machine_description || '';
+      return '<div class="board-card" style="border-left-color:' + color + '"' + (draggable ? ' draggable="true"' : '') + ' data-sv-id="' + v.id + '">' +
+        '<div onclick="openEditSv(\'' + v.id + '\')">' +
+          '<div class="board-card-top"><span class="board-card-num">' + (v.visit_number ? xsvNum(v.visit_number) : 'DRAFT') + '</span>' + (total > 0 ? '<span class="board-card-value">$' + total.toFixed(0) + '</span>' : '') + '</div>' +
+          '<div class="board-card-customer">' + (v.customer || 'No customer') + '</div>' +
+          '<div class="board-card-meta">' + (machinesStr ? machinesStr + ' · ' : '') + fmtDate(v.visit_date) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('') : '<div style="font-size:11px;color:#2a4060;padding:6px;text-align:center">-</div>';
+    return '<div class="board-col" data-sv-status="' + col + '">' +
+      '<div class="board-col-header"><span class="board-col-title" style="color:' + color + '">' + col + '</span><span class="board-col-count">' + colVisits.length + '</span></div>' +
+      '<div class="board-col-body"' + (draggable ? ' data-sv-status="' + col + '"' : '') + '>' + cards + '</div>' +
+    '</div>';
+  }).join('');
+  initSvBoardDrag();
+}
+
+function initSvBoardDrag() {
+  var dragId = null;
+  document.querySelectorAll('#svBoardCols .board-card[draggable="true"]').forEach(function(card) {
+    card.addEventListener('dragstart', function() {
+      dragId = card.dataset.svId;
+      setTimeout(function(){ card.classList.add('dragging'); }, 0);
+    });
+    card.addEventListener('dragend', function() {
+      card.classList.remove('dragging');
+      document.querySelectorAll('#svBoardCols .board-col-body').forEach(function(c){ c.classList.remove('drag-over'); });
+    });
+  });
+  // Only Waiting to be Invoiced / Invoiced are real drop targets - the other two columns
+  // are date-derived and can't be set by dragging a card onto them.
+  document.querySelectorAll('#svBoardCols .board-col-body[data-sv-status]').forEach(function(col) {
+    col.addEventListener('dragover', function(e) {
+      if (!dragId) return;
+      e.preventDefault();
+      document.querySelectorAll('#svBoardCols .board-col-body').forEach(function(c){ c.classList.remove('drag-over'); });
+      col.classList.add('drag-over');
+    });
+    col.addEventListener('dragleave', function() { col.classList.remove('drag-over'); });
+    col.addEventListener('drop', function(e) {
+      e.preventDefault(); col.classList.remove('drag-over');
+      if (!dragId) return;
+      var newStatus = col.dataset.svStatus === 'Waiting to be Invoiced' ? 'Completed' : 'Invoiced';
+      var v = siteVisits.find(function(x){ return x.id === dragId; });
+      dragId = null;
+      if (!v || v.status === newStatus) return;
+      v.status = newStatus;
+      db('PATCH', 'site_visits?id=eq.' + v.id, { status: newStatus }).catch(function(err){ showToast('Update failed: ' + err.message, 'error'); });
+      renderSvBoard();
+    });
+  });
 }
 
 function openSvModal() {
