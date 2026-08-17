@@ -830,10 +830,20 @@
     </div>
     <div class="section-label">Agreement Terms</div>
     <div class="g2">
-      <div class="field"><label>Monthly Fee ($) ex GST</label><input id="aFee" type="number" step="0.01" placeholder="2000.00"></div>
-      <div class="field"><label>Included Hours / Month</label><input id="aHours" type="number" step="0.5" placeholder="8"></div>
-      <div class="field"><label>Hourly Rate for Extras ($)</label><input id="aHourlyRate" type="number" step="0.01" placeholder="e.g. 150.00"></div>
+      <div class="field"><label>Visit Frequency</label>
+        <select id="aFrequency" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <option value="Monthly">Monthly</option>
+          <option value="Bi-Monthly">Bi-Monthly (every 2 months)</option>
+          <option value="Quarterly">Quarterly (every 3 months)</option>
+          <option value="6-Monthly">6-Monthly</option>
+          <option value="Annual">Annual</option>
+          <option value="As Required">As Required</option>
+        </select>
+      </div>
       <div class="field"><label>Start Date</label><input id="aStartDate" type="date"></div>
+      <div class="field"><label>Fee ($) ex GST</label><input id="aFee" type="number" step="0.01" placeholder="2000.00"></div>
+      <div class="field"><label>Included Hours / Visit</label><input id="aHours" type="number" step="0.5" placeholder="8"></div>
+      <div class="field"><label>Hourly Rate for Extras ($)</label><input id="aHourlyRate" type="number" step="0.01" placeholder="e.g. 150.00"></div>
     </div>
     <div class="field"><label>Machines / Equipment Covered</label><textarea id="aMachines" placeholder="e.g. Strapack SQ-800 (S/N 12345)" style="min-height:55px"></textarea></div>
     <div class="field"><label>Notes</label><textarea id="aNotes" placeholder="Any agreement notes..." style="min-height:55px"></textarea></div>
@@ -1989,8 +1999,8 @@ function renderAgreements(){
         (a.machines_covered?'<div style="font-size:11px;color:#5a8090;margin-top:3px">'+a.machines_covered+'</div>':'')+
         '</div>'+
         '<div style="text-align:right">'+
-          '<div class="agr-fee">$'+parseFloat(a.monthly_fee||0).toFixed(0)+'/mo</div>'+
-          '<div style="font-size:11px;color:#5a8090;margin-top:2px">'+(a.included_hours||8)+' hrs included</div>'+
+          '<div class="agr-fee">$'+parseFloat(a.monthly_fee||0).toFixed(0)+' <span style="font-size:11px;font-weight:600">('+(a.frequency||'Monthly')+')</span></div>'+
+          '<div style="font-size:11px;color:#5a8090;margin-top:2px">'+(a.included_hours||8)+' hrs included / visit</div>'+
           '<div style="font-size:10px;font-weight:700;color:'+(active?'#10b981':'#4a6080')+';margin-top:3px">'+(active?'ACTIVE':'INACTIVE')+'</div>'+
         '</div>'+
       '</div>'+
@@ -2006,11 +2016,12 @@ function openAgrModal(agrId){
     document.getElementById('aCustomer').value=a.customer||''; document.getElementById('aContact').value=a.contact_name||''; document.getElementById('aPhone').value=a.phone||''; document.getElementById('aEmail').value=a.email||'';
     document.getElementById('aFee').value=a.monthly_fee||''; document.getElementById('aHours').value=a.included_hours||''; document.getElementById('aHourlyRate').value=a.hourly_rate||''; document.getElementById('aStartDate').value=a.start_date||'';
     document.getElementById('aMachines').value=a.machines_covered||''; document.getElementById('aNotes').value=a.notes||''; document.getElementById('aStatus').value=a.status||'ACTIVE';
+    document.getElementById('aFrequency').value=a.frequency||'Monthly';
     document.getElementById('btnDeleteAgr').style.display='block';
   } else {
     editingAgr=null; document.getElementById('agrModalTitle').textContent='New Service Agreement';
     ['aCustomer','aContact','aPhone','aEmail','aFee','aHours','aHourlyRate','aStartDate','aMachines','aNotes'].forEach(function(id){document.getElementById(id).value='';});
-    document.getElementById('aStatus').value='ACTIVE'; document.getElementById('btnDeleteAgr').style.display='none';
+    document.getElementById('aStatus').value='ACTIVE'; document.getElementById('aFrequency').value='Monthly'; document.getElementById('btnDeleteAgr').style.display='none';
   }
   document.getElementById('agrOverlay').classList.add('show');
   setTimeout(function(){document.getElementById('aCustomer').focus();},100);
@@ -2020,7 +2031,7 @@ function closeAgrModal(){document.getElementById('agrOverlay').classList.remove(
 async function saveAgr(){
   var customer=document.getElementById('aCustomer').value.trim(); if(!customer){showToast('Customer required','error');return;}
   var btn=document.getElementById('btnSaveAgr'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={customer:customer,contact_name:document.getElementById('aContact').value||null,phone:document.getElementById('aPhone').value||null,email:document.getElementById('aEmail').value||null,monthly_fee:parseFloat(document.getElementById('aFee').value)||null,included_hours:parseFloat(document.getElementById('aHours').value)||8,hourly_rate:parseFloat(document.getElementById('aHourlyRate').value)||null,start_date:document.getElementById('aStartDate').value||null,machines_covered:document.getElementById('aMachines').value||null,notes:document.getElementById('aNotes').value||null,status:document.getElementById('aStatus').value,updated_at:new Date().toISOString()};
+  var payload={customer:customer,contact_name:document.getElementById('aContact').value||null,phone:document.getElementById('aPhone').value||null,email:document.getElementById('aEmail').value||null,monthly_fee:parseFloat(document.getElementById('aFee').value)||null,included_hours:parseFloat(document.getElementById('aHours').value)||8,hourly_rate:parseFloat(document.getElementById('aHourlyRate').value)||null,start_date:document.getElementById('aStartDate').value||null,machines_covered:document.getElementById('aMachines').value||null,notes:document.getElementById('aNotes').value||null,status:document.getElementById('aStatus').value,frequency:document.getElementById('aFrequency').value||'Monthly',updated_at:new Date().toISOString()};
   try{
     if(editingAgr) await db('PATCH','service_agreements?id=eq.'+editingAgr.id,payload);
     else await db('POST','service_agreements',payload);
