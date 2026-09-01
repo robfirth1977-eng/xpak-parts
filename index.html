@@ -4431,6 +4431,8 @@ async function generateAssessmentReport(jobId) {
 function renderAssessmentReport(j, tools, jparts) {
   var today = new Date().toLocaleDateString('en-AU', { day:'2-digit', month:'long', year:'numeric' });
   var mLookup = function(id) { var m = machines.find(function(x){return x.id===id;}); return m ? m.name : (id || ''); };
+  var hasCompletedWork = tools.some(function(t) { return (t.work_completed || '').trim().length > 0; });
+  var reportTitle = hasCompletedWork ? 'SERVICE REPORT' : 'SERVICE ASSESSMENT REPORT';
 
   // Detect tools where repair is not proceeding
   function isNoRepairTool(t) {
@@ -4463,6 +4465,7 @@ function renderAssessmentReport(j, tools, jparts) {
       (t.fault_type ? '<div class="field-block"><div class="field-label">Fault Reported</div><div class="field-val">' + t.fault_type + (t.error_code ? ' &nbsp;|&nbsp; Error Code: ' + t.error_code : '') + '</div></div>' : '') +
       (t.customer_issue ? '<div class="field-block"><div class="field-label">Customer Description</div><div class="field-val">' + t.customer_issue.split('\n').join('<br>') + '</div></div>' : '') +
       (t.diagnosis ? '<div class="field-block"><div class="field-label">Assessment / Findings</div><div class="field-val">' + t.diagnosis.split('\n').join('<br>') + '</div></div>' : '') +
+      (t.work_completed ? '<div class="field-block" style="background:#f0fdf4"><div class="field-label" style="color:#10b981">Work Completed</div><div class="field-val">' + t.work_completed.split('\n').join('<br>') + '</div></div>' : '') +
       (t.recommendation ? '<div class="field-block"' + (noRepair ? ' style="background:#fef3cd"' : '') + '><div class="field-label" ' + (noRepair ? 'style="color:#e87722"' : '') + '>Recommendation</div><div class="field-val">' + t.recommendation.split('\n').join('<br>') + '</div></div>' : '') +
       '<div class="field-block"><div class="field-label">Parts Required' + partsHeaderNote + '</div>' + partsTable + '</div>' +
       (!noRepair && t.service_fee ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Service Fee</div><div class="field-val" style="color:#f97316;font-weight:700">$' + parseFloat(t.service_fee).toFixed(2) + '</div></div>' : '') +
@@ -4477,7 +4480,7 @@ function renderAssessmentReport(j, tools, jparts) {
   var grandTotal = partsTotal + serviceFeeTotal;
 
   var w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Assessment Report - ' + (j.customer||'') + ' ' + xpsNum(j.job_number) + '</title><style>');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + reportTitle + ' - ' + (j.customer||'') + ' ' + xpsNum(j.job_number) + '</title><style>');
   w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
   w.document.write('body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a2e;background:#fff;padding:20mm 18mm}');
   w.document.write('.header-row{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3799;padding-bottom:12px;margin-bottom:18px}');
@@ -4513,7 +4516,7 @@ function renderAssessmentReport(j, tools, jparts) {
   // Header
   w.document.write('<div class="header-row">');
   w.document.write('<div class="logo"><img src="' + _LOGO_B64 + '" style="height:55px"></div>');
-  w.document.write('<div class="report-title"><h1>SERVICE ASSESSMENT REPORT</h1><div class="case-num">' + xpsNum(j.job_number) + '</div><div class="date">' + today + '</div></div>');
+  w.document.write('<div class="report-title"><h1>' + reportTitle + '</h1><div class="case-num">' + xpsNum(j.job_number) + '</div><div class="date">' + today + '</div></div>');
   w.document.write('</div>');
 
   // Customer details
