@@ -663,6 +663,7 @@
       <div class="field"><label>Hourly Rate ($)</label><input id="jLabourRate" type="number" step="1" min="0" value="120" placeholder="120" oninput="recalcJobCostSummary()"></div>
       <div class="field"><label>Labour Discount ($) <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jLabourDiscount" type="number" step="0.01" min="0" placeholder="0.00" oninput="recalcJobCostSummary()"></div>
       <div class="field"><label>Parts Discount ($) <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jPartsDiscount" type="number" step="0.01" min="0" placeholder="0.00" oninput="recalcJobCostSummary()"></div>
+      <div class="field"><label>Freight ($) <span style="font-size:10px;color:#3a5070;font-weight:400">optional</span></label><input id="jFreight" type="number" step="0.01" min="0" placeholder="0.00" oninput="recalcJobCostSummary()"></div>
     </div>
     <div id="jobCostSummaryBox"></div>
 
@@ -1052,7 +1053,8 @@ function jobRevenue(j) {
   var lh  = parseFloat(j.hours_spent||0) * parseFloat(j.labour_rate||120);
   var ld  = parseFloat(j.labour_discount||0);
   var pd  = parseFloat(j.parts_discount||0);
-  return svc + Math.max(0,pts-pd) + Math.max(0,lh-ld);
+  var fr  = parseFloat(j.freight_cost||0);
+  return svc + Math.max(0,pts-pd) + Math.max(0,lh-ld) + fr;
 }
 
 // Shared site visit revenue calc - used by Weekly Report so Site Visits never blend into
@@ -2825,11 +2827,12 @@ function recalcJobCostSummary() {
   var rate             = parseFloat(document.getElementById('jLabourRate').value) || 120;
   var labourDiscount  = parseFloat(document.getElementById('jLabourDiscount').value) || 0;
   var partsDiscount   = parseFloat(document.getElementById('jPartsDiscount').value) || 0;
+  var freight         = parseFloat(document.getElementById('jFreight').value) || 0;
 
   var labourGross = hours * rate;
   var labourNet   = Math.max(0, labourGross - labourDiscount);
   var partsNet    = Math.max(0, partsTotal - partsDiscount);
-  var totalExGst  = serviceFeeTotal + partsNet + labourNet;
+  var totalExGst  = serviceFeeTotal + partsNet + labourNet + freight;
   var gst         = totalExGst * 0.1;
 
   var rows = '';
@@ -2848,8 +2851,9 @@ function recalcJobCostSummary() {
       rows += '<div class="jcs-row"><span>Labour Net</span><span>'+fmt(labourNet)+'</span></div>';
     }
   }
-  if (!serviceFeeTotal && !partsTotal && !hours) {
-    box.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:8px 0">Add a service fee, parts, or billable hours to see the cost summary.</div>';
+  if (freight) rows += '<div class="jcs-row"><span>Freight</span><span>'+fmt(freight)+'</span></div>';
+  if (!serviceFeeTotal && !partsTotal && !hours && !freight) {
+    box.innerHTML = '<div style="font-size:11px;color:#3a5070;padding:8px 0">Add a service fee, parts, freight, or billable hours to see the cost summary.</div>';
     return;
   }
   rows += '<div class="jcs-row jcs-grand"><span>Total ex GST</span><span>'+fmt(totalExGst)+'</span></div>';
@@ -3184,6 +3188,7 @@ function clearJobForm() {
   document.getElementById('jLabourRate').value = '120';
   document.getElementById('jLabourDiscount').value = '';
   document.getElementById('jPartsDiscount').value = '';
+  document.getElementById('jFreight').value = '';
   jobLinks = []; renderLinksList();
   jobPartsLocal = [];
   jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', date_of_manufacture: '', warranty_period: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' }];
@@ -3254,6 +3259,7 @@ async function openEditJobModal(jobId) {
   document.getElementById('jLabourRate').value = j.labour_rate != null ? j.labour_rate : 120;
   document.getElementById('jLabourDiscount').value = j.labour_discount || '';
   document.getElementById('jPartsDiscount').value = j.parts_discount || '';
+  document.getElementById('jFreight').value = j.freight_cost || '';
   try { jobLinks = j.links ? JSON.parse(j.links) : []; } catch(e) { jobLinks = []; }
   renderLinksList();
   document.getElementById('lLinkName').value = '';
@@ -3423,6 +3429,7 @@ async function saveJob() {
     labour_rate: parseFloat(document.getElementById('jLabourRate').value) || 120,
     labour_discount: parseFloat(document.getElementById('jLabourDiscount').value) || null,
     parts_discount: parseFloat(document.getElementById('jPartsDiscount').value) || null,
+    freight_cost: parseFloat(document.getElementById('jFreight').value) || null,
     links: JSON.stringify(jobLinks),
     updated_at: new Date().toISOString()
   };
@@ -4544,10 +4551,11 @@ function renderAssessmentReport(j, tools, jparts) {
   var labourRate     = parseFloat(j.labour_rate) || 120;
   var labourDiscount = parseFloat(j.labour_discount) || 0;
   var partsDiscount  = parseFloat(j.parts_discount) || 0;
+  var freightCost    = parseFloat(j.freight_cost) || 0;
   var labourGross    = labourHours * labourRate;
   var labourNet      = Math.max(0, labourGross - labourDiscount);
   var partsNet       = Math.max(0, partsTotal - partsDiscount);
-  var reportTotal    = serviceFeeTotal + partsNet + labourNet;
+  var reportTotal    = serviceFeeTotal + partsNet + labourNet + freightCost;
 
   if (reportTotal > 0 || serviceFeeTotal > 0 || partsTotal > 0) {
     w.document.write('<div class="totals-box"><table style="width:auto;margin-left:auto;min-width:320px">');
@@ -4566,6 +4574,7 @@ function renderAssessmentReport(j, tools, jparts) {
         w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Labour Net</td><td style="text-align:right;font-family:monospace">$' + labourNet.toFixed(2) + '</td></tr>');
       }
     }
+    if (freightCost > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Freight</td><td style="text-align:right;font-family:monospace">$' + freightCost.toFixed(2) + '</td></tr>');
     w.document.write('<tr class="total-row"><td style="text-align:right;padding-right:20px">Total (ex GST)</td><td style="text-align:right;font-family:monospace">$' + reportTotal.toFixed(2) + '</td></tr>');
     w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#888">GST (10%)</td><td style="text-align:right;font-family:monospace;color:#888">$' + (reportTotal * 0.1).toFixed(2) + '</td></tr>');
     w.document.write('<tr><td style="text-align:right;padding-right:20px;font-weight:700">Total (inc GST)</td><td style="text-align:right;font-family:monospace;font-weight:700">$' + (reportTotal * 1.1).toFixed(2) + '</td></tr>');
@@ -7511,10 +7520,11 @@ function renderInvoiceNotice(j, tools, jparts) {
   var labourRate2     = parseFloat(j.labour_rate) || 120;
   var labourDiscount2 = parseFloat(j.labour_discount) || 0;
   var partsDiscount2  = parseFloat(j.parts_discount) || 0;
+  var freightCost2    = parseFloat(j.freight_cost) || 0;
   var labourGross2    = labourHours2 * labourRate2;
   var labourNet2      = Math.max(0, labourGross2 - labourDiscount2);
   var partsNet2       = Math.max(0, partsTotal - partsDiscount2);
-  var invoiceTotal    = serviceFeeTotal + partsNet2 + labourNet2;
+  var invoiceTotal    = serviceFeeTotal + partsNet2 + labourNet2 + freightCost2;
   var invoiceGST      = invoiceTotal * 0.1;
 
   if (serviceFeeTotal) w.document.write('<div class="tot-row"><span>Service Fee</span><span>'+fmt(serviceFeeTotal)+'</span></div>');
@@ -7532,6 +7542,7 @@ function renderInvoiceNotice(j, tools, jparts) {
       w.document.write('<div class="tot-row"><span>Labour Net</span><span>'+fmt(labourNet2)+'</span></div>');
     }
   }
+  if (freightCost2 > 0) w.document.write('<div class="tot-row"><span>Freight</span><span>'+fmt(freightCost2)+'</span></div>');
   w.document.write('<div class="tot-row grand"><span>Total ex GST</span><span>'+fmt(invoiceTotal)+'</span></div>');
   w.document.write('<div class="tot-row gst"><span>GST (10%)</span><span>'+fmt(invoiceGST)+'</span></div>');
   w.document.write('<div class="tot-row" style="font-weight:700"><span>Total inc GST</span><span>'+fmt(invoiceTotal+invoiceGST)+'</span></div>');
