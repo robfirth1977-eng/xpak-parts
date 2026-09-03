@@ -4606,7 +4606,7 @@ async function exportQuoteExcel(jobId) {
     var today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'});
     var CUR = '$#,##0.00';
     var rows = [];
-    rows.push(['QUOTE REQUEST', '', '', '', 'X-Pak Global - Service Division']);
+    rows.push(['QUOTE REQUEST', '', '', 'X-Pak Global - Service Division']);
     rows.push([]);
     rows.push(['Reference', xpsNum(j.job_number)]);
     rows.push(['Date', today]);
@@ -4615,13 +4615,15 @@ async function exportQuoteExcel(jobId) {
     rows.push([]);
     rows.push(['Please supply unit prices (ex GST) and estimated lead times for the parts listed below, then return this completed form to rob.firth@xpak.com.au.']);
     rows.push([]);
-    rows.push(['Machine (reference only)','Part No.','Description','Qty','Unit Price (ex GST)','Extended Price','Lead Time','Notes']);
+    // Machine is deliberately left off the supplier-facing table - a common/shared part
+    // appearing once per machine it fits reads as duplicate line items to a supplier.
+    rows.push(['Part No.','Description','Qty','Unit Price (ex GST)','Extended Price','Lead Time','Notes']);
     var FIRST_DATA_ROW = rows.length + 1; // 1-indexed - row after the column headers
     var grouped = {};
     jparts.forEach(function(p) { var k = p.machine_name||'Unspecified'; if(!grouped[k]) grouped[k]=[]; grouped[k].push(p); });
     Object.keys(grouped).sort().forEach(function(machine) {
       grouped[machine].forEach(function(p) {
-        rows.push([machine, p.part_key_no||'', p.part_description||'', p.quantity||1, undefined, undefined, undefined, p.notes||'']);
+        rows.push([p.part_key_no||'', p.part_description||'', p.quantity||1, undefined, undefined, undefined, p.notes||'']);
       });
     });
     var LAST_DATA_ROW = rows.length;
@@ -4629,30 +4631,30 @@ async function exportQuoteExcel(jobId) {
     var freightRow = subTotalRow + 1;
     var gstRow = freightRow + 1;
     var totalRow = gstRow + 1;
-    rows.push(['','','','','Sub Total']);
-    rows.push(['','','','','Freight (if applicable)']);
-    rows.push(['','','','','GST (10%)']);
-    rows.push(['','','','','Total']);
+    rows.push(['','','','Sub Total']);
+    rows.push(['','','','Freight (if applicable)']);
+    rows.push(['','','','GST (10%)']);
+    rows.push(['','','','Total']);
 
     var ws = XLSX.utils.aoa_to_sheet(rows);
 
     // Extended Price per row - blank until the supplier fills in a unit price, never a raw
     // formula error (this is exactly what was broken in the manually-built version of this file).
     for (var r = FIRST_DATA_ROW; r <= LAST_DATA_ROW; r++) {
-      ws['E'+r] = { t:'n', z: CUR };  // unit price - blank, pre-formatted for the supplier to fill in
-      ws['F'+r] = { t:'n', f: 'IF(E'+r+'="","",D'+r+'*E'+r+')', z: CUR };
+      ws['D'+r] = { t:'n', z: CUR };  // unit price - blank, pre-formatted for the supplier to fill in
+      ws['E'+r] = { t:'n', f: 'IF(D'+r+'="","",C'+r+'*D'+r+')', z: CUR };
     }
-    ws['F'+subTotalRow] = { t:'n', f: 'SUM(F'+FIRST_DATA_ROW+':F'+LAST_DATA_ROW+')', z: CUR };
-    ws['F'+freightRow]  = { t:'n', z: CUR };  // blank - supplier fills in if freight applies
-    ws['F'+gstRow]      = { t:'n', f: '(F'+subTotalRow+'+F'+freightRow+')*0.1', z: CUR };
-    ws['F'+totalRow]    = { t:'n', f: 'F'+subTotalRow+'+F'+freightRow+'+F'+gstRow, z: CUR };
+    ws['E'+subTotalRow] = { t:'n', f: 'SUM(E'+FIRST_DATA_ROW+':E'+LAST_DATA_ROW+')', z: CUR };
+    ws['E'+freightRow]  = { t:'n', z: CUR };  // blank - supplier fills in if freight applies
+    ws['E'+gstRow]      = { t:'n', f: '(E'+subTotalRow+'+E'+freightRow+')*0.1', z: CUR };
+    ws['E'+totalRow]    = { t:'n', f: 'E'+subTotalRow+'+E'+freightRow+'+E'+gstRow, z: CUR };
 
     ws['!merges'] = [
-      { s:{r:0,c:0}, e:{r:0,c:3} },  // A1:D1 - title
-      { s:{r:0,c:4}, e:{r:0,c:7} },  // E1:H1 - wordmark
-      { s:{r:7,c:0}, e:{r:7,c:7} }   // A8:H8 - instructions
+      { s:{r:0,c:0}, e:{r:0,c:2} },  // A1:C1 - title
+      { s:{r:0,c:3}, e:{r:0,c:6} },  // D1:G1 - wordmark
+      { s:{r:7,c:0}, e:{r:7,c:6} }   // A8:G8 - instructions
     ];
-    ws['!cols'] = [{wch:24},{wch:17},{wch:38},{wch:7},{wch:17},{wch:17},{wch:14},{wch:26}];
+    ws['!cols'] = [{wch:17},{wch:38},{wch:7},{wch:17},{wch:17},{wch:14},{wch:26}];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Quote Request');
     var fname = 'Quote_' + xpsNum(j.job_number) + '_' + today.replace(/ /g,'-') + '.xlsx';
