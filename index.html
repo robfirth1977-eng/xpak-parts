@@ -978,20 +978,24 @@ function filterAllParts() {
     if (allPartsSearchTerm) {
       return p.key_no.toLowerCase().includes(allPartsSearchTerm) ||
              p.description.toLowerCase().includes(allPartsSearchTerm) ||
-             (p.machineName||'').toLowerCase().includes(allPartsSearchTerm) ||
+             (p.machineNames||[]).some(function(mn){ return mn.toLowerCase().includes(allPartsSearchTerm); }) ||
              (p.diagram_ref && p.diagram_ref.toLowerCase().includes(allPartsSearchTerm));
     }
     return true;
   });
   var el = document.getElementById('allPartsList');
   if (!filtered.length) { el.innerHTML = '<div class="center" style="padding:30px;color:#3a5070">No parts match</div>'; return; }
-  // Group by machine
+  // Group by machine - a shared part appears once under every machine it's linked to,
+  // since that's exactly what this view exists to show.
   var byMachine = {}, machineOrder = [];
   filtered.forEach(function(p) {
-    var mn = p.machineName || 'Unknown';
-    if (!byMachine[mn]) { byMachine[mn] = []; machineOrder.push(mn); }
-    byMachine[mn].push(p);
+    var names = (p.machineNames && p.machineNames.length) ? p.machineNames : ['Unknown'];
+    names.forEach(function(mn) {
+      if (!byMachine[mn]) { byMachine[mn] = []; machineOrder.push(mn); }
+      byMachine[mn].push(p);
+    });
   });
+  machineOrder.sort();
   var html2 = '';
   machineOrder.forEach(function(mn) {
     html2 += '<div style="margin-top:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#3a5070;padding:4px 0 6px;border-bottom:1px solid #1a2a3d">' + mn + '</div>';
@@ -1157,9 +1161,30 @@ async function loadAllParts() {
       all = all.concat(batch);
       offset += 1000;
     } while (batch.length === 1000);
+
+    // A part can now be linked to more than one machine - load every link (paginated)
+    // and group by part_id, rather than relying on the old single parts.machine_id column.
+    var links = [], lOffset = 0, lBatch;
+    do {
+      lBatch = await db('GET', 'part_machines?select=part_id,machine_id&limit=1000&offset=' + lOffset);
+      links = links.concat(lBatch);
+      lOffset += 1000;
+    } while (lBatch.length === 1000);
+    var linksByPart = {};
+    links.forEach(function(l) {
+      if (!linksByPart[l.part_id]) linksByPart[l.part_id] = [];
+      linksByPart[l.part_id].push(l.machine_id);
+    });
+
     allParts = all.map(function(p) {
-      var m = machines.find(function(m) { return m.id === p.machine_id; });
-      p.machineName = m ? m.name : 'Unknown'; return p;
+      var mIds = linksByPart[p.id] || [];
+      p.machineIds = mIds;
+      p.machineNames = mIds.map(function(id) {
+        var m = machines.find(function(x) { return x.id === id; });
+        return m ? m.name : 'Unknown';
+      });
+      p.machineName = p.machineNames[0] || 'Unknown'; // singular fallback for any display code
+      return p;
     });
   } catch(e) { allParts = []; }
 }
@@ -1285,7 +1310,7 @@ function renderStockOrderBuilder() {
   var el = document.getElementById('stockOrderList'); if (!el) return;
 
   var pool = allParts.filter(function(p) {
-    if (_stockOrderMachine && p.machine_id !== _stockOrderMachine) return false;
+    if (_stockOrderMachine && (p.machineIds||[]).indexOf(_stockOrderMachine) === -1) return false;
     var s = p.stock && p.stock[0];
     var qty = s ? s.quantity : null;
     if (_stockOrderFilter === 'low')  return qty !== null && qty <= (s.reorder_threshold || 1);
@@ -2706,7 +2731,8 @@ async function selectMachine(m) {
   selectedMachine = m; renderTabs(); renderDocsBar();
   document.getElementById('partsList').innerHTML = '<div class="center"><span class="spinner"></span> Loading...</div>';
   try {
-    parts = await db('GET', 'parts?machine_id=eq.' + m.id + '&select=*,stock(*)&is_deleted=neq.true&order=key_no.asc');
+    var links = await db('GET', 'part_machines?machine_id=eq.' + m.id + '&parts.is_deleted=neq.true&select=parts!inner(*,stock(*))');
+    parts = links.map(function(l) { return l.parts; }).sort(function(a, b) { return (a.key_no||'').localeCompare(b.key_no||''); });
     selectedMachine = machines.find(function(x) { return x.id === m.id; }) || m; partsFilter = 'all'; renderParts();
   } catch(e) { showToast('Failed to load parts', 'error'); }
 }
@@ -2722,13 +2748,13 @@ function searchPartsForJob(toolTempId) {
   // Get machine for this tool
   var tool = jobToolsLocal.find(function(t){return t._tempId===toolTempId;});
   var toolMachineId = tool ? (tool.machine_id || null) : null;
-  var toolMachineName = toolMachineId ? (allParts.find(function(p){return p.machine_id===toolMachineId;}) || {machineName:''}).machineName : null;
   var allMatches = allParts.filter(function(pt) {
     return pt.key_no.toLowerCase().includes(q) || pt.description.toLowerCase().includes(q);
   });
-  // Split: this machine first, then others
-  var thisMachine = toolMachineId ? allMatches.filter(function(pt){return pt.machine_id===toolMachineId;}) : [];
-  var others = allMatches.filter(function(pt){return !toolMachineId || pt.machine_id!==toolMachineId;}).slice(0,6);
+  // Split: this machine first, then others - a part now carries an array of every machine
+  // it's linked to (machineIds), since the same part can fit more than one machine.
+  var thisMachine = toolMachineId ? allMatches.filter(function(pt){return (pt.machineIds||[]).indexOf(toolMachineId) !== -1;}) : [];
+  var others = allMatches.filter(function(pt){return !toolMachineId || (pt.machineIds||[]).indexOf(toolMachineId) === -1;}).slice(0,6);
   function makeRow(pt) {
     var s = pt.stock && pt.stock[0]; var qty = s ? s.quantity : null;
     var st = qty===null?'unset':qty===0?'empty':qty<=(s.reorder_threshold||1)?'low':'ok';
@@ -2737,7 +2763,7 @@ function searchPartsForJob(toolTempId) {
     return '<div class="part-search-item" style="cursor:default;' + (alreadyAdded?'opacity:0.45;':'') + '" onclick="togglePartCheckbox(\'' + cbId + '\')">' +
       '<input type="checkbox" id="' + cbId + '" ' + (alreadyAdded?'disabled checked':'') + ' data-part-id="' + pt.id + '" data-tool-temp-id="' + toolTempId + '" onclick="event.stopPropagation()" style="margin-right:8px;flex-shrink:0;width:15px;height:15px;cursor:pointer;accent-color:#10b981">' +
       '<div class="psi-left" style="flex:1"><div class="psi-keyno">' + pt.key_no + '</div><div class="psi-desc">' + pt.description + '</div>' +
-      (toolMachineId && pt.machine_id!==toolMachineId ? '<div class="psi-machine" style="color:#5a8090">' + (pt.machineName||'') + '</div>' : '') +
+      (toolMachineId && (pt.machineIds||[]).indexOf(toolMachineId) === -1 ? '<div class="psi-machine" style="color:#5a8090">' + (pt.machineNames||[]).join(', ') + '</div>' : '') +
       '</div><div class="psi-stock ' + st + '">' + (qty===null?'No stock':'Stock: '+qty) + '</div></div>';
   }
   if (!thisMachine.length && !others.length) { res.innerHTML = '<div style="padding:8px;font-size:11px;color:#5a8090">No parts found</div>'; return; }
@@ -3625,9 +3651,22 @@ async function saveMachine() {
 
 async function deleteMachine() {
   if (!selectedMachine) return;
-  if (!confirm('Delete "' + selectedMachine.name + '" AND all its parts? This cannot be undone.')) return;
+  if (!confirm('Delete "' + selectedMachine.name + '"? Parts only used by this machine will be removed too - parts shared with other machines will stay on those machines. This cannot be undone.')) return;
   try {
-    await db('PATCH', 'parts?machine_id=eq.' + selectedMachine.id, { is_deleted: true });
+    // A part now might belong to several machines - only retire the parts whose sole
+    // machine link was this one; parts shared elsewhere just lose this one link.
+    var links = await db('GET', 'part_machines?machine_id=eq.' + selectedMachine.id + '&select=part_id');
+    var partIds = links.map(function(l) { return l.part_id; });
+    if (partIds.length) {
+      var counts = await db('GET', 'part_machines?part_id=in.(' + partIds.join(',') + ')&select=part_id');
+      var linkCount = {};
+      counts.forEach(function(c) { linkCount[c.part_id] = (linkCount[c.part_id] || 0) + 1; });
+      var soleIds = partIds.filter(function(id) { return linkCount[id] === 1; });
+      if (soleIds.length) {
+        await db('PATCH', 'parts?id=in.(' + soleIds.join(',') + ')', { is_deleted: true });
+      }
+    }
+    await db('DELETE', 'part_machines?machine_id=eq.' + selectedMachine.id);
     await db('DELETE', 'machines?id=eq.' + selectedMachine.id);
     machines = machines.filter(function(m) { return m.id !== selectedMachine.id; });
     selectedMachine = null; closeMachineModal(); showToast('Machine deleted');
@@ -3671,7 +3710,7 @@ function renderParts() {
     }
     return p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.diagram_ref && p.diagram_ref.toLowerCase().includes(q)) ||
       ((p.stock && p.stock[0] && p.stock[0].location) || '').toLowerCase().includes(q) ||
-      (p.machineName || '').toLowerCase().includes(q) || (p.alt_part_no || '').toLowerCase().includes(q);
+      (p.machineNames||[]).some(function(mn){ return mn.toLowerCase().includes(q); }) || (p.alt_part_no || '').toLowerCase().includes(q);
   });
   var low = parts.filter(function(p) { var s = p.stock && p.stock[0]; return s && s.quantity <= (s.reorder_threshold || 1) && s.quantity >= 0; }).length;
   var inStock = parts.filter(function(p) { var s = p.stock && p.stock[0]; return s && s.quantity > 0; }).length;
@@ -3696,7 +3735,7 @@ function renderParts() {
   document.getElementById('partsList').innerHTML = f.map(function(p) {
     var s = p.stock && p.stock[0], status = getStatus(p), qty = s ? s.quantity : null;
     var inQ = labelQueue.some(function(x) { return x.id === p.id; });
-    var mb = isGlobal && p.machineName ? '<span class="part-ref" style="background:#0a2a1a;color:#10b981;border:1px solid #10b981">' + p.machineName + '</span>' : '';
+    var mb = isGlobal && p.machineNames && p.machineNames.length ? '<span class="part-ref" style="background:#0a2a1a;color:#10b981;border:1px solid #10b981">' + p.machineNames.join(', ') + '</span>' : '';
     var refs = p.diagram_refs ? '<span class="part-ref" style="background:#1a1a3a;color:#a78bfa">Refs: ' + p.diagram_refs + '</span>' : (p.diagram_ref ? '<span class="part-ref">Ref ' + p.diagram_ref + '</span>' : '');
     return '<div class="part-card ' + status + '">' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openEditModal(\'' + p.id + '\')">' +
@@ -3883,9 +3922,21 @@ window.addEventListener('scroll', function() {
 
 async function deletePart() {
   if (!editingPart) return;
-  if (!confirm('Remove ' + editingPart.key_no + ' - ' + editingPart.description + ' from parts lists? Job history will be preserved.')) return;
   try {
-    await db('PATCH', 'parts?id=eq.' + editingPart.id, { is_deleted: true });
+    // A part can be linked to several machines now - only fully retire it once this was
+    // the last one; otherwise just unlink it from the machine we're currently viewing.
+    var links = await db('GET', 'part_machines?part_id=eq.' + editingPart.id + '&select=id,machine_id');
+    var isLastMachine = links.length <= 1;
+    var msg = isLastMachine
+      ? 'Remove ' + editingPart.key_no + ' - ' + editingPart.description + ' from parts lists entirely? Job history will be preserved.'
+      : 'Remove ' + editingPart.key_no + ' - ' + editingPart.description + ' from ' + (selectedMachine ? selectedMachine.name : 'this machine') + '? It is still linked to ' + (links.length - 1) + ' other machine(s) and will stay there.';
+    if (!confirm(msg)) return;
+    if (isLastMachine) {
+      await db('PATCH', 'parts?id=eq.' + editingPart.id, { is_deleted: true });
+    }
+    if (selectedMachine) {
+      await db('DELETE', 'part_machines?part_id=eq.' + editingPart.id + '&machine_id=eq.' + selectedMachine.id);
+    }
     closeModal(); showToast(editingPart.key_no + ' removed');
     await selectMachine(selectedMachine); await loadAllParts();
   } catch(e) { showToast('Remove failed', 'error'); }
@@ -3911,11 +3962,12 @@ async function savePart() {
       showToast('Part updated');
     if (selectedMachine) { renderDocsBar(); renderParts(); }
     } else {
-      var res = await db('POST', 'parts', Object.assign({ machine_id: selectedMachine.id }, pd));
+      var res = await db('POST', 'parts', pd);
+      await db('POST', 'part_machines', { part_id: res[0].id, machine_id: selectedMachine.id });
       await db('POST', 'stock', Object.assign({ part_id: res[0].id }, stock));
       showToast('Part added');
     closeModal();
-    } 
+    }
     await loadAllParts(); if (selectedMachine) { renderDocsBar(); renderParts(); } await loadAllParts();
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Part'; }
@@ -3925,7 +3977,9 @@ async function savePart() {
 
 function makeLabelData(partId) {
   var p = parts.find(function(x) { return x.id === partId; }) || allParts.find(function(x) { return x.id === partId; }); if (!p) return null;
-  var mName = p.machineName || (selectedMachine ? selectedMachine.name : '');
+  // Prefer whichever machine's catalog you were viewing when queuing the label - a shared
+  // part's machineNames array order isn't meaningful, so it's only a fallback.
+  var mName = (selectedMachine ? selectedMachine.name : '') || (p.machineNames && p.machineNames[0]) || p.machineName || '';
   return { id: p.id, machine: mName, keyno: p.key_no, description: p.description, section: p.assembly_section || '', location: (p.stock && p.stock[0] && p.stock[0].location) || '', qrText: 'XPAK|' + p.key_no + '|' + p.description + '|' + mName };
 }
 
@@ -5041,7 +5095,7 @@ function svPartOptionsFor(machineTypeStr) {
   var mt = (machineTypeStr||'').trim().toLowerCase(); if (!mt) return [];
   var mach = (machines||[]).find(function(x){ return (x.name||'').trim().toLowerCase() === mt; });
   if (!mach) return [];
-  return (allParts||[]).filter(function(p){ return p.machine_id === mach.id; });
+  return (allParts||[]).filter(function(p){ return (p.machineIds||[]).indexOf(mach.id) !== -1; });
 }
 function renderSvMachines() {
   var knownMachines = svGetCustomerMachines(svMatchedCustomer);
