@@ -33,6 +33,7 @@
   <input class="search-input" id="searchBox" placeholder="Search part number, description, location..." oninput="renderParts()">
   <button class="btn-print-all" onclick="queueAllVisible()">Print All</button>
   <button class="btn-add" onclick="openAddModal()">+ Add Part</button>
+  <button class="btn-add" style="background:transparent;border:1px solid #00c8e070;color:#00c8e0" onclick="openLinkPartModal()">🔗 Link Existing</button>
 </div>
 <div class="stats-bar" id="statsBar"></div>
 <div class="parts-list" id="partsList"><div class="center"><span class="spinner"></span> Loading...</div></div>
@@ -592,6 +593,16 @@
   </div>
 </div>
 
+<!-- Link Existing Part Modal -->
+<div class="overlay" id="linkPartOverlay" style="z-index:110" onclick="if(event.target===this)closeLinkPartModal()">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Link Existing Part</div><button class="modal-close" onclick="closeLinkPartModal()">x</button></div>
+    <div style="font-size:11px;color:#5a8090;margin-bottom:10px">Search the whole catalog and link a part already used elsewhere to <strong id="linkPartMachineName" style="color:#e2e8f0"></strong> - no need to re-enter its details.</div>
+    <input class="search-input" id="linkPartSearch" placeholder="Search part number or description..." oninput="searchLinkableParts()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
+    <div id="linkPartResults" style="max-height:360px;overflow-y:auto"></div>
+  </div>
+</div>
+
 <!-- Machine Modal -->
 <div class="overlay" id="machineOverlay" style="z-index:110" onclick="if(event.target===this)closeMachineModal()">
   <div class="modal green">
@@ -602,7 +613,7 @@
     <div class="field"><label>Default Supplier</label><select id="mSupplierId" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- None --</option></select></div>
     <div class="field"><label>Notes</label><textarea id="mNotes" rows="3" placeholder="e.g. Default PIN: 5878, firmware notes, known issues..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;resize:vertical"></textarea></div>
     <button class="btn-save green" id="btnSaveMachine" onclick="saveMachine()">Create Machine</button>
-    <button class="btn-delete" id="btnDeleteMachine" onclick="deleteMachine()" style="display:none">Delete This Machine and All Its Parts</button>
+    <button class="btn-delete" id="btnDeleteMachine" onclick="deleteMachine()" style="display:none">Delete This Machine</button>
   </div>
 </div>
 
@@ -3940,6 +3951,55 @@ async function deletePart() {
     closeModal(); showToast(editingPart.key_no + ' removed');
     await selectMachine(selectedMachine); await loadAllParts();
   } catch(e) { showToast('Remove failed', 'error'); }
+}
+
+// ── LINK EXISTING PART TO THIS MACHINE ──────────────────────────────
+
+function openLinkPartModal() {
+  if (!selectedMachine) return;
+  document.getElementById('linkPartMachineName').textContent = selectedMachine.name;
+  document.getElementById('linkPartSearch').value = '';
+  document.getElementById('linkPartResults').innerHTML = '<div style="padding:12px;font-size:11px;color:#5a8090">Start typing a part number or description.</div>';
+  document.getElementById('linkPartOverlay').classList.add('show');
+  setTimeout(function() { document.getElementById('linkPartSearch').focus(); }, 100);
+}
+
+function closeLinkPartModal() {
+  document.getElementById('linkPartOverlay').classList.remove('show');
+}
+
+function searchLinkableParts() {
+  var q = document.getElementById('linkPartSearch').value.toLowerCase().trim();
+  var el = document.getElementById('linkPartResults');
+  if (!q) { el.innerHTML = '<div style="padding:12px;font-size:11px;color:#5a8090">Start typing a part number or description.</div>'; return; }
+  if (!selectedMachine) return;
+  var alreadyLinked = (parts || []).map(function(p) { return p.id; });
+  var matches = allParts.filter(function(p) {
+    return (p.key_no.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)) && alreadyLinked.indexOf(p.id) === -1;
+  }).slice(0, 25);
+  if (!matches.length) { el.innerHTML = '<div style="padding:12px;font-size:11px;color:#5a8090">No other parts match - it may already be linked to this machine.</div>'; return; }
+  el.innerHTML = matches.map(function(p) {
+    var machineTags = (p.machineNames || []).join(', ') || 'No machines yet';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid #1a2a3d">' +
+      '<div style="flex:1;min-width:0"><div style="font-family:monospace;font-size:12.5px;color:#e2e8f0">' + p.key_no + '</div>' +
+      '<div style="font-size:12px;color:#a8b8c8">' + p.description + '</div>' +
+      '<div style="font-size:10px;color:#5a8090;margin-top:2px">Currently on: ' + machineTags + '</div></div>' +
+      '<button class="btn-save" style="width:auto;padding:7px 14px;font-size:12px;flex-shrink:0" onclick="linkExistingPart(\'' + p.id + '\')">Link</button>' +
+      '</div>';
+  }).join('');
+}
+
+async function linkExistingPart(partId) {
+  if (!selectedMachine) return;
+  try {
+    await db('POST', 'part_machines', { part_id: partId, machine_id: selectedMachine.id });
+    showToast('Part linked to ' + selectedMachine.name);
+    closeLinkPartModal();
+    await loadAllParts();
+    await selectMachine(selectedMachine);
+  } catch (e) {
+    showToast('Link failed: ' + e.message, 'error');
+  }
 }
 
 async function saveAndClosePart() {
