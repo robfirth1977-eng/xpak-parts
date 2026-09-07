@@ -7840,18 +7840,32 @@ async function checkSerialHistory(serial, tempId) {
   }
 
   try {
-    // Search job_tools for matching serial (case-insensitive partial match)
-    var results = await db('GET', 'job_tools?serial_number=ilike.*' + serial + '*&select=*&order=created_at.desc');
-    // Filter out current job
+    // Search past Jobs (job_tools) AND past Site Visits (site_visit_machines) for this serial -
+    // a machine's history isn't just its job history, and technicians need both.
+    var jobResults = await db('GET', 'job_tools?serial_number=ilike.*' + serial + '*&select=*&order=created_at.desc').catch(function(){ return []; });
+    var visitResults = await db('GET', 'site_visit_machines?serial_number=ilike.*' + serial + '*&select=*,site_visits(id,visit_number,visit_date,customer,status)&order=created_at.desc').catch(function(){ return []; });
+
     var editingJobId = editingJob ? editingJob.id : null;
-    var history = results.filter(function(t) { return t.job_id !== editingJobId; });
-    // Enrich with job data
-    var enriched = history.map(function(t) {
-      var j = jobs.find(function(x){ return x.id === t.job_id; }) || {};
-      return Object.assign({}, t, { _job: j });
-    }).filter(function(t){ return t._job && t._job.job_number; });
-    _svcHistoryCache[serial] = enriched;
-    renderSvcHistory(serial, tempId, enriched);
+    var jobHistory = jobResults
+      .filter(function(t) { return t.job_id !== editingJobId; })
+      .map(function(t) {
+        var j = jobs.find(function(x){ return x.id === t.job_id; }) || {};
+        return Object.assign({ _kind: 'job' }, t, { _job: j });
+      })
+      .filter(function(t){ return t._job && t._job.job_number; });
+
+    var visitHistory = visitResults
+      .filter(function(v) { return v.site_visits; })
+      .map(function(v) { return Object.assign({ _kind: 'visit' }, v); });
+
+    var combined = jobHistory.concat(visitHistory).sort(function(a, b) {
+      var da = a._kind === 'job' ? (a._job.created_at || '') : (a.site_visits.visit_date || '');
+      var db2 = b._kind === 'job' ? (b._job.created_at || '') : (b.site_visits.visit_date || '');
+      return db2.localeCompare(da);
+    });
+
+    _svcHistoryCache[serial] = combined;
+    renderSvcHistory(serial, tempId, combined);
   } catch(e) { panel.innerHTML = ''; }
 }
 
@@ -7861,6 +7875,15 @@ function renderSvcHistory(serial, tempId, history) {
   if (!history.length) { panel.innerHTML = ''; return; }
 
   var items = history.map(function(t) {
+    if (t._kind === 'visit') {
+      var v = t.site_visits;
+      var dateStr2 = v.visit_date ? new Date(v.visit_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
+      return '<div class="svc-history-item">' +
+        '<div class="svc-hi-top"><span class="svc-hi-job" style="color:#00c8e0">' + xsvNum(v.visit_number) + ' (Site Visit)</span><span class="svc-hi-date">' + dateStr2 + '</span></div>' +
+        '<div class="svc-hi-customer">' + (v.customer || 'Unknown') + (t.machine_type ? ' &nbsp;·&nbsp; ' + t.machine_type : '') + '</div>' +
+        (t.work_performed ? '<div class="svc-hi-work">✓ ' + t.work_performed.substring(0,160) + (t.work_performed.length>160?'…':'') + '</div>' : '<div class="svc-hi-work" style="opacity:0.6">No work notes recorded</div>') +
+      '</div>';
+    }
     var j = t._job;
     var dateStr = j.created_at ? new Date(j.created_at).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
     var mName = t.machine_id ? (machines.find(function(m){ return m.id === t.machine_id; }) || {}).name || '' : '';
@@ -7876,7 +7899,7 @@ function renderSvcHistory(serial, tempId, history) {
   panel.innerHTML = '<div class="svc-history-panel">' +
     '<div class="svc-history-hdr">' +
       '<span class="svc-history-title">⚠️ Previously Serviced</span>' +
-      '<span class="svc-history-count">' + history.length + ' previous service' + (history.length>1?'s':'') + '</span>' +
+      '<span class="svc-history-count">' + history.length + ' previous record' + (history.length>1?'s':'') + '</span>' +
     '</div>' +
     '<div style="font-size:11px;color:#f59e0b;margin-bottom:8px">S/N: ' + serial + '</div>' +
     items +
@@ -7917,6 +7940,16 @@ function printSvcHistory(serial, tempId) {
   w.document.write('</div>');
   w.document.write('<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#f59e0b;margin-bottom:10px;border-bottom:1px solid #f59e0b40;padding-bottom:6px">Service Records</div>');
   history.forEach(function(t) {
+    if (t._kind === 'visit') {
+      var v = t.site_visits;
+      var vDate = v.visit_date ? new Date(v.visit_date).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}) : '';
+      w.document.write('<div class="rec">');
+      w.document.write('<div class="rec-top"><span class="rec-job">' + xsvNum(v.visit_number) + ' (Site Visit)' + (t.machine_type?' &nbsp;·&nbsp; '+t.machine_type:'') + '</span><span class="rec-date">' + vDate + '</span></div>');
+      w.document.write('<div class="rec-cust">' + (v.customer||'') + '</div>');
+      if (t.work_performed) w.document.write('<div class="rec-work"><strong>Work performed:</strong> ' + t.work_performed + '</div>');
+      w.document.write('</div>');
+      return;
+    }
     var j = t._job;
     var dateStr = j.created_at ? new Date(j.created_at).toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'}) : '';
     var mName = t.machine_id ? (machines.find(function(m){ return m.id===t.machine_id; })||{}).name||'' : '';
