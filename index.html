@@ -807,12 +807,11 @@
       <div class="field"><label>Condition</label><select id="ltCondition" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><option value="">-- Select --</option><option value="As New">As New</option><option value="Excellent">Excellent</option><option value="Good">Good</option><option value="Minor Wear">Minor Wear</option><option value="Fair">Fair</option><option value="Poor">Poor</option><option value="Damaged">Damaged</option></select></div>
     </div>
     <div class="field"><label>Current Cycle Count (Odometer)</label><input id="ltCycleCount" type="number" min="0" placeholder="e.g. 45230"></div>
-    <div class="field"><label>Location</label>
+    <div class="field"><label>Shelf Location <span style="font-size:10px;color:#3a5070;font-weight:400">(where it sits when it's back - not needed while it's out on loan, that's tracked automatically)</span></label>
       <input id="ltLocation" list="ltLocationList" placeholder="e.g. Tamworth Stock">
       <datalist id="ltLocationList">
         <option value="Tamworth Stock">
         <option value="Rep Stock — Tom">
-        <option value="Customer">
       </datalist>
     </div>
     <div class="field"><label>Notes</label><input id="ltNotes" placeholder="Any notes about this tool..."></div>
@@ -1561,7 +1560,8 @@ function renderToolRegister(){
   var reg=loanTools;
   if(q){
     reg=loanTools.filter(function(t){
-      var hay=((t.name||'')+' '+(t.xpak_name||'')+' '+(t.xpak_code||'')+' '+(t.serial_number||'')+' '+(t.location||'')+' '+(t.notes||'')).toLowerCase();
+      var al=loans.find(function(l){return l.loan_tool_id===t.id&&l.status!=='RETURNED';});
+      var hay=((t.name||'')+' '+(t.xpak_name||'')+' '+(t.xpak_code||'')+' '+(t.serial_number||'')+' '+(t.location||'')+' '+(t.notes||'')+' '+(al?al.customer||'':'')).toLowerCase();
       return hay.indexOf(q)!==-1;
     });
   }
@@ -1569,12 +1569,18 @@ function renderToolRegister(){
   document.getElementById('loanList').innerHTML=reg.map(function(t){
     var al=loans.find(function(l){return l.loan_tool_id===t.id&&l.status!=='RETURNED';});
     var col=!al?'#10b981':'#ef4444'; var sl=!al?'Available':'On Loan — '+(al.customer||'');
+    // Where the tool actually is: while it's on loan, that's the real customer from the
+    // active loan record - never the tool's own manually-typed shelf location, which only
+    // means anything once the tool is back.
+    var whereLine=al
+      ? '<div style="font-size:11px;color:#ef4444;margin-top:2px">📍 Out with: '+(al.customer||'Unknown customer')+'</div>'
+      : (t.location?'<div style="font-size:11px;color:#f59e0b;margin-top:2px">● '+t.location+'</div>':'');
     return '<div class="tool-reg-card'+(al?' unavailable':'')+'" onclick="openLoanToolModal(\'' + t.id + '\')">'+
       '<div style="flex:1"><div class="tool-reg-name">'+t.name+'</div>'+
       (t.xpak_name?'<div style="font-size:12px;font-weight:700;color:#00c8e0;margin-bottom:2px">'+t.xpak_name+(t.xpak_code?' <span style="font-size:10px;color:#3a5070;font-weight:400">['+t.xpak_code+']</span>':'')+'</div>':'')+
       (t.serial_number?'<div class="tool-reg-sn">S/N: '+t.serial_number+(t.condition?' · '+t.condition:'')+'</div>':'')+
       (t.current_cycle_count!=null?'<div class="tool-reg-sn" style="color:#a78bfa">⟳ '+t.current_cycle_count.toLocaleString()+' cycles</div>':'')+
-      (t.location?'<div style="font-size:11px;color:#f59e0b;margin-top:2px">● '+t.location+'</div>':'')+(t.notes?'<div style="font-size:11px;color:#5a8090;margin-top:2px">'+t.notes+'</div>':'')+
+      whereLine+(t.notes?'<div style="font-size:11px;color:#5a8090;margin-top:2px">'+t.notes+'</div>':'')+
       '</div><span class="tool-reg-status" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+sl+'</span></div>';
   }).join('');
 }
