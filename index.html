@@ -381,6 +381,7 @@
     <button class="view-btn active" id="btnSvListView" onclick="setSvView('list')">List</button>
     <button class="view-btn" id="btnSvBoardView" onclick="setSvView('board')">Board</button>
   </div>
+  <button class="btn-add" style="background:transparent;border:1px solid #fb923c70;color:#fb923c" onclick="printRouteSheet()">🗺️ Route Sheet</button>
   <button class="btn-add" style="background:#fb923c;color:#0f1923;font-weight:700" onclick="openSvModal()">+ New Visit</button>
 </div>
 <div class="sv-section" id="svSection">
@@ -5570,6 +5571,90 @@ function printSvReport() {
   w.document.write('<div style="margin-top:30px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">X-Pak Global Service Division · rob.firth@xpak.com.au</div>');
   w.document.write('</body></html>');
   w.document.close(); setTimeout(function(){w.print();},500);
+}
+
+// ── ROUTE SHEET ──────────────────────────────────────────────────────────
+// Prints all Site Visits scheduled for a given day (default: tomorrow), in
+// time order where a time can be found, with each stop's address and
+// contact pulled from the customer record - not re-typed by hand each time.
+function extractTimeFromNotes(notes) {
+  var m = (notes || '').match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+  if (!m) return null;
+  var h = parseInt(m[1], 10), min = m[2] ? parseInt(m[2], 10) : 0;
+  var pm = /pm/i.test(m[3]);
+  if (pm && h !== 12) h += 12;
+  if (!pm && h === 12) h = 0;
+  return { minutes: h * 60 + min, label: m[0] };
+}
+
+async function printRouteSheet() {
+  var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  var defaultDate = tomorrow.toISOString().split('T')[0];
+  var dateStr = prompt('Route sheet for which date? (YYYY-MM-DD)', defaultDate);
+  if (!dateStr) return;
+
+  try {
+    var visits = await db('GET', 'site_visits?visit_date=eq.' + dateStr + '&select=*&order=visit_number.asc');
+    if (!visits.length) { showToast('No site visits scheduled for ' + dateStr, 'error'); return; }
+
+    var custRows = await db('GET', 'customers?select=id,company_name,address').catch(function(){ return []; });
+    var contactRows = await db('GET', 'customer_contacts?select=*&is_primary=eq.true').catch(function(){ return []; });
+
+    var enriched = visits.map(function(v) {
+      var cust = custRows.find(function(c){ return c.company_name === v.customer; });
+      var contact = cust ? contactRows.find(function(x){ return x.customer_id === cust.id; }) : null;
+      return Object.assign({}, v, {
+        _time: extractTimeFromNotes(v.notes),
+        _address: cust ? cust.address : null,
+        _contact: contact
+      });
+    }).sort(function(a, b) {
+      if (a._time && b._time) return a._time.minutes - b._time.minutes;
+      if (a._time) return -1;
+      if (b._time) return 1;
+      return a.visit_number - b.visit_number;
+    });
+
+    var dateLabel = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-AU', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    var w = window.open('', '_blank');
+    if (!w) { showToast('Allow pop-ups to print', 'error'); return; }
+    w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Route Sheet - ' + dateLabel + '</title><style>');
+    w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
+    w.document.write('body{font-family:Arial,sans-serif;color:#1a1a1a;background:#fff;padding:16mm 14mm;font-size:11pt}');
+    w.document.write('.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #fb923c;padding-bottom:10px;margin-bottom:16px}');
+    w.document.write('.hdr h1{font-size:19pt;font-weight:900;color:#fb923c;letter-spacing:0.5px}');
+    w.document.write('.hdr .date{font-size:12pt;color:#444;font-weight:700}');
+    w.document.write('.stop{border:1px solid #e2e8f0;border-left:5px solid #fb923c;border-radius:6px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid}');
+    w.document.write('.stop-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}');
+    w.document.write('.stop-time{font-size:14pt;font-weight:900;color:#fb923c}');
+    w.document.write('.stop-num{font-size:9pt;color:#999;text-transform:uppercase;letter-spacing:0.5px;margin-right:8px}');
+    w.document.write('.stop-cust{font-size:13pt;font-weight:700;color:#1a1a1a}');
+    w.document.write('.stop-row{font-size:10.5pt;color:#333;margin-top:2px}');
+    w.document.write('.stop-label{font-weight:700;color:#555}');
+    w.document.write('.no-time{color:#c0392b;font-style:italic;font-size:9pt}');
+    w.document.write('.footer{margin-top:20px;font-size:9pt;color:#999;text-align:center;border-top:1px solid #eee;padding-top:8px}');
+    w.document.write('@media print{body{padding:8mm 10mm}}');
+    w.document.write('</style></head><body>');
+    w.document.write('<div class="hdr"><h1>ROUTE SHEET</h1><div class="date">' + dateLabel + '</div></div>');
+
+    enriched.forEach(function(v, i) {
+      var contact = v._contact;
+      w.document.write('<div class="stop">');
+      w.document.write('<div class="stop-top"><div><span class="stop-num">Stop ' + (i+1) + '</span><span class="stop-time">' + (v._time ? v._time.label.toUpperCase() : 'NO TIME FOUND') + '</span></div><span style="font-size:9pt;color:#999">' + xsvNum(v.visit_number) + '</span></div>');
+      w.document.write('<div class="stop-cust">' + (v.customer || 'Unknown customer') + '</div>');
+      if (v._address) w.document.write('<div class="stop-row"><span class="stop-label">Address:</span> ' + v._address + '</div>');
+      if (contact) w.document.write('<div class="stop-row"><span class="stop-label">Contact:</span> ' + contact.name + (contact.phone ? ' - ' + contact.phone : '') + '</div>');
+      if (v.scope_of_work) w.document.write('<div class="stop-row"><span class="stop-label">Scope:</span> ' + v.scope_of_work + '</div>');
+      if (v.notes) w.document.write('<div class="stop-row"><span class="stop-label">Notes:</span> ' + v.notes.replace(/\n/g,'<br>') + '</div>');
+      if (!v._time) w.document.write('<div class="no-time">No time detected in notes - check manually and confirm running order.</div>');
+      w.document.write('</div>');
+    });
+
+    w.document.write('<div class="footer">X-Pak Global Service Division &nbsp;·&nbsp; Generated by MainFlow</div>');
+    w.document.write('</body></html>');
+    w.document.close();
+    setTimeout(function(){ w.print(); }, 400);
+  } catch(e) { showToast('Route sheet failed: ' + e.message, 'error'); }
 }
 
 function printSvInvoiceNotice() {
