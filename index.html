@@ -656,6 +656,9 @@
       <div class="field full"><label>Shipping / Return Address</label><input id="jShipping" placeholder="e.g. 123 Pacific Hwy, Coffs Harbour NSW 2450"></div>
     </div>
 
+    <div class="section-label">Loan Tool</div>
+    <div id="loanTagBox" style="margin-bottom:12px"></div>
+
     <div class="section-label" style="display:flex;justify-content:space-between;align-items:center">
       <span>Tools</span>
       <div style="display:flex;gap:6px">
@@ -962,6 +965,7 @@ function updateAuthHeader(session) {
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
 var jobs = [], jobTools = [], editingJob = null, jobFilter = 'OPEN', currentView = 'home', jobViewMode = 'board';
+var jobLoanState = { linkedLoan: null, noLoanNeeded: false, selectedToolId: null };
 var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
 var openBrandGroups = {};
 var allPartsFilter = 'all';
@@ -3217,6 +3221,49 @@ function renderLinksList() {
 
 // ── JOB MODAL ─────────────────────────────────────────────────────
 
+// Every job must resolve one way or the other: a loan tool linked (with a
+// serial number on file), or an explicit "no loan needed" - saveJob() blocks
+// until one of those is true. See renderJobLoanSection() / jobLoanSatisfied().
+function renderJobLoanSection() {
+  var box = document.getElementById('loanTagBox'); if (!box) return;
+  if (jobLoanState.linkedLoan) {
+    var l = jobLoanState.linkedLoan;
+    var lt = loanTools.find(function(x) { return x.id === l.loan_tool_id; });
+    box.innerHTML = '<div style="background:#132a1e;border:1px solid #10b98160;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">' +
+      '<div><div style="font-weight:700;color:#10b981">' + (lt ? lt.name : 'Loan tool') + (lt && lt.serial_number ? ' - S/N ' + lt.serial_number : '') + '</div>' +
+      '<div style="font-size:11px;color:#8aa8c0">' + xplNum(l.loan_number) + ' &middot; loaned ' + fmtDate(l.loaned_date) + '</div></div>' +
+      '<button onclick="unlinkJobLoan()" style="padding:5px 10px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:6px;cursor:pointer;font-size:11px">Unlink</button></div>';
+    return;
+  }
+  var pickerDisplay = jobLoanState.noLoanNeeded ? 'none' : 'block';
+  var availableTools = loanTools.filter(function(t) { return t.is_available && t.serial_number; });
+  var opts = '<option value="">-- Select loan tool (with S/N) --</option>' + availableTools.map(function(t) {
+    return '<option value="' + t.id + '"' + (jobLoanState.selectedToolId === t.id ? ' selected' : '') + '>' + t.name + ' - S/N ' + t.serial_number + '</option>';
+  }).join('');
+  box.innerHTML =
+    '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#8aa8c0;cursor:pointer;margin-bottom:8px;user-select:none">' +
+      '<input type="checkbox" id="jNoLoanNeeded"' + (jobLoanState.noLoanNeeded ? ' checked' : '') + ' onchange="jobLoanState.noLoanNeeded=this.checked;renderJobLoanSection()" style="width:15px;height:15px;accent-color:#f59e0b;cursor:pointer">' +
+      '<span style="font-weight:700">No loan tool needed for this job</span></label>' +
+    '<div id="loanPickerRow" style="display:' + pickerDisplay + '">' +
+      '<select id="jLoanToolPick" onchange="jobLoanState.selectedToolId=this.value" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">' + opts + '</select>' +
+      '<div style="font-size:10px;color:#5a8090;margin-top:4px">Only tools with a serial number on file are listed - add it in the Loan Tool Register first if the one you need is missing.</div>' +
+    '</div>';
+}
+
+function unlinkJobLoan() {
+  if (!jobLoanState.linkedLoan) return;
+  if (!confirm('Unlink this loan from the job? The loan record itself is kept, just no longer tied to this job.')) return;
+  var loanId = jobLoanState.linkedLoan.id;
+  db('PATCH', 'loans?id=eq.' + loanId, { job_id: null, linked_job: null }).then(function() {
+    jobLoanState.linkedLoan = null; renderJobLoanSection(); loadLoans();
+  }).catch(function(e) { showToast('Unlink failed: ' + e.message, 'error'); });
+}
+
+// True once the loan question has been answered one way or the other.
+function jobLoanSatisfied() {
+  return !!(jobLoanState.linkedLoan || jobLoanState.noLoanNeeded || jobLoanState.selectedToolId);
+}
+
 function clearJobForm() {
   _jobDataLoadFailed = false;
   ['jCustomer','jContact','jPhone','jMobile','jEmail','jShipping',
@@ -3238,6 +3285,8 @@ function clearJobForm() {
   jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', date_of_manufacture: '', warranty_period: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' }];
   renderToolsList();
   recalcJobCostSummary();
+  jobLoanState = { linkedLoan: null, noLoanNeeded: false, selectedToolId: null };
+  renderJobLoanSection();
 }
 
 function openNewJobModal(skipFocus) {
@@ -3304,6 +3353,11 @@ async function openEditJobModal(jobId) {
   document.getElementById('jLabourDiscount').value = j.labour_discount || '';
   document.getElementById('jPartsDiscount').value = j.parts_discount || '';
   document.getElementById('jFreight').value = j.freight_cost || '';
+  jobLoanState = { linkedLoan: null, noLoanNeeded: !!j.no_loan_needed, selectedToolId: null };
+  renderJobLoanSection();
+  db('GET', 'loans?job_id=eq.' + j.id + '&status=neq.RETURNED&select=*').then(function(activeLoans) {
+    if (activeLoans && activeLoans.length) { jobLoanState.linkedLoan = activeLoans[0]; renderJobLoanSection(); }
+  }).catch(function() {});
   try { jobLinks = j.links ? JSON.parse(j.links) : []; } catch(e) { jobLinks = []; }
   renderLinksList();
   document.getElementById('lLinkName').value = '';
@@ -3442,6 +3496,10 @@ async function saveJob() {
   if (_jobDataLoadFailed) { showToast('This job\'s tool/part data failed to load - close this job and reopen it before saving, to avoid overwriting real data', 'error'); return; }
   var customer = document.getElementById('jCustomer').value.trim();
   if (!customer) { showToast('Customer name is required', 'error'); return; }
+  if (!jobLoanSatisfied()) {
+    alert('Before saving: either link a loan tool (with a serial number) or tick "No loan tool needed" in the Loan Tool section.');
+    return;
+  }
   var btn = document.getElementById('btnSaveJob'); btn.disabled = true; btn.textContent = 'Saving...';
   var newStatus = document.getElementById('jStatus').value;
   var milestones = computeJobMilestones(editingJob, newStatus);
@@ -3474,6 +3532,7 @@ async function saveJob() {
     labour_discount: parseFloat(document.getElementById('jLabourDiscount').value) || null,
     parts_discount: parseFloat(document.getElementById('jPartsDiscount').value) || null,
     freight_cost: parseFloat(document.getElementById('jFreight').value) || null,
+    no_loan_needed: jobLoanState.noLoanNeeded,
     links: JSON.stringify(jobLinks),
     updated_at: new Date().toISOString()
   };
@@ -3526,6 +3585,31 @@ async function saveJob() {
       } catch(pe) {
         partErrors.push((jp.part_key_no || jp.part_description || 'Part ' + (i+1)) + ': ' + pe.message);
       }
+    }
+    // Link the chosen loan tool to this job, now that we have a real job id
+    if (jobLoanState.selectedToolId && !jobLoanState.linkedLoan) {
+      try {
+        var loanPayload = {
+          loan_tool_id: jobLoanState.selectedToolId,
+          customer: customer,
+          contact_name: document.getElementById('jContact').value || null,
+          phone: document.getElementById('jPhone').value || null,
+          mobile: document.getElementById('jMobile').value || null,
+          email: document.getElementById('jEmail').value || null,
+          job_id: savedJob.id,
+          linked_job: xpsNum(savedJob.job_number),
+          loaned_date: new Date().toISOString().split('T')[0],
+          reason_for_loan: 'Loan tool while ' + xpsNum(savedJob.job_number) + ' is being repaired',
+          loaned_by: 'Rob',
+          status: 'ACTIVE',
+          updated_at: new Date().toISOString()
+        };
+        var newLoan = await db('POST', 'loans', loanPayload);
+        await db('PATCH', 'loan_tools?id=eq.' + jobLoanState.selectedToolId, { is_available: false, updated_at: new Date().toISOString() });
+        jobLoanState.linkedLoan = newLoan[0]; jobLoanState.selectedToolId = null;
+        renderJobLoanSection();
+        await loadLoans();
+      } catch(le) { showToast('Job saved but loan link failed: ' + le.message, 'error'); }
     }
     // Auto-update customer machines owned
     try { await updateCustomerMachines(customer, jobToolsLocal); } catch(e) { console.error('updateCustomerMachines failed', e); }
