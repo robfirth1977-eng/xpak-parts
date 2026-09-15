@@ -2988,6 +2988,15 @@ function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsL
 // ── JOBS ──────────────────────────────────────────────────────────
 
 function xpsNum(n) { return 'XPS-' + String(n).padStart(3, '0'); }
+
+// Every job creation path must call this explicitly rather than rely on a database
+// default - job_number has no reliable DB-side sequence (or one that's drifted out of
+// sync), which previously let two different jobs collide on the same number.
+async function nextJobNumber() {
+  var rows = await db('GET', 'jobs?select=job_number&order=job_number.desc&limit=1');
+  var max = (rows && rows[0] && rows[0].job_number) ? rows[0].job_number : 0;
+  return max + 1;
+}
 function xsaNum(n) { return 'XSA-' + String(n).padStart(3, '0'); }
 function xsvNum(n) { return 'XSV-' + String(n).padStart(3, '0'); }
 
@@ -3544,6 +3553,7 @@ async function saveJob() {
       // Delete existing job_parts and re-save
       await db('DELETE', 'job_parts?job_id=eq.' + editingJob.id);
     } else {
+      payload.job_number = await nextJobNumber();
       var res = await db('POST', 'jobs', payload);
       savedJob = res[0];
     }
@@ -4271,6 +4281,7 @@ async function splitSelectedTools() {
   if (btn) { btn.disabled = true; btn.textContent = 'Splitting...'; }
   try {
     var newJobPayload = {
+      job_number: await nextJobNumber(),
       status: editingJob.status || 'NEW JOB',
       order_number: editingJob.order_number || null,
       customer: editingJob.customer,
