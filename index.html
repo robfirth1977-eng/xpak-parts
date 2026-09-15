@@ -4703,7 +4703,9 @@ function renderAssessmentReport(j, tools, jparts) {
   var grandTotal = partsTotal + serviceFeeTotal;
 
   var w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + reportTitle + ' - ' + (j.customer||'') + ' ' + xpsNum(j.job_number) + '</title><style>');
+  // Title leads with the job number, not the customer name or report type, so a saved
+  // PDF's default filename files numerically alongside every other report for this job.
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + xpsNum(j.job_number) + ' - ' + (j.customer||'') + '</title><style>');
   w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
   w.document.write('body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a2e;background:#fff;padding:20mm 18mm}');
   w.document.write('.header-row{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3799;padding-bottom:12px;margin-bottom:18px}');
@@ -5808,7 +5810,7 @@ function printSvInvoiceNotice() {
   var w = window.open('','_blank');
   if (!w) { showToast('Allow pop-ups to generate invoice notice','error'); return; }
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
-  w.document.write('<title>Invoice Notice - '+customer+' '+refLabel+'</title>');
+  w.document.write('<title>' + refLabel + ' - ' + customer + '</title>');
   w.document.write('<style>');
   w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:28px;font-size:11pt}');
   w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #e879f9}');
@@ -7819,7 +7821,7 @@ function renderInvoiceNotice(j, tools, jparts) {
   var w = window.open('','_blank');
   if (!w) { showToast('Allow pop-ups to generate invoice notice','error'); return; }
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
-  w.document.write('<title>Invoice Notice - '+(j.customer||'')+' '+xpsNum(j.job_number)+'</title>');
+  w.document.write('<title>' + xpsNum(j.job_number) + ' - ' + (j.customer||'') + '</title>');
   w.document.write('<style>');
   w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:28px;font-size:11pt}');
   w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #e879f9}');
