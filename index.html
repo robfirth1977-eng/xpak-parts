@@ -964,6 +964,7 @@ function updateAuthHeader(session) {
 }
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
+var _returnToJobPartsAfterEdit = null;
 var jobs = [], jobTools = [], editingJob = null, jobFilter = 'OPEN', currentView = 'home', jobViewMode = 'board';
 var jobLoanState = { linkedLoan: null, noLoanNeeded: false, selectedToolId: null };
 var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
@@ -2945,9 +2946,11 @@ function renderToolPartsList(toolTempId) {
     var gpCol = gp !== '' ? (gp < 30 ? '#ef4444' : gp > 60 ? '#a78bfa' : '#10b981') : '#3a5070';
     var tid = jp._tempId;
     return '<div class="job-part-row '+jp.status+'">'
-      +'<span class="jpr-keyno">'+jp.part_key_no+'</span>'
+      +'<span class="jpr-keyno" style="cursor:pointer;text-decoration:underline dotted" onclick="quickEditJobPart(\x27'+tid+'\x27)" title="Edit this part in the catalog">'+jp.part_key_no+'</span>'
       +'<span class="jpr-desc">'+jp.part_description+'</span>'
-      +'<span style="width:65px;text-align:right;font-size:11px;color:#5a8090;flex-shrink:0">'+(cost>0?'$'+cost.toFixed(2):'-')+'</span>'
+      +(cost>0
+        ? '<span style="width:65px;text-align:right;font-size:11px;color:#5a8090;flex-shrink:0">$'+cost.toFixed(2)+'</span>'
+        : '<span style="width:65px;text-align:right;font-size:11px;color:#f59e0b;flex-shrink:0;cursor:pointer;text-decoration:underline" onclick="quickEditJobPart(\x27'+tid+'\x27)" title="No cost set - click to add">+ Add</span>')
       +'<div style="width:50px;flex-shrink:0"><input type="number" min="0" max="99" value="'+(gp!==''?gp:'')+'" placeholder="-"'
         +' onchange="setJobPartGP(\x27'+tid+'\x27,this.value)"'
         +' style="'+iS+';text-align:right;border-color:'+gpCol+';color:'+gpCol+'"></div>'
@@ -2984,6 +2987,13 @@ function setJobPartSell(tempId, sellVal) {
   renderToolPartsList(jp._toolTempId); recalcPartsTotal();
 }
 function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsList(t._tempId);}); recalcPartsTotal();}
+function quickEditJobPart(tid) {
+  var jp = jobPartsLocal.find(function(x){return x._tempId===tid;});
+  if (!jp || !jp.part_id) { showToast('This part isn\x27t linked to a catalog part', 'error'); return; }
+  _returnToJobPartsAfterEdit = tid;
+  document.getElementById('overlay').style.zIndex = '110';
+  openEditModal(jp.part_id);
+}
 
 // ── JOBS ──────────────────────────────────────────────────────────
 
@@ -3076,7 +3086,10 @@ function renderList() {
     return '<div class="job-card" style="border-left-color:' + col + '" onclick="openEditJobModal(\'' + j.id + '\')">' +
       '<div class="job-card-top">' +
         '<div><div class="job-number">' + xpsNum(j.job_number) + '</div><div class="job-customer">' + (j.customer || 'No customer') + '</div></div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
         '<span class="job-status-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + j.status + '</span>' +
+        (jobHasWrittenOffTool(j) ? writtenOffBadge('') : '') +
+        '</div>' +
       '</div>' +
       '<div class="job-meta">' +
         (mName ? '<span>' + mName + '</span>' : '') +
@@ -3101,6 +3114,12 @@ function renderList() {
   }).join('');
 }
 
+function jobHasWrittenOffTool(j) {
+  return (j.job_tools || []).some(function(t) { return (t.recommendation || '').toLowerCase().indexOf('written off') !== -1; });
+}
+function writtenOffBadge(extraStyle) {
+  return '<span style="background:#2a0a0a;border:1px solid #ef444460;color:#ef4444;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;' + (extraStyle||'') + '">WRITTEN OFF</span>';
+}
 function renderBoard() {
   var q = (document.getElementById('jobSearchBox').value || '').toLowerCase();
   var searched = q ? jobs.filter(function(j) {
@@ -3117,7 +3136,7 @@ function renderBoard() {
       var val = jobRevenue(j);
       return '<div class="board-card" style="border-left-color:' + col + '" draggable="true" data-job-id="' + j.id + '">' +
         '<div onclick="openEditJobModal(\'' + j.id + '\')">' +
-          '<div class="board-card-top"><span class="board-card-num">' + xpsNum(j.job_number) + '</span>' + (val > 0 ? '<span class="board-card-value">$' + val.toFixed(0) + '</span>' : '') + '</div>' +
+          '<div class="board-card-top"><span class="board-card-num">' + xpsNum(j.job_number) + '</span>' + (jobHasWrittenOffTool(j) ? writtenOffBadge('margin-left:6px') : '') + (val > 0 ? '<span class="board-card-value">$' + val.toFixed(0) + '</span>' : '') + '</div>' +
           '<div class="board-card-customer">' + (j.customer || 'No customer') + '</div>' +
           '<div class="board-card-meta">' + (mName ? mName + ' · ' : '') + fmtDate(j.created_at) + '</div>' +
         '</div>' +
@@ -3499,7 +3518,7 @@ async function pushPartsToStockOrder() {
   closeJobModal();
   setTimeout(function(){ switchToPurchasing(); setPOFilter('Draft'); }, 250);
 }
-function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); }
+function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); _returnToJobPartsAfterEdit = null; document.getElementById('overlay').style.zIndex = ''; }
 
 async function saveJob() {
   if (_jobDataLoadFailed) { showToast('This job\'s tool/part data failed to load - close this job and reopen it before saving, to avoid overwriting real data', 'error'); return; }
@@ -4024,7 +4043,14 @@ function populatePartSupplierDrop() {
   else { db('GET','suppliers?select=*,supplier_brands(brand_name)&order=sort_order').then(function(d){ _supplierCache=d; doFill(); }).catch(function(){}); }
 }
 
-function closeModal() { document.getElementById('overlay').classList.remove('show'); }
+function closeModal() {
+  document.getElementById('overlay').classList.remove('show');
+  if (_returnToJobPartsAfterEdit) {
+    renderJobPartsList();
+    _returnToJobPartsAfterEdit = null;
+    document.getElementById('overlay').style.zIndex = '';
+  }
+}
 
 // Back to top button visibility
 window.addEventListener('scroll', function() {
@@ -4130,6 +4156,7 @@ async function savePart() {
     closeModal();
     }
     await loadAllParts(); if (selectedMachine) { renderDocsBar(); renderParts(); } await loadAllParts();
+    if (_returnToJobPartsAfterEdit) { closeModal(); }
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Save Part'; }
 }
@@ -4341,10 +4368,26 @@ async function splitSelectedTools() {
   }
 }
 
+function recActiveKinds(text) {
+  var r = (text||'').toLowerCase();
+  return { notreq: r.indexOf('not required') !== -1, declined: r.indexOf('declined') !== -1, writtenoff: r.indexOf('written off') !== -1 };
+}
+function recButtonStyle(kind, active) {
+  var base = 'padding:3px 8px;font-size:11px;border-radius:5px;cursor:pointer;';
+  if (!active) return base + 'background:#141f2d;border:1px solid #2a4060;color:#5a8090';
+  if (kind === 'notreq') return base + 'background:#0a2a1a;border:1px solid #10b98160;color:#10b981';
+  if (kind === 'declined') return base + 'background:#1a1a0a;border:1px solid #f59e0b60;color:#f59e0b';
+  return base + 'background:#2a0a0a;border:1px solid #ef444460;color:#ef4444';
+}
 function setToolRecommendation(tempId, text) {
   setToolField(tempId, 'recommendation', text);
   var ta = document.getElementById('rec_' + tempId);
   if (ta) ta.value = text;
+  var active = recActiveKinds(text);
+  ['notreq','declined','writtenoff'].forEach(function(kind) {
+    var btn = document.getElementById('recbtn_' + kind + '_' + tempId);
+    if (btn) btn.style.cssText = recButtonStyle(kind, active[kind]);
+  });
 }
 
 function setToolField(tempId, field, val) {
@@ -4376,6 +4419,7 @@ function renderToolsList() {
         return '<option value="' + m.id + '"' + (m.id === t.machine_id ? ' selected' : '') + '>' + m.name + '</option>';
       }).join('');
   var mName = t.machine_id ? (machines.find(function(m){return m.id===t.machine_id;})||{}).name || '' : '';
+    var recActive = recActiveKinds(t.recommendation);
     return '<div class="tool-card" id="tc_' + t._tempId + '">' +
       '<div class="tool-card-header">' +
         '<span class="tool-card-title">' +
@@ -4400,9 +4444,9 @@ function renderToolsList() {
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label>' +
         '<div style="display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap">' +
-          '<button type="button" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Repair not required — tool is serviceable and within specification.\')" style="padding:3px 8px;font-size:11px;background:#0a2a1a;border:1px solid #10b98160;color:#10b981;border-radius:5px;cursor:pointer">Repair not required</button>' +
-          '<button type="button" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Repair declined by customer — tool to be returned as assessed.\')" style="padding:3px 8px;font-size:11px;background:#1a1a0a;border:1px solid #f59e0b60;color:#f59e0b;border-radius:5px;cursor:pointer">Repair declined</button>' +
-          '<button type="button" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Tool written off — uneconomical to repair. Recommend replacement.\')" style="padding:3px 8px;font-size:11px;background:#2a0a0a;border:1px solid #ef444460;color:#ef4444;border-radius:5px;cursor:pointer">Written off</button>' +
+          '<button type="button" id="recbtn_notreq_' + t._tempId + '" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Repair not required — tool is serviceable and within specification.\')" style="' + recButtonStyle('notreq', recActive.notreq) + '">Repair not required</button>' +
+          '<button type="button" id="recbtn_declined_' + t._tempId + '" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Repair declined by customer — tool to be returned as assessed.\')" style="' + recButtonStyle('declined', recActive.declined) + '">Repair declined</button>' +
+          '<button type="button" id="recbtn_writtenoff_' + t._tempId + '" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Tool written off — uneconomical to repair. Recommend replacement.\')" style="' + recButtonStyle('writtenoff', recActive.writtenoff) + '">Written off</button>' +
         '</div>' +
         '<textarea id="rec_' + t._tempId + '" oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
         '<div class="field full"><label>Work Completed</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'work_completed\',this.value)" placeholder="Describe all work carried out..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.work_completed||'') + '</textarea></div>' +
