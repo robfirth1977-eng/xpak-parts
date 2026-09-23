@@ -965,6 +965,10 @@ function updateAuthHeader(session) {
 
 var machines = [], parts = [], allParts = [], selectedMachine = null, editingPart = null, labelQueue = [];
 var _returnToJobPartsAfterEdit = null;
+// Serial numbers get typed/pasted with inconsistent spacing ("B 23041539" vs "B23041539"),
+// which silently breaks every ilike-based "previously serviced" lookup. Strip all whitespace
+// at every save point so serials stay comparable across jobs, loans, stock and site visits.
+function normSerial(s) { return (s || '').replace(/\s+/g, ''); }
 var jobs = [], jobTools = [], editingJob = null, jobFilter = 'OPEN', currentView = 'home', jobViewMode = 'board';
 var jobLoanState = { linkedLoan: null, noLoanNeeded: false, selectedToolId: null };
 var loanTools = [], loans = [], editingLoan = null, editingLoanTool = null, loanView = 'active';
@@ -2013,7 +2017,7 @@ function printToolIdLabel() {
 async function saveLoanTool(){
   var name=document.getElementById('ltName').value.trim(); if(!name){showToast('Tool name required','error');return;}
   var btn=document.getElementById('btnSaveLoanTool'); btn.disabled=true; btn.textContent='Saving...';
-  var cycleVal=document.getElementById('ltCycleCount').value; var payload={name:name,serial_number:document.getElementById('ltSerial').value||null,condition:document.getElementById('ltCondition').value||null,current_cycle_count:cycleVal!==''?parseInt(cycleVal):null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,date_of_manufacture:document.getElementById('ltManufDate').value||null,warranty_period:document.getElementById('ltWarranty').value||null,is_available:true,updated_at:new Date().toISOString()};
+  var cycleVal=document.getElementById('ltCycleCount').value; var payload={name:name,serial_number:normSerial(document.getElementById('ltSerial').value)||null,condition:document.getElementById('ltCondition').value||null,current_cycle_count:cycleVal!==''?parseInt(cycleVal):null,location:document.getElementById('ltLocation').value||null,xpak_name:document.getElementById('ltXpakName').value||null,xpak_code:document.getElementById('ltXpakCode').value||null,notes:document.getElementById('ltNotes').value||null,date_of_manufacture:document.getElementById('ltManufDate').value||null,warranty_period:document.getElementById('ltWarranty').value||null,is_available:true,updated_at:new Date().toISOString()};
   try{if(editingLoanTool){await db('PATCH','loan_tools?id=eq.'+editingLoanTool.id,payload);showToast('Tool updated');await loadLoans();var r2=loanTools.find(function(x){return x.id===editingLoanTool.id;});if(r2)editingLoanTool=r2;}else{await db('POST','loan_tools',payload);showToast('Tool added');closeLoanToolModal();await loadLoans();}}
   catch(e){showToast('Save failed: '+e.message,'error');}finally{btn.disabled=false;btn.textContent='Save Tool';}
 }
@@ -3521,12 +3525,12 @@ async function pushPartsToStockOrder() {
 function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); _returnToJobPartsAfterEdit = null; document.getElementById('overlay').style.zIndex = ''; }
 
 async function saveJob() {
-  if (_jobDataLoadFailed) { showToast('This job\'s tool/part data failed to load - close this job and reopen it before saving, to avoid overwriting real data', 'error'); return; }
+  if (_jobDataLoadFailed) { showToast('This job\'s tool/part data failed to load - close this job and reopen it before saving, to avoid overwriting real data', 'error'); return false; }
   var customer = document.getElementById('jCustomer').value.trim();
-  if (!customer) { showToast('Customer name is required', 'error'); return; }
+  if (!customer) { showToast('Customer name is required', 'error'); return false; }
   if (!jobLoanSatisfied()) {
     alert('Before saving: either link a loan tool (with a serial number) or tick "No loan tool needed" in the Loan Tool section.');
-    return;
+    return false;
   }
   var btn = document.getElementById('btnSaveJob'); btn.disabled = true; btn.textContent = 'Saving...';
   var newStatus = document.getElementById('jStatus').value;
@@ -3575,12 +3579,13 @@ async function saveJob() {
       payload.job_number = await nextJobNumber();
       var res = await db('POST', 'jobs', payload);
       savedJob = res[0];
+      editingJob = savedJob;
     }
     // Save job tools
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: jt.serial_number || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
+      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: normSerial(jt.serial_number) || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
     }
     // Save job parts — each part saved independently so one failure doesn't block others
     var partErrors = [];
@@ -3649,7 +3654,8 @@ async function saveJob() {
     }
     loadJobs();
     if (!editingJob) closeJobModal();
-  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+    return true;
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); return false; }
   finally { btn.disabled = false; btn.textContent = 'Save Service Case'; }
 }
 
@@ -3658,8 +3664,8 @@ async function saveAndCloseJob() {
   var closeBtn = document.getElementById('btnSaveCloseJob');
   if (closeBtn) { closeBtn.disabled = true; closeBtn.textContent = 'Saving...'; }
   try {
-    await saveJob();
-    closeJobModal();
+    var ok = await saveJob();
+    if (ok) closeJobModal();
   } catch(e) {
     // saveJob handles its own error toast
   } finally {
@@ -5062,11 +5068,11 @@ function svGetCustomerMachines(cust) {
 }
 function svFindSerialElsewhere(serial, excludeCustomerId) {
   if (!serial) return null;
-  var s = serial.trim().toLowerCase(); if (!s) return null;
+  var s = normSerial(serial).toLowerCase(); if (!s) return null;
   for (var i = 0; i < (customers||[]).length; i++) {
     var c = customers[i]; if (c.id === excludeCustomerId) continue;
     var owned = svGetCustomerMachines(c);
-    if (owned.some(function(m){ return (m.serial||'').trim().toLowerCase() === s; })) return c.company_name;
+    if (owned.some(function(m){ return normSerial(m.serial).toLowerCase() === s; })) return c.company_name;
   }
   return null;
 }
@@ -5439,7 +5445,7 @@ async function saveSiteVisit() {
     }
     for (var i=0;i<svMachines.length;i++) {
       var m=svMachines[i];
-      var mres=await db('POST','site_visit_machines',{site_visit_id:vid,machine_type:m.machine_type||null,serial_number:m.serial_number||null,work_performed:m.work_performed||null});
+      var mres=await db('POST','site_visit_machines',{site_visit_id:vid,machine_type:m.machine_type||null,serial_number:normSerial(m.serial_number)||null,work_performed:m.work_performed||null});
       var mid=mres[0].id;
       for (var j=0;j<m.parts.length;j++) {
         var p=m.parts[j];
@@ -5451,8 +5457,8 @@ async function saveSiteVisit() {
       var added = false;
       svMachines.forEach(function(m) {
         if (!m.machine_type || !m.serial_number) return;
-        var already = owned.some(function(km){ return (km.name||'').trim().toLowerCase()===m.machine_type.trim().toLowerCase() && (km.serial||'').trim().toLowerCase()===m.serial_number.trim().toLowerCase(); });
-        if (!already) { owned.push({ name: m.machine_type.trim(), serial: m.serial_number.trim() }); added = true; }
+        var already = owned.some(function(km){ return (km.name||'').trim().toLowerCase()===m.machine_type.trim().toLowerCase() && normSerial(km.serial).toLowerCase()===normSerial(m.serial_number).toLowerCase(); });
+        if (!already) { owned.push({ name: m.machine_type.trim(), serial: normSerial(m.serial_number) }); added = true; }
       });
       if (added) {
         await db('PATCH','customers?id=eq.'+matchedCust.id,{machines_owned: JSON.stringify(owned)});
@@ -6532,7 +6538,7 @@ async function saveStockTool() {
   var status = document.getElementById('stStatus').value;
   var payload = {
     name: name,
-    serial_number: document.getElementById('stSerial').value || null,
+    serial_number: normSerial(document.getElementById('stSerial').value) || null,
     supplier_id: document.getElementById('stSupplierId').value || null,
     date_received: document.getElementById('stDateReceived').value || null,
     date_of_manufacture: document.getElementById('stManufDate').value || null,
@@ -7328,9 +7334,9 @@ async function updateCustomerMachines(customerName, toolsList) {
       var mName = (window.machines||[]).find(function(m){ return m.id === t.machine_id; });
       if (!mName) return;
       var name = mName.name;
-      var serial = (t.serial_number||'').trim();
+      var serial = normSerial(t.serial_number);
       var alreadyHas = existing.some(function(m){
-        return m.name === name && (!serial || m.serial === serial);
+        return m.name === name && (!serial || normSerial(m.serial) === serial);
       });
       if (!alreadyHas) { existing.push({ name: name, serial: serial }); changed = true; }
     });
@@ -8060,7 +8066,7 @@ async function deleteAct(actId, btn) {
 var _svcHistoryCache = {};
 
 async function checkSerialHistory(serial, tempId) {
-  serial = (serial || '').trim();
+  serial = normSerial(serial);
   var panel = document.getElementById('svc-hist-' + tempId);
   if (!panel) return;
   if (!serial || serial.length < 3) { panel.innerHTML = ''; return; }
@@ -8233,6 +8239,7 @@ function runToolSearch(val) {
 }
 
 async function doToolSearch(serial) {
+  serial = normSerial(serial);
   var results = { jobs: [], loans: [], sv: [] };
   var pattern = serial.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -8247,7 +8254,7 @@ async function doToolSearch(serial) {
 
   try {
     // Search loan tools register
-    var lt = loanTools.filter(function(t){ return t.serial_number && t.serial_number.toLowerCase().includes(serial.toLowerCase()); });
+    var lt = loanTools.filter(function(t){ return t.serial_number && normSerial(t.serial_number).toLowerCase().includes(serial.toLowerCase()); });
     results.loans = lt;
   } catch(e) { console.error('tool search: loan tools filter failed', e); }
 
