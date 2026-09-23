@@ -4,47 +4,55 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Request a Repair — X-Pak Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{color-scheme:dark}
+  :root{
+    --navy:#0a2442; --navy-light:#193049; --blue:#29abe3; --orange:#f2873b;
+    --page-bg:#eef1f5; --card-bg:#ffffff; --border:#d7dee6; --text:#243447; --muted:#6b7c91;
+  }
   *{box-sizing:border-box}
-  body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px}
-  .wrap{width:100%;max-width:480px}
-  .brand{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
-  .brand-x{font-size:26px;font-weight:900;color:#00c8e0;letter-spacing:0.5px}
-  .brand-pak{font-size:26px;font-weight:900;color:#e2e8f0;letter-spacing:0.5px}
-  .brand-service{font-size:12px;font-weight:700;color:#f97316;letter-spacing:2px;text-transform:uppercase}
-  .subtitle{color:#8aa8c0;font-size:14px;margin:2px 0 24px}
-  .card{background:#141f2d;border:1px solid #2a4060;border-radius:14px;padding:22px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+  body{margin:0;font-family:'Poppins',system-ui,sans-serif;background:var(--page-bg);color:var(--text);min-height:100vh}
+  .hero{background:linear-gradient(135deg,var(--navy),var(--navy-light));padding:28px 16px 34px;text-align:center}
+  .brand{display:flex;align-items:baseline;justify-content:center;gap:6px}
+  .brand-x{font-size:26px;font-weight:800;color:var(--blue);letter-spacing:0.5px}
+  .brand-pak{font-size:26px;font-weight:800;color:#fff;letter-spacing:0.5px}
+  .hero h1{color:#fff;font-size:20px;font-weight:600;margin:10px 0 4px}
+  .hero p{color:#b9c8da;font-size:13px;margin:0}
+  .wrap{width:100%;max-width:480px;margin:0 auto;padding:0 16px 60px}
+  .card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:22px 20px;margin-top:-18px;box-shadow:0 12px 32px rgba(10,36,66,0.12)}
   .field{margin-bottom:16px}
-  label{display:block;font-size:12px;font-weight:700;color:#8aa8c0;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px}
-  .opt{font-weight:400;text-transform:none;color:#5a8090;letter-spacing:0}
-  input,textarea,select{width:100%;padding:11px 12px;border-radius:9px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:15px;outline:none;font-family:inherit}
-  input:focus,textarea:focus,select:focus{border-color:#00c8e0}
+  label{display:block;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px}
+  .opt{font-weight:400;text-transform:none;color:var(--muted);letter-spacing:0}
+  input,textarea,select{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--border);background:#fbfcfd;color:var(--text);font-size:15px;outline:none;font-family:inherit}
+  input:focus,textarea:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(41,171,227,0.15)}
   textarea{min-height:90px;resize:vertical}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width:420px){.row2{grid-template-columns:1fr}}
   .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-  .btn-submit{width:100%;padding:14px;background:#00c8e0;color:#0f1923;border:none;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer;margin-top:6px}
+  .btn-submit{width:100%;padding:14px;background:var(--orange);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:6px}
   .btn-submit:disabled{opacity:0.6;cursor:default}
-  .err{color:#ef4444;font-size:13px;margin-top:10px;display:none}
+  .err{color:#c0392b;font-size:13px;margin-top:10px;display:none}
   .success{display:none;text-align:center;padding:20px 4px}
-  .success .tick{font-size:44px;color:#10b981;margin-bottom:10px}
-  .success h2{margin:0 0 8px;font-size:19px}
-  .success p{color:#8aa8c0;font-size:14px;line-height:1.5;margin:0}
-  .foot{text-align:center;color:#3a5070;font-size:11px;margin-top:20px}
-  .tool-card{border:1px solid #2a4060;border-radius:10px;padding:14px;margin-bottom:10px;background:#0f1923}
+  .success .tick{font-size:44px;color:var(--blue);margin-bottom:10px}
+  .success h2{margin:0 0 8px;font-size:19px;color:var(--navy)}
+  .success p{color:var(--muted);font-size:14px;line-height:1.5;margin:0}
+  .foot{text-align:center;color:var(--muted);font-size:11px;margin-top:20px}
+  .tool-card{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;background:#f7f9fb}
   .tool-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .tool-card-top span{font-size:12px;font-weight:700;color:#64b5c8;text-transform:uppercase;letter-spacing:0.4px}
-  .tool-remove{background:none;border:none;color:#ef4444;font-size:13px;cursor:pointer;padding:2px 6px}
-  .btn-add-tool{width:100%;padding:10px;background:#1e3048;color:#64b5c8;border:1px solid #2a4060;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:16px}
+  .tool-card-top span{font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.4px}
+  .tool-remove{background:none;border:none;color:#c0392b;font-size:13px;cursor:pointer;padding:2px 6px}
+  .btn-add-tool{width:100%;padding:10px;background:#fff;color:var(--blue);border:1.5px solid var(--blue);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:16px}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="hero">
   <div class="brand"><span class="brand-x">X</span><span class="brand-pak">-PAK</span></div>
-  <div class="brand-service">Service</div>
-  <div class="subtitle">Submit a repair request below and we'll be in touch.</div>
-
+  <h1>Request a Repair</h1>
+  <p>Submit your details below and we'll be in touch.</p>
+</div>
+<div class="wrap">
   <div class="card">
     <form id="intakeForm">
       <div class="field"><label>Company / Business Name *</label><input id="fCompany" required autocomplete="organization"></div>
