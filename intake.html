@@ -18,8 +18,8 @@
   .field{margin-bottom:16px}
   label{display:block;font-size:12px;font-weight:700;color:#8aa8c0;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px}
   .opt{font-weight:400;text-transform:none;color:#5a8090;letter-spacing:0}
-  input,textarea{width:100%;padding:11px 12px;border-radius:9px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:15px;outline:none;font-family:inherit}
-  input:focus,textarea:focus{border-color:#00c8e0}
+  input,textarea,select{width:100%;padding:11px 12px;border-radius:9px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:15px;outline:none;font-family:inherit}
+  input:focus,textarea:focus,select:focus{border-color:#00c8e0}
   textarea{min-height:90px;resize:vertical}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width:420px){.row2{grid-template-columns:1fr}}
@@ -32,6 +32,11 @@
   .success h2{margin:0 0 8px;font-size:19px}
   .success p{color:#8aa8c0;font-size:14px;line-height:1.5;margin:0}
   .foot{text-align:center;color:#3a5070;font-size:11px;margin-top:20px}
+  .tool-card{border:1px solid #2a4060;border-radius:10px;padding:14px;margin-bottom:10px;background:#0f1923}
+  .tool-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .tool-card-top span{font-size:12px;font-weight:700;color:#64b5c8;text-transform:uppercase;letter-spacing:0.4px}
+  .tool-remove{background:none;border:none;color:#ef4444;font-size:13px;cursor:pointer;padding:2px 6px}
+  .btn-add-tool{width:100%;padding:10px;background:#1e3048;color:#64b5c8;border:1px solid #2a4060;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:16px}
 </style>
 </head>
 <body>
@@ -48,8 +53,33 @@
         <div class="field"><label>Phone *</label><input id="fPhone" type="tel" required autocomplete="tel"></div>
       </div>
       <div class="field"><label>Email *</label><input id="fEmail" type="email" required autocomplete="email"></div>
-      <div class="field"><label>Tool(s) <span class="opt">brand/model, if known</span></label><input id="fTool" placeholder="e.g. Strapex STB 73"></div>
-      <div class="field"><label>Serial Number <span class="opt">if known</span></label><input id="fSerial"></div>
+      <div class="field"><label>Pickup / Site Address *</label><input id="fAddress" required autocomplete="street-address"></div>
+      <div class="field"><label>Order / PO Number <span class="opt">if you need one on file</span></label><input id="fOrderNum"></div>
+
+      <div class="field">
+        <label>Tool(s) Being Sent</label>
+        <div id="toolsList"></div>
+        <button type="button" class="btn-add-tool" id="btnAddTool">+ Add Tool</button>
+      </div>
+
+      <div class="row2">
+        <div class="field"><label>Loan Tool Needed? *</label>
+          <select id="fLoanNeeded" required>
+            <option value="">-- Select --</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+            <option value="not_sure">Not sure</option>
+          </select>
+        </div>
+        <div class="field"><label>Ready for Courier Pickup? *</label>
+          <select id="fReadyPickup" required>
+            <option value="">-- Select --</option>
+            <option value="yes">Yes, packed and ready</option>
+            <option value="no">No, not yet</option>
+          </select>
+        </div>
+      </div>
+
       <div class="field"><label>What's the Problem? *</label><textarea id="fFault" required placeholder="Describe the fault or what's needed..."></textarea></div>
       <input class="hp" id="fWebsite" tabindex="-1" autocomplete="off">
       <button type="submit" class="btn-submit" id="btnSubmit">Send Request</button>
@@ -68,6 +98,33 @@
 var SUPABASE_URL = 'https://hoahfuxxefvfgxcjyqhp.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvYWhmdXh4ZWZ2Zmd4Y2p5cWhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMDk5OTEsImV4cCI6MjA5Mjg4NTk5MX0.rqV79ekcylTNqlAEIENJZe_lhuxBhhE54d2CXfRve8g';
 var _loadedAt = Date.now();
+var toolRows = [];
+
+function addToolRow() {
+  toolRows.push({ description: '', serial: '' });
+  renderToolRows();
+}
+function removeToolRow(i) {
+  toolRows.splice(i, 1);
+  renderToolRows();
+}
+function setToolRow(i, field, val) {
+  toolRows[i][field] = val;
+}
+function renderToolRows() {
+  var el = document.getElementById('toolsList');
+  el.innerHTML = toolRows.map(function(t, i) {
+    return '<div class="tool-card">' +
+      '<div class="tool-card-top"><span>Tool ' + (i + 1) + '</span>' +
+      (toolRows.length > 1 ? '<button type="button" class="tool-remove" onclick="removeToolRow(' + i + ')">Remove</button>' : '') +
+      '</div>' +
+      '<div class="field" style="margin-bottom:8px"><label>Brand / Model <span class="opt">if known</span></label><input value="' + t.description.replace(/"/g,'&quot;') + '" placeholder="e.g. Strapex STB 73" oninput="setToolRow(' + i + ',\'description\',this.value)"></div>' +
+      '<div class="field" style="margin-bottom:0"><label>Serial Number <span class="opt">if known</span></label><input value="' + t.serial.replace(/"/g,'&quot;') + '" oninput="setToolRow(' + i + ',\'serial\',this.value)"></div>' +
+    '</div>';
+  }).join('');
+}
+document.getElementById('btnAddTool').addEventListener('click', addToolRow);
+addToolRow();
 
 document.getElementById('intakeForm').addEventListener('submit', function(e){
   e.preventDefault();
@@ -78,16 +135,23 @@ document.getElementById('intakeForm').addEventListener('submit', function(e){
   if (document.getElementById('fWebsite').value) { return; }
   if (Date.now() - _loadedAt < 1500) { return; }
 
+  var cleanTools = toolRows
+    .map(function(t){ return { description: t.description.trim(), serial_number: t.serial.trim() }; })
+    .filter(function(t){ return t.description || t.serial_number; });
+
   var payload = {
     company_name: document.getElementById('fCompany').value.trim(),
     contact_name: document.getElementById('fContact').value.trim(),
     phone: document.getElementById('fPhone').value.trim(),
     email: document.getElementById('fEmail').value.trim(),
-    tool_description: document.getElementById('fTool').value.trim() || null,
-    serial_number: document.getElementById('fSerial').value.trim() || null,
+    address: document.getElementById('fAddress').value.trim(),
+    order_number: document.getElementById('fOrderNum').value.trim() || null,
+    tools: cleanTools,
+    loan_tool_needed: document.getElementById('fLoanNeeded').value || null,
+    ready_for_pickup: document.getElementById('fReadyPickup').value === 'yes' ? true : (document.getElementById('fReadyPickup').value === 'no' ? false : null),
     fault_description: document.getElementById('fFault').value.trim()
   };
-  if (!payload.company_name || !payload.contact_name || !payload.phone || !payload.email || !payload.fault_description) {
+  if (!payload.company_name || !payload.contact_name || !payload.phone || !payload.email || !payload.address || !payload.fault_description || !payload.loan_tool_needed || payload.ready_for_pickup === null) {
     errEl.textContent = 'Please fill in all required fields.';
     errEl.style.display = 'block';
     return;

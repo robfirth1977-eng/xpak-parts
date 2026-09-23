@@ -3155,15 +3155,26 @@ function renderIntakeQueue() {
   if (!intakeRequests.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:#5a8090">No new requests.</div>'; return; }
   el.innerHTML = intakeRequests.map(function(r) {
     var match = guessIntakeCustomerMatch(r.company_name);
+    var tools = Array.isArray(r.tools) ? r.tools : [];
+    var toolsHtml = tools.length ? tools.map(function(t){ return (t.description||'Unspecified tool') + (t.serial_number ? ' (S/N: ' + t.serial_number + ')' : ''); }).join('<br>') : '<span style="color:#5a8090">No tool details given</span>';
+    var loanLabel = { yes:'Yes', no:'No', not_sure:'Not sure' }[r.loan_tool_needed] || '—';
+    var pickupLabel = r.ready_for_pickup === true ? 'Yes' : (r.ready_for_pickup === false ? 'No' : '—');
     return '<div style="border:1px solid #2a4060;border-radius:10px;padding:14px;margin-bottom:12px">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
         '<div><div style="font-weight:700;font-size:15px">' + (r.company_name||'') + '</div>' +
-        '<div style="font-size:12px;color:#8aa8c0">' + (r.contact_name||'') + ' &middot; ' + (r.phone||'') + ' &middot; ' + (r.email||'') + '</div></div>' +
+        '<div style="font-size:12px;color:#8aa8c0">' + (r.contact_name||'') + ' &middot; ' + (r.phone||'') + ' &middot; ' + (r.email||'') + '</div>' +
+        (r.address ? '<div style="font-size:12px;color:#8aa8c0">' + r.address + '</div>' : '') +
+        '</div>' +
         '<div style="font-size:11px;color:#5a8090;white-space:nowrap">' + fmtDate(r.created_at) + '</div>' +
       '</div>' +
       (match ? '<div style="margin-top:8px;font-size:11px;background:#0a2a1a;border:1px solid #10b98160;color:#10b981;border-radius:6px;padding:5px 8px">Possible match: existing account "' + match.company_name + '"</div>' : '') +
-      (r.tool_description ? '<div style="margin-top:8px;font-size:13px"><b>Tool:</b> ' + r.tool_description + (r.serial_number ? ' (S/N: ' + r.serial_number + ')' : '') + '</div>' : (r.serial_number ? '<div style="margin-top:8px;font-size:13px"><b>S/N:</b> ' + r.serial_number + '</div>' : '')) +
+      '<div style="margin-top:8px;font-size:13px"><b>Tools:</b><br>' + toolsHtml + '</div>' +
       '<div style="margin-top:6px;font-size:13px;color:#c0d0e0">' + (r.fault_description||'') + '</div>' +
+      '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:#8aa8c0">' +
+        '<span>Loan tool: <b style="color:#e2e8f0">' + loanLabel + '</b></span>' +
+        '<span>Ready for pickup: <b style="color:#e2e8f0">' + pickupLabel + '</b></span>' +
+        (r.order_number ? '<span>Order#: <b style="color:#e2e8f0">' + r.order_number + '</b></span>' : '') +
+      '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
         '<button onclick="convertIntakeRequest(\'' + r.id + '\')" style="flex:1;padding:9px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Convert to Job</button>' +
         '<button onclick="dismissIntakeRequest(\'' + r.id + '\')" style="padding:9px 14px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:8px;font-size:13px;cursor:pointer">Dismiss</button>' +
@@ -3174,7 +3185,8 @@ function renderIntakeQueue() {
 async function dismissIntakeRequest(id) {
   if (!confirm('Dismiss this request? It will be removed from the queue.')) return;
   try {
-    await db('PATCH', 'job_intake_requests?id=eq.' + id, { status: 'dismissed', reviewed_at: new Date().toISOString() });
+    var res = await db('PATCH', 'job_intake_requests?id=eq.' + id, { status: 'dismissed', reviewed_at: new Date().toISOString() });
+    if (!res || !res.length) { showToast('Dismiss did not take effect - 0 rows updated (check permissions/policies on job_intake_requests)', 'error'); return; }
     await loadIntakeRequests();
     renderIntakeQueue();
     showToast('Request dismissed');
@@ -3192,9 +3204,23 @@ function convertIntakeRequest(id) {
     document.getElementById('jContact').value = r.contact_name || '';
     document.getElementById('jPhone').value = r.phone || '';
     document.getElementById('jEmail').value = r.email || '';
-    var desc = (r.tool_description ? 'Tool: ' + r.tool_description + '\n' : '') + (r.fault_description || '');
-    jobToolsLocal[0].customer_issue = desc;
-    jobToolsLocal[0].serial_number = normSerial(r.serial_number || '');
+    document.getElementById('jShipping').value = r.address || '';
+    document.getElementById('jOrderNum').value = r.order_number || '';
+
+    var tools = Array.isArray(r.tools) && r.tools.length ? r.tools : [{ description: '', serial_number: '' }];
+    jobToolsLocal = tools.map(function(t, i) {
+      var desc = (t.description ? 'Tool: ' + t.description + '\n' : '') + (r.fault_description || '');
+      return { _tempId: 'tool_' + Date.now() + '_' + i, tool_number: i + 1, machine_id: '', serial_number: normSerial(t.serial_number || ''), fault_type: '', error_code: '', cycle_count: '', customer_issue: desc, workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' };
+    });
+
+    if (r.loan_tool_needed === 'no') { jobLoanState.noLoanNeeded = true; renderJobLoanSection(); }
+
+    var extraNotes = [];
+    if (r.loan_tool_needed && r.loan_tool_needed !== 'no') extraNotes.push('Customer loan tool answer: ' + r.loan_tool_needed + ' - confirm before saving.');
+    if (r.ready_for_pickup === true) extraNotes.push('Customer says tool(s) packed and ready for courier pickup.');
+    if (r.ready_for_pickup === false) extraNotes.push('Customer says tool(s) NOT yet ready for pickup.');
+    if (extraNotes.length) document.getElementById('jInternalNotes').value = extraNotes.join(' ');
+
     renderToolsList();
     showToast('Review and save to create the job from this request');
   }, 150);
@@ -3730,7 +3756,8 @@ async function saveJob() {
     try { await updateCustomerMachines(customer, jobToolsLocal); } catch(e) { console.error('updateCustomerMachines failed', e); }
     if (_convertingIntakeId) {
       try {
-        await db('PATCH', 'job_intake_requests?id=eq.' + _convertingIntakeId, { status: 'converted', converted_job_id: savedJob.id, reviewed_at: new Date().toISOString() });
+        var ires = await db('PATCH', 'job_intake_requests?id=eq.' + _convertingIntakeId, { status: 'converted', converted_job_id: savedJob.id, reviewed_at: new Date().toISOString() });
+        if (!ires || !ires.length) console.error('intake request PATCH matched 0 rows - check permissions/policies on job_intake_requests');
         await loadIntakeRequests();
       } catch(ie) { console.error('failed to mark intake request converted', ie); }
       _convertingIntakeId = null;
