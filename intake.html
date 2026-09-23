@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request a Repair — X-Pak Service</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#0f1923;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px}
+  .wrap{width:100%;max-width:480px}
+  .brand{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+  .brand-x{font-size:26px;font-weight:900;color:#00c8e0;letter-spacing:0.5px}
+  .brand-pak{font-size:26px;font-weight:900;color:#e2e8f0;letter-spacing:0.5px}
+  .brand-service{font-size:12px;font-weight:700;color:#f97316;letter-spacing:2px;text-transform:uppercase}
+  .subtitle{color:#8aa8c0;font-size:14px;margin:2px 0 24px}
+  .card{background:#141f2d;border:1px solid #2a4060;border-radius:14px;padding:22px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+  .field{margin-bottom:16px}
+  label{display:block;font-size:12px;font-weight:700;color:#8aa8c0;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px}
+  .opt{font-weight:400;text-transform:none;color:#5a8090;letter-spacing:0}
+  input,textarea{width:100%;padding:11px 12px;border-radius:9px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:15px;outline:none;font-family:inherit}
+  input:focus,textarea:focus{border-color:#00c8e0}
+  textarea{min-height:90px;resize:vertical}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:420px){.row2{grid-template-columns:1fr}}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .btn-submit{width:100%;padding:14px;background:#00c8e0;color:#0f1923;border:none;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer;margin-top:6px}
+  .btn-submit:disabled{opacity:0.6;cursor:default}
+  .err{color:#ef4444;font-size:13px;margin-top:10px;display:none}
+  .success{display:none;text-align:center;padding:20px 4px}
+  .success .tick{font-size:44px;color:#10b981;margin-bottom:10px}
+  .success h2{margin:0 0 8px;font-size:19px}
+  .success p{color:#8aa8c0;font-size:14px;line-height:1.5;margin:0}
+  .foot{text-align:center;color:#3a5070;font-size:11px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="brand-x">X</span><span class="brand-pak">-PAK</span></div>
+  <div class="brand-service">Service</div>
+  <div class="subtitle">Submit a repair request below and we'll be in touch.</div>
+
+  <div class="card">
+    <form id="intakeForm">
+      <div class="field"><label>Company / Business Name *</label><input id="fCompany" required autocomplete="organization"></div>
+      <div class="row2">
+        <div class="field"><label>Your Name *</label><input id="fContact" required autocomplete="name"></div>
+        <div class="field"><label>Phone *</label><input id="fPhone" type="tel" required autocomplete="tel"></div>
+      </div>
+      <div class="field"><label>Email *</label><input id="fEmail" type="email" required autocomplete="email"></div>
+      <div class="field"><label>Tool(s) <span class="opt">brand/model, if known</span></label><input id="fTool" placeholder="e.g. Strapex STB 73"></div>
+      <div class="field"><label>Serial Number <span class="opt">if known</span></label><input id="fSerial"></div>
+      <div class="field"><label>What's the Problem? *</label><textarea id="fFault" required placeholder="Describe the fault or what's needed..."></textarea></div>
+      <input class="hp" id="fWebsite" tabindex="-1" autocomplete="off">
+      <button type="submit" class="btn-submit" id="btnSubmit">Send Request</button>
+      <div class="err" id="errMsg"></div>
+    </form>
+    <div class="success" id="successBox">
+      <div class="tick">&#10003;</div>
+      <h2>Request received</h2>
+      <p>Thanks — we've got your details and will be in touch shortly about next steps.</p>
+    </div>
+  </div>
+  <div class="foot">X-Pak Global Service Division &middot; Load Containment Specialists</div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://hoahfuxxefvfgxcjyqhp.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvYWhmdXh4ZWZ2Zmd4Y2p5cWhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMDk5OTEsImV4cCI6MjA5Mjg4NTk5MX0.rqV79ekcylTNqlAEIENJZe_lhuxBhhE54d2CXfRve8g';
+var _loadedAt = Date.now();
+
+document.getElementById('intakeForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var errEl = document.getElementById('errMsg');
+  errEl.style.display = 'none';
+
+  // Honeypot + minimum-time-on-page check to filter obvious bots without a CAPTCHA.
+  if (document.getElementById('fWebsite').value) { return; }
+  if (Date.now() - _loadedAt < 1500) { return; }
+
+  var payload = {
+    company_name: document.getElementById('fCompany').value.trim(),
+    contact_name: document.getElementById('fContact').value.trim(),
+    phone: document.getElementById('fPhone').value.trim(),
+    email: document.getElementById('fEmail').value.trim(),
+    tool_description: document.getElementById('fTool').value.trim() || null,
+    serial_number: document.getElementById('fSerial').value.trim() || null,
+    fault_description: document.getElementById('fFault').value.trim()
+  };
+  if (!payload.company_name || !payload.contact_name || !payload.phone || !payload.email || !payload.fault_description) {
+    errEl.textContent = 'Please fill in all required fields.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var btn = document.getElementById('btnSubmit');
+  btn.disabled = true; btn.textContent = 'Sending...';
+
+  fetch(SUPABASE_URL + '/rest/v1/job_intake_requests', {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Content-Profile': 'public',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(payload)
+  }).then(function(res){
+    if (!res.ok) throw new Error('Request failed (' + res.status + ')');
+    document.getElementById('intakeForm').style.display = 'none';
+    document.getElementById('successBox').style.display = 'block';
+  }).catch(function(e){
+    errEl.textContent = 'Something went wrong sending your request. Please call us on 1300 551 281 instead.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Send Request';
+  });
+});
+</script>
+</body>
+</html>

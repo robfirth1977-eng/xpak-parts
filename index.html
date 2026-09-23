@@ -23,7 +23,7 @@
 
 <div class="header">
   <div><div class="header-title" onclick="showLanding()" style="cursor:pointer" title="Back to menu">MAINFLOW <span style="font-size:9px;color:#3a5070;font-weight:400;letter-spacing:1px">v1.3</span></div><div class="header-sub" id="hSub">Connecting...</div></div>
-  <div id="lowBadge"></div><button class="auth-user" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;margin-right:6px" onclick="openToolSearch()">🔍 Find Tool</button><button class="auth-user" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
+  <div id="lowBadge"></div><button class="auth-user" id="intakeBadgeBtn" style="display:none;background:#2a1a0a;border:1px solid #f9731660;color:#f97316;margin-right:6px;font-weight:700" onclick="openIntakeQueue()">📥 <span id="intakeBadgeCount">0</span> New Request<span id="intakeBadgePlural">s</span></button><button class="auth-user" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;margin-right:6px" onclick="openToolSearch()">🔍 Find Tool</button><button class="auth-user" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
 </div>
 <div class="machine-tabs" id="machineTabs"></div>
 <div class="docs-bar" id="docsBar"></div>
@@ -512,6 +512,12 @@
   </div>
 </div>
 <div id="printArea"></div>
+<div class="overlay" id="intakeOverlay" onclick="if(event.target===this)closeIntakeQueue()">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📥 New Job Requests</div><button class="modal-close" onclick="closeIntakeQueue()">x</button></div>
+    <div id="intakeQueueList"></div>
+  </div>
+</div>
 <div id="weeklyView" style="display:none;padding:20px 24px;max-width:1200px;margin:0 auto"></div>
 <button id="backToTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" style="display:none;position:fixed;bottom:28px;right:20px;z-index:500;width:42px;height:42px;border-radius:50%;background:#00c8e0;color:#0f1923;border:none;font-size:20px;font-weight:900;cursor:pointer;box-shadow:0 2px 10px rgba(0,200,224,0.4);line-height:1">&#8679;</button>
 
@@ -1161,6 +1167,7 @@ async function init() {
     // Pre-load data for home page stats
     try { await loadJobs(); } catch(e) { console.error('init: loadJobs failed', e); }
     try { await loadCustomers(); } catch(e) { console.error('init: loadCustomers failed', e); }
+    try { await loadIntakeRequests(); } catch(e) { console.error('init: loadIntakeRequests failed', e); }
     try { await loadStockTools(); } catch(e) { console.error('init: loadStockTools failed', e); }
     try { await loadPurchaseOrders(); } catch(e) { console.error('init: loadPurchaseOrders failed', e); }
     try { loanTools = await db('GET','loan_tools?select=*&order=name.asc'); loans = await db('GET','loans?select=*&order=loan_number.desc'); } catch(e) { console.error('init: loans load failed', e); }
@@ -3118,6 +3125,80 @@ function renderList() {
   }).join('');
 }
 
+var intakeRequests = [];
+var _convertingIntakeId = null;
+async function loadIntakeRequests() {
+  intakeRequests = await db('GET', 'job_intake_requests?status=eq.new&select=*&order=created_at.asc');
+  updateIntakeBadge();
+}
+function updateIntakeBadge() {
+  var btn = document.getElementById('intakeBadgeBtn'); if (!btn) return;
+  var n = intakeRequests.length;
+  document.getElementById('intakeBadgeCount').textContent = n;
+  document.getElementById('intakeBadgePlural').textContent = n === 1 ? '' : 's';
+  btn.style.display = n > 0 ? 'inline-block' : 'none';
+}
+function guessIntakeCustomerMatch(companyName) {
+  var q = (companyName||'').trim().toLowerCase();
+  if (!q) return null;
+  var exact = customers.find(function(c){ return (c.company_name||'').trim().toLowerCase() === q; });
+  if (exact) return exact;
+  return customers.find(function(c){
+    var cn = (c.company_name||'').toLowerCase();
+    return cn && (cn.indexOf(q) !== -1 || q.indexOf(cn) !== -1);
+  }) || null;
+}
+function openIntakeQueue() { renderIntakeQueue(); document.getElementById('intakeOverlay').classList.add('show'); }
+function closeIntakeQueue() { document.getElementById('intakeOverlay').classList.remove('show'); }
+function renderIntakeQueue() {
+  var el = document.getElementById('intakeQueueList');
+  if (!intakeRequests.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:#5a8090">No new requests.</div>'; return; }
+  el.innerHTML = intakeRequests.map(function(r) {
+    var match = guessIntakeCustomerMatch(r.company_name);
+    return '<div style="border:1px solid #2a4060;border-radius:10px;padding:14px;margin-bottom:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
+        '<div><div style="font-weight:700;font-size:15px">' + (r.company_name||'') + '</div>' +
+        '<div style="font-size:12px;color:#8aa8c0">' + (r.contact_name||'') + ' &middot; ' + (r.phone||'') + ' &middot; ' + (r.email||'') + '</div></div>' +
+        '<div style="font-size:11px;color:#5a8090;white-space:nowrap">' + fmtDate(r.created_at) + '</div>' +
+      '</div>' +
+      (match ? '<div style="margin-top:8px;font-size:11px;background:#0a2a1a;border:1px solid #10b98160;color:#10b981;border-radius:6px;padding:5px 8px">Possible match: existing account "' + match.company_name + '"</div>' : '') +
+      (r.tool_description ? '<div style="margin-top:8px;font-size:13px"><b>Tool:</b> ' + r.tool_description + (r.serial_number ? ' (S/N: ' + r.serial_number + ')' : '') + '</div>' : (r.serial_number ? '<div style="margin-top:8px;font-size:13px"><b>S/N:</b> ' + r.serial_number + '</div>' : '')) +
+      '<div style="margin-top:6px;font-size:13px;color:#c0d0e0">' + (r.fault_description||'') + '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px">' +
+        '<button onclick="convertIntakeRequest(\'' + r.id + '\')" style="flex:1;padding:9px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Convert to Job</button>' +
+        '<button onclick="dismissIntakeRequest(\'' + r.id + '\')" style="padding:9px 14px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:8px;font-size:13px;cursor:pointer">Dismiss</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+async function dismissIntakeRequest(id) {
+  if (!confirm('Dismiss this request? It will be removed from the queue.')) return;
+  try {
+    await db('PATCH', 'job_intake_requests?id=eq.' + id, { status: 'dismissed', reviewed_at: new Date().toISOString() });
+    await loadIntakeRequests();
+    renderIntakeQueue();
+    showToast('Request dismissed');
+  } catch(e) { showToast('Failed to dismiss: ' + e.message, 'error'); }
+}
+function convertIntakeRequest(id) {
+  var r = intakeRequests.find(function(x){ return x.id === id; });
+  if (!r) return;
+  closeIntakeQueue();
+  switchToJobs();
+  setTimeout(function() {
+    _convertingIntakeId = id;
+    openNewJobModal(true);
+    document.getElementById('jCustomer').value = r.company_name || '';
+    document.getElementById('jContact').value = r.contact_name || '';
+    document.getElementById('jPhone').value = r.phone || '';
+    document.getElementById('jEmail').value = r.email || '';
+    var desc = (r.tool_description ? 'Tool: ' + r.tool_description + '\n' : '') + (r.fault_description || '');
+    jobToolsLocal[0].customer_issue = desc;
+    jobToolsLocal[0].serial_number = normSerial(r.serial_number || '');
+    renderToolsList();
+    showToast('Review and save to create the job from this request');
+  }, 150);
+}
 function jobHasWrittenOffTool(j) {
   return (j.job_tools || []).some(function(t) { return (t.recommendation || '').toLowerCase().indexOf('written off') !== -1; });
 }
@@ -3522,7 +3603,7 @@ async function pushPartsToStockOrder() {
   closeJobModal();
   setTimeout(function(){ switchToPurchasing(); setPOFilter('Draft'); }, 250);
 }
-function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); _returnToJobPartsAfterEdit = null; document.getElementById('overlay').style.zIndex = ''; }
+function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); _returnToJobPartsAfterEdit = null; _convertingIntakeId = null; document.getElementById('overlay').style.zIndex = ''; }
 
 async function saveJob() {
   if (_jobDataLoadFailed) { showToast('This job\'s tool/part data failed to load - close this job and reopen it before saving, to avoid overwriting real data', 'error'); return false; }
@@ -3647,6 +3728,13 @@ async function saveJob() {
     }
     // Auto-update customer machines owned
     try { await updateCustomerMachines(customer, jobToolsLocal); } catch(e) { console.error('updateCustomerMachines failed', e); }
+    if (_convertingIntakeId) {
+      try {
+        await db('PATCH', 'job_intake_requests?id=eq.' + _convertingIntakeId, { status: 'converted', converted_job_id: savedJob.id, reviewed_at: new Date().toISOString() });
+        await loadIntakeRequests();
+      } catch(ie) { console.error('failed to mark intake request converted', ie); }
+      _convertingIntakeId = null;
+    }
     if (partErrors.length) {
       showToast('Job saved but ' + partErrors.length + ' part(s) failed: ' + partErrors[0], 'error');
     } else {
