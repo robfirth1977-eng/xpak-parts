@@ -7102,6 +7102,16 @@ var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 var _supabase = null;
 var _currentUser = null;
 
+// Number inputs intercept mouse-wheel/trackpad scroll to nudge their value up or down
+// while focused - easy to hit by accident when scrolling the page past one (e.g. Service
+// Fee, Hours, Qty). Blur the field the instant a wheel event reaches it so scrolling just
+// scrolls the page instead of silently changing whatever number field you left focused.
+document.addEventListener('wheel', function() {
+  if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'number') {
+    document.activeElement.blur();
+  }
+}, { passive: true });
+
 document.addEventListener('DOMContentLoaded', function() {
   _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   // Keep H.Authorization in sync with the live JWT (handles login + token refresh)
