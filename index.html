@@ -3692,7 +3692,11 @@ async function saveJob() {
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: normSerial(jt.serial_number) || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
+      var jtRes = await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: normSerial(jt.serial_number) || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
+      // Every save deletes+recreates this row with a fresh id - keep _existingId in sync so
+      // anything referencing it later in the same session (e.g. Split Job) targets the row
+      // that actually exists, not the one that was just deleted.
+      if (jtRes && jtRes[0]) jt._existingId = jtRes[0].id;
     }
     // Save job parts — each part saved independently so one failure doesn't block others
     var partErrors = [];
@@ -3712,7 +3716,8 @@ async function saveJob() {
         updated_at: new Date().toISOString()
       };
       try {
-        await db('POST', 'job_parts', jpPayload);
+        var jpRes = await db('POST', 'job_parts', jpPayload);
+        if (jpRes && jpRes[0]) jp._existingId = jpRes[0].id;
         // Deduct from stock if use_stock
         if (jp.status === 'use_stock' && jp.part_id) {
           try {
@@ -4450,7 +4455,15 @@ async function splitSelectedTools() {
     for (var i = 0; i < selected.length; i++) {
       var t = selected[i];
       var newToolNumber = i + 1;
-      await db('PATCH', 'job_tools?id=eq.' + t._existingId, { job_id: newJob.id, tool_number: newToolNumber, updated_at: new Date().toISOString() });
+      var moveRes = await db('PATCH', 'job_tools?id=eq.' + t._existingId, { job_id: newJob.id, tool_number: newToolNumber, updated_at: new Date().toISOString() });
+      if (!moveRes || !moveRes.length) {
+        // The tool's id no longer matches a real row - most likely this job was saved (and its
+        // tools' ids regenerated) without reloading, so _existingId is stale. Bail out before
+        // touching local state so nothing gets stripped off this job for a move that never
+        // actually happened, and clean up the empty job we just created.
+        try { await db('DELETE', 'jobs?id=eq.' + newJob.id); } catch(ce) {}
+        throw new Error('Tool ' + t.tool_number + ' could not be moved (its record is out of date). Close this job, reopen it, and try the split again.');
+      }
       var toolParts = jobPartsLocal.filter(function(p) { return p._toolTempId === t._tempId && p._existingId; });
       for (var pi = 0; pi < toolParts.length; pi++) {
         await db('PATCH', 'job_parts?id=eq.' + toolParts[pi]._existingId, { job_id: newJob.id, tool_number: newToolNumber, updated_at: new Date().toISOString() });
