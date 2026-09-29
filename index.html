@@ -4980,10 +4980,11 @@ function renderAssessmentReport(j, tools, jparts) {
   // Approval
   w.document.write('<div class="approval-box"><h3>Customer Approval</h3>');
   w.document.write('<p style="font-size:10.5pt;color:#444">I/We hereby authorise X-Pak Global to proceed with the recommended work and parts as detailed in this report.</p>');
+  w.document.write('<div style="background:#fff8f0;border:1px solid #f9731660;border-radius:6px;padding:8px 12px;margin-top:12px"><span style="font-size:10.5pt;font-weight:700;color:#f97316">Please provide a Purchase Order / Order Number with your reply.</span>' + (j.order_number ? ' <span style="font-size:10pt;color:#444">(on file: <strong>' + j.order_number + '</strong>)</span>' : '') + '</div>');
   w.document.write('<div class="sig-row">');
   w.document.write('<div><div class="sig-field"></div><div class="sig-label">Authorised Signature</div></div>');
   w.document.write('<div><div class="sig-field"></div><div class="sig-label">Print Name &amp; Date</div></div>');
-  w.document.write('<div><div class="sig-field"></div><div class="sig-label">Purchase Order Number (if required)</div></div>');
+  w.document.write('<div><div class="sig-field" style="border-bottom-color:#f97316">' + (j.order_number||'') + '</div><div class="sig-label" style="color:#f97316;font-weight:700">Purchase Order / Order Number</div></div>');
   w.document.write('<div><div class="sig-field"></div><div class="sig-label">Date Authorised</div></div>');
   w.document.write('</div></div>');
 
