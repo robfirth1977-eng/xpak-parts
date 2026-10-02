@@ -1,6 +1,6 @@
 // Offline support: cache the app files so the diary opens without a connection.
 // Bump VERSION whenever any cached file changes, so phones pick up the update.
-var VERSION = "bowel-diary-v7";
+var VERSION = "bowel-diary-v8";
 var FILES = [
   "./",
   "./index.html",
@@ -10,7 +10,11 @@ var FILES = [
   "./icon.svg",
   "./icon-192.png",
   "./icon-512.png",
-  "./apple-touch-icon.png"
+  "./apple-touch-icon.png",
+  "./fonts/bricolage-grotesque-latin-600-normal.woff2",
+  "./fonts/bricolage-grotesque-latin-800-normal.woff2",
+  "./fonts/atkinson-hyperlegible-latin-400-normal.woff2",
+  "./fonts/atkinson-hyperlegible-latin-700-normal.woff2"
 ];
 
 self.addEventListener("install", function (e) {

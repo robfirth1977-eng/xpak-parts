@@ -25,7 +25,10 @@ window.BRAND = {
   color: "#5b3fa0",
   contact: "01234 567890 · hello@riverside.co.uk",
   instructions: "Please fill this in for 7 days and bring the PDF report to your appointment.",
-  days: 7
+  days: 7,
+  treatment: "sacral nerve modulation (SNM)",
+  beforeLabel: "Pre-op",
+  afterLabel: "Post-op"
 };
 ```
 
@@ -48,4 +51,5 @@ It must be served from a website address (starting `https://`) to install on pho
 | `manifest.json` | App name and icons for installing |
 | `sw.js` | Makes the app work offline |
 | `jspdf.umd.min.js` | Library that makes the PDF (jsPDF 2.5.2, MIT licence) |
+| `fonts/` | Bricolage Grotesque and Atkinson Hyperlegible (SIL Open Font License) |
 | `icon*.png`, `icon.svg`, `apple-touch-icon.png` | App icons |
