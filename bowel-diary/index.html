@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Bowel Diary">
+<script src="brand.js"></script>
 <style>
   :root {
     --bg: #f3f6f6;
@@ -101,14 +102,22 @@
   .install.show { display: flex; }
   .install p { margin: 0; flex: 1; font-size: .92rem; }
   details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+  .brand { display: none; align-items: center; gap: 12px; margin: 4px 0 10px; }
+  .brand.show { display: flex; }
+  .brand img { max-height: 48px; max-width: 140px; object-fit: contain; background: #fff; border-radius: 8px; padding: 4px; }
+  .brand strong { font-size: 1rem; }
+  .instructions { display: none; }
+  .instructions.show { display: block; }
   .disclaimer { color: var(--muted); font-size: .82rem; text-align: center; margin-top: 24px; }
   @media (prefers-reduced-motion: reduce) { .progress > div { transition: none; } }
 </style>
 </head>
 <body>
 <main>
+  <div class="brand" id="brand"><img id="brandLogo" alt="" hidden><strong id="brandName"></strong></div>
   <h1>Bowel diary</h1>
   <p class="sub">Log each visit. Everything stays on this device.</p>
+  <section class="card instructions" id="instructions" aria-label="Instructions"></section>
 
   <section class="card install" id="installCard" aria-label="Install">
     <p id="installText">Add Bowel Diary to your home screen so it works like an app, even offline.</p>
@@ -116,9 +125,9 @@
   </section>
 
   <section class="card" aria-label="Progress">
-    <strong id="progText">Day 0 of 14</strong>
+    <strong id="progText">Day 0</strong>
     <div class="progress"><div id="progBar"></div></div>
-    <div class="small" id="progSub">Add your first entry to start the two weeks.</div>
+    <div class="small" id="progSub">Add your first entry to start.</div>
   </section>
 
   <section class="card" aria-label="New entry">
@@ -219,6 +228,59 @@
   var EASE = ["Easy", "Strained", "Urgent"];
   var EMPTY = ["Yes", "Partly", "No"];
   var EXTRAS = ["Pain", "Blood", "Mucus"];
+
+  // ---- clinic branding (from brand.js)
+  var BRAND = window.BRAND || {};
+  var DAYS = Math.max(1, Math.round(+BRAND.days || 14));
+  function hexToRgb(h) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(String(h || "").trim());
+    if (!m) return null;
+    var n = parseInt(m[1], 16);
+    return [n >> 16, (n >> 8) & 255, n & 255];
+  }
+  // Light brand colours need dark text on top of them to stay readable.
+  function isLight(rgb) {
+    var l = rgb.map(function (c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
+    return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2] > 0.25;
+  }
+  var brandRgb = hexToRgb(BRAND.color);
+  var logo = null; // { data, w, h } once loaded
+  // A pale version of the brand colour, for backgrounds.
+  function tint(rgb) { return rgb.map(function (c) { return Math.round(c + (255 - c) * 0.86); }); }
+
+  function applyBrand() {
+    if (brandRgb) {
+      var hex = "#" + brandRgb.map(function (c) { return pad(c.toString(16)); }).join("");
+      var st = document.createElement("style");
+      st.textContent = ":root { --accent: " + hex + "; --accent-ink: " + (isLight(brandRgb) ? "#17302f" : "#ffffff") +
+        "; --soft: rgb(" + tint(brandRgb).join(",") + "); }";
+      document.head.appendChild(st);
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", hex);
+    }
+    if (BRAND.clinicName) $("brandName").textContent = BRAND.clinicName;
+    if (BRAND.instructions) {
+      $("instructions").textContent = BRAND.instructions;
+      $("instructions").classList.add("show");
+    }
+    if (BRAND.logo) {
+      var img = new Image();
+      img.onload = function () {
+        var el = $("brandLogo");
+        el.src = BRAND.logo; el.alt = BRAND.clinicName ? BRAND.clinicName + " logo" : "Clinic logo"; el.hidden = false;
+        $("brand").classList.add("show");
+        // Turn the logo into a PNG the PDF can use (works for SVG too).
+        try {
+          var scale = Math.min(1, 600 / Math.max(img.naturalWidth || 600, img.naturalHeight || 600));
+          var w = Math.round((img.naturalWidth || 600) * scale), h = Math.round((img.naturalHeight || 300) * scale);
+          var c = document.createElement("canvas"); c.width = w; c.height = h;
+          c.getContext("2d").drawImage(img, 0, 0, w, h);
+          logo = { data: c.toDataURL("image/png"), w: w, h: h };
+        } catch (e) {}
+      };
+      img.src = BRAND.logo;
+    }
+    if (BRAND.clinicName) $("brand").classList.add("show");
+  }
 
   function load() {
     try {
@@ -401,17 +463,17 @@
   function renderProgress(dates) {
     var asc = dates.slice().sort();
     if (!asc.length) {
-      $("progText").textContent = "Day 0 of 14";
+      $("progText").textContent = "Day 0 of " + DAYS;
       $("progBar").style.width = "0%";
-      $("progSub").textContent = "Add your first entry to start the two weeks.";
+      $("progSub").textContent = "Add your first entry to start the " + DAYS + " days.";
       return;
     }
     var start = parseDate(asc[0]);
     var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-    var day = Math.min(14, Math.max(1, Math.round((t - start) / 86400000) + 1));
-    $("progText").textContent = "Day " + day + " of 14";
-    $("progBar").style.width = (day / 14 * 100) + "%";
-    $("progSub").textContent = day >= 14 ? "Two weeks done. Create your PDF report below." : "Started " + niceDate(asc[0]) + ".";
+    var day = Math.min(DAYS, Math.max(1, Math.round((t - start) / 86400000) + 1));
+    $("progText").textContent = "Day " + day + " of " + DAYS;
+    $("progBar").style.width = (day / DAYS * 100) + "%";
+    $("progSub").textContent = day >= DAYS ? "All " + DAYS + " days done. Create your PDF report below." : "Started " + niceDate(asc[0]) + ".";
   }
 
   // ---- shared numbers for the text summary and the PDF
@@ -442,7 +504,7 @@
   $("makeSummary").addEventListener("click", function () {
     var s = stats();
     if (!s.dates.length) { $("summary").value = "No entries yet."; return; }
-    var lines = ["BOWEL DIARY", s.dates[0] + " to " + s.dates[s.dates.length - 1], ""];
+    var lines = ["BOWEL DIARY" + (BRAND.clinicName ? " - " + BRAND.clinicName : ""), s.dates[0] + " to " + s.dates[s.dates.length - 1], ""];
     lines.push("Total movements: " + s.total + " over " + s.dates.length + " logged day(s)");
     var byType = [];
     for (var t = 1; t <= 7; t++) if (s.types[t]) byType.push("T" + t + " x" + s.types[t]);
@@ -495,27 +557,43 @@
     var s = stats();
     var profile = loadProfile();
     var W = 210, M = 16, R = W - M, BOTTOM = 280;
-    var TEAL = [31, 111, 107], INK = [23, 48, 47], MUTED = [93, 116, 115], LINE = [214, 224, 223], SOFT = [224, 238, 237], WARN = [180, 71, 47];
+    var TEAL = brandRgb || [31, 111, 107], INK = [23, 48, 47], MUTED = [93, 116, 115], LINE = [214, 224, 223], SOFT = brandRgb ? tint(brandRgb) : [224, 238, 237], WARN = [180, 71, 47];
     var y;
 
     function color(c) { doc.setTextColor(c[0], c[1], c[2]); }
     function font(style, size) { doc.setFont("helvetica", style); doc.setFontSize(size); }
 
-    // Header band
+    var HEAD_INK = brandRgb && isLight(brandRgb) ? INK : [255, 255, 255];
+
+    // Header band, with the clinic logo (or name) on the right
     doc.setFillColor(TEAL[0], TEAL[1], TEAL[2]);
     doc.rect(0, 0, W, 30, "F");
-    color([255, 255, 255]);
+    color(HEAD_INK);
     font("bold", 18); doc.text("Bowel Diary Report", M, 14);
     font("normal", 10);
     doc.text(longDate(s.dates[0]) + " to " + longDate(s.dates[s.dates.length - 1]) + "  (" + s.span + " days)", M, 22);
-    doc.text("Created " + longDate(todayStr()), R, 22, { align: "right" });
+    if (logo) {
+      var boxW = 50, boxH = 22, bx = R - boxW, by = 4;
+      var fit = Math.min((boxW - 4) / logo.w, (boxH - 4) / logo.h);
+      var lw = logo.w * fit, lh = logo.h * fit;
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(bx, by, boxW, boxH, 2, 2, "F");
+      doc.addImage(logo.data, "PNG", bx + (boxW - lw) / 2, by + (boxH - lh) / 2, lw, lh);
+    } else if (BRAND.clinicName) {
+      font("bold", 11);
+      doc.text(doc.splitTextToSize(pdfText(BRAND.clinicName), 70), R, 14, { align: "right" });
+    }
 
     y = 40;
     color(INK);
     var who = [];
     if (profile.name) who.push("Name: " + pdfText(profile.name));
     if (profile.dob) who.push("Date of birth: " + longDate(profile.dob));
-    if (who.length) { font("normal", 11); doc.text(who.join("      "), M, y); y += 9; }
+    font("normal", 11);
+    if (who.length) doc.text(who.join("      "), M, y);
+    color(MUTED); font("normal", 9);
+    doc.text("Created " + longDate(todayStr()), R, y, { align: "right" });
+    y += 9;
 
     // Summary tiles
     font("bold", 12); doc.text("Summary", M, y); y += 4;
@@ -646,8 +724,14 @@
     for (var p = 1; p <= pages; p++) {
       doc.setPage(p);
       color(MUTED); font("normal", 7.5);
-      doc.text("Patient-recorded diary. This is a record, not a diagnosis.", M, 290);
-      doc.text("Page " + p + " of " + pages, R, 290, { align: "right" });
+      var clinicLine = [BRAND.clinicName, BRAND.contact].filter(Boolean).map(pdfText).join("  |  ");
+      if (clinicLine) {
+        doc.setDrawColor(LINE[0], LINE[1], LINE[2]); doc.setLineWidth(0.2);
+        doc.line(M, 284, R, 284);
+        doc.text(clinicLine, M, 287.5);
+      }
+      doc.text("Patient-recorded diary. This is a record, not a diagnosis.", M, 291);
+      doc.text("Page " + p + " of " + pages, R, 291, { align: "right" });
     }
     return doc;
   }
@@ -747,6 +831,7 @@
   }
 
   // ---- init
+  applyBrand();
   load();
   var prof = loadProfile();
   $("pName").value = prof.name || "";

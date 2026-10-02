@@ -1,10 +1,11 @@
 // Offline support: cache the app files so the diary opens without a connection.
 // Bump VERSION whenever any cached file changes, so phones pick up the update.
-var VERSION = "bowel-diary-v2";
+var VERSION = "bowel-diary-v3";
 var FILES = [
   "./",
   "./index.html",
   "./manifest.json",
+  "./brand.js",
   "./jspdf.umd.min.js",
   "./icon.svg",
   "./icon-192.png",
@@ -27,6 +28,14 @@ self.addEventListener("activate", function (e) {
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") return;
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
-    return hit || fetch(e.request);
+    if (hit) return hit;
+    return fetch(e.request).then(function (res) {
+      // Keep a copy of anything else from this site (like a clinic logo) for offline use.
+      if (res.ok && new URL(e.request.url).origin === location.origin) {
+        var copy = res.clone();
+        caches.open(VERSION).then(function (c) { c.put(e.request, copy); });
+      }
+      return res;
+    });
   }));
 });
