@@ -199,9 +199,15 @@
     <div class="tools">
       <button class="ghost" id="backup" type="button">Save backup</button>
       <button class="ghost" id="restore" type="button">Restore backup</button>
+      <button class="ghost" id="pasteToggle" type="button" aria-expanded="false">Paste backup</button>
       <button class="ghost danger" id="wipe" type="button">Clear all</button>
     </div>
     <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+    <div id="pasteBox" hidden>
+      <label class="f" for="pasteText">Paste the backup you copied from your old diary</label>
+      <textarea id="pasteText" placeholder='Starts with {"app":"bowel-diary"'></textarea>
+      <button class="primary" id="pasteRestore" type="button" style="margin-top:10px">Restore pasted backup</button>
+    </div>
     <div class="status" id="backupStatus" role="status"></div>
   </section>
 
@@ -783,20 +789,36 @@
     this.value = "";
     if (!f) return;
     var reader = new FileReader();
-    reader.onload = function () {
-      try {
-        var d = JSON.parse(reader.result);
-        if (!d || d.app !== "bowel-diary" || !Array.isArray(d.entries)) throw new Error("bad file");
-        if (!confirm("Replace this diary with the backup (" + d.entries.length + " entries)?")) return;
-        store = { entries: d.entries, days: d.days || {} };
-        save(); render(); loadDay();
-        flash("backupStatus", "Backup restored.");
-      } catch (e) {
-        flash("backupStatus", "That file is not a Bowel Diary backup.");
-      }
-    };
+    reader.onload = function () { restoreFrom(reader.result, "That file is not a Bowel Diary backup."); };
     reader.readAsText(f);
   });
+  $("pasteToggle").addEventListener("click", function () {
+    var box = $("pasteBox");
+    box.hidden = !box.hidden;
+    this.setAttribute("aria-expanded", String(!box.hidden));
+    if (!box.hidden) $("pasteText").focus();
+  });
+  $("pasteRestore").addEventListener("click", function () {
+    if (restoreFrom($("pasteText").value.trim(), "That text is not a Bowel Diary backup. Copy it again from your old diary.")) {
+      $("pasteText").value = ""; $("pasteBox").hidden = true;
+      $("pasteToggle").setAttribute("aria-expanded", "false");
+    }
+  });
+  function restoreFrom(text, badMsg) {
+    var d;
+    try {
+      d = JSON.parse(text);
+      if (!d || d.app !== "bowel-diary" || !Array.isArray(d.entries)) throw new Error("bad backup");
+    } catch (e) {
+      flash("backupStatus", badMsg);
+      return false;
+    }
+    if (!confirm("Replace this diary with the backup (" + d.entries.length + " entries)?")) return false;
+    store = { entries: d.entries, days: d.days || {} };
+    save(); render(); loadDay();
+    flash("backupStatus", "Backup restored: " + d.entries.length + " entries.");
+    return true;
+  }
 
   $("wipe").addEventListener("click", function () {
     if (confirm("Delete the whole diary from this device? This can't be undone.")) {
