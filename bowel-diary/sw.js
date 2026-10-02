@@ -1,6 +1,6 @@
 // Offline support: cache the app files so the diary opens without a connection.
 // Bump VERSION whenever any cached file changes, so phones pick up the update.
-var VERSION = "bowel-diary-v6";
+var VERSION = "bowel-diary-v7";
 var FILES = [
   "./",
   "./index.html",

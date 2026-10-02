@@ -121,7 +121,7 @@
   .compare th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 6px 6px 0; border-bottom: 1px solid var(--line); }
   .compare td { padding: 7px 6px 7px 0; border-bottom: 1px solid var(--line); }
   .compare tr:first-child td { font-weight: 700; }
-  .compare td:last-child { white-space: nowrap; }
+  .compare td:last-child, .compare th { white-space: nowrap; }
   .compare td.good { color: var(--good); font-weight: 700; }
   .compare td.bad { color: var(--warn); font-weight: 700; }
   input[type=number] { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
@@ -204,9 +204,9 @@
   </section>
 
   <section class="card" aria-label="Treatment">
-    <h2>Before and during treatment</h2>
-    <p class="small" style="margin:0">Enter the day your treatment started, for example the day your nerve stimulator was switched on. Entries before this date count as “before”, and entries from this date count as “during”.</p>
-    <label class="f" for="treatStart">Treatment start date</label>
+    <h2 id="cmpTitle">Before and after treatment</h2>
+    <p class="small" style="margin:0" id="cmpHelp"></p>
+    <label class="f" for="treatStart" id="treatLabel">Treatment date</label>
     <input type="date" id="treatStart">
     <div id="compare" class="compare"></div>
   </section>
@@ -286,6 +286,10 @@
   // ---- clinic branding (from brand.js)
   var BRAND = window.BRAND || {};
   var DAYS = Math.max(1, Math.round(+BRAND.days || 14));
+  var BL = BRAND.beforeLabel || "Before", AL = BRAND.afterLabel || "After";
+  var TREAT = BRAND.treatment || "";
+  function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+  function treatOn(date, fmt) { return (TREAT ? cap(TREAT) : "Treatment") + " on " + fmt(date); }
   function hexToRgb(h) {
     var m = /^#?([0-9a-f]{6})$/i.exec(String(h || "").trim());
     if (!m) return null;
@@ -303,6 +307,10 @@
   function tint(rgb) { return rgb.map(function (c) { return Math.round(c + (255 - c) * 0.86); }); }
 
   function applyBrand() {
+    $("cmpTitle").textContent = BL + " and " + AL.toLowerCase();
+    $("treatLabel").textContent = TREAT ? "Date of " + TREAT : "Treatment date";
+    $("cmpHelp").textContent = "Enter the date of your " + (TREAT || "treatment") + ". The report compares the " + DAYS +
+      " days before it (" + BL.toLowerCase() + ") with the first " + DAYS + " days from that date (" + AL.toLowerCase() + ").";
     if (brandRgb) {
       var hex = "#" + brandRgb.map(function (c) { return pad(c.toString(16)); }).join("");
       var st = document.createElement("style");
@@ -361,6 +369,7 @@
   function todayStr() { var d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function nowTime() { var d = new Date(); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
   function parseDate(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(s, n) { var d = parseDate(s); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function daySpan(a, b) { return Math.round((parseDate(b) - parseDate(a)) / 86400000) + 1; }
   function niceDate(s) {
     return parseDate(s).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
@@ -546,7 +555,7 @@
         var nLeak = es.length - nBm;
         var counts = plural(nBm, "movement") + (nLeak ? ", " + plural(nLeak, "accident") : "");
         var html = '<div class="card day"><h3>' + esc(niceDate(date)) + ' <span class="small">(' + counts + ')</span>' +
-          (store.treatStart && date === store.treatStart ? ' <span class="pill">Treatment started</span>' : '') + '</h3>';
+          (store.treatStart && date === store.treatStart ? ' <span class="pill">' + esc(treatOn(date, niceDate).replace(/ on .*$/, "")) + '</span>' : '') + '</h3>';
         if (day && day.none && !nBm) html += '<div class="small">No bowel movement</div>';
         es.forEach(function (e) {
           var leak = isLeak(e);
@@ -581,10 +590,20 @@
       $("progSub").textContent = "Add your first entry to start the " + DAYS + " days.";
       return;
     }
-    var day = Math.min(DAYS, Math.max(1, daySpan(asc[0], todayStr())));
-    $("progText").textContent = "Day " + day + " of " + DAYS;
+    var start = store.treatStart, today = todayStr(), day, label, sub;
+    if (start && today >= start) {
+      day = Math.min(DAYS, daySpan(start, today));
+      label = AL + " day " + day + " of " + DAYS;
+      sub = day >= DAYS ? "All " + DAYS + " " + AL.toLowerCase() + " days done. Create your PDF report below." : treatOn(start, niceDate) + ".";
+    } else {
+      var first = start ? (asc.filter(function (d) { return d >= addDays(start, -DAYS); })[0] || today) : asc[0];
+      day = Math.min(DAYS, Math.max(1, daySpan(first, today)));
+      label = (start ? BL + " day " : "Day ") + day + " of " + DAYS;
+      sub = start ? treatOn(start, niceDate) + "." : day >= DAYS ? "All " + DAYS + " days done. Create your PDF report below." : "Started " + niceDate(asc[0]) + ".";
+    }
+    $("progText").textContent = label;
     $("progBar").style.width = (day / DAYS * 100) + "%";
-    $("progSub").textContent = day >= DAYS ? "All " + DAYS + " days done. Create your PDF report below." : "Started " + niceDate(asc[0]) + ".";
+    $("progSub").textContent = sub;
   }
 
   // ---- numbers for a stretch of days (the whole diary, or before / during treatment)
@@ -634,13 +653,14 @@
     var dates = allDates().sort();
     return dates.length ? periodStats(dates[0], dates[dates.length - 1]) : null;
   }
-  // Before = first logged day to the day before treatment; during = treatment start to last logged day.
+  // Before = the DAYS days up to treatment; after = the first DAYS days from the treatment date.
+  // Each period runs from its first to its last logged day inside that window.
   function comparison() {
     var start = store.treatStart;
     if (!start) return null;
     var dates = allDates().sort();
-    var before = dates.filter(function (d) { return d < start; });
-    var during = dates.filter(function (d) { return d >= start; });
+    var before = dates.filter(function (d) { return d < start && d >= addDays(start, -DAYS); });
+    var during = dates.filter(function (d) { return d >= start && d <= addDays(start, DAYS - 1); });
     if (!before.length || !during.length) return { start: start, before: before.length, during: during.length };
     return {
       start: start,
@@ -685,13 +705,13 @@
     var c = comparison();
     if (!c) { box.innerHTML = ""; return; }
     if (!c.b) {
-      box.innerHTML = '<p class="small">Logged so far: ' + plural(c.before, "day") + ' before and ' + plural(c.during, "day") +
-        ' during treatment. The comparison appears once both have entries.</p>';
+      box.innerHTML = '<p class="small">Logged so far: ' + plural(c.before, "day") + ' ' + esc(BL.toLowerCase()) + ' and ' + plural(c.during, "day") +
+        ' ' + esc(AL.toLowerCase()) + '. The comparison appears once both have entries.</p>';
       return;
     }
-    box.innerHTML = '<p class="small">Before: ' + esc(niceDate(c.b.from)) + ' to ' + esc(niceDate(c.b.to)) + ' (' + plural(c.b.days, "day") + '). ' +
-      'During: ' + esc(niceDate(c.d.from)) + ' to ' + esc(niceDate(c.d.to)) + ' (' + plural(c.d.days, "day") + ').</p>' +
-      '<div class="tablewrap"><table><thead><tr><th>Measure</th><th>Before</th><th>During</th><th>Change</th></tr></thead><tbody>' +
+    box.innerHTML = '<p class="small">' + esc(BL) + ': ' + esc(niceDate(c.b.from)) + ' to ' + esc(niceDate(c.b.to)) + ' (' + plural(c.b.days, "day") + '). ' +
+      '' + esc(AL) + ': ' + esc(niceDate(c.d.from)) + ' to ' + esc(niceDate(c.d.to)) + ' (' + plural(c.d.days, "day") + ').</p>' +
+      '<div class="tablewrap"><table><thead><tr><th>Measure</th><th>' + esc(BL) + '</th><th>' + esc(AL) + '</th><th>Change</th></tr></thead><tbody>' +
       cmpRows(c).map(function (r) {
         return '<tr><td>' + esc(r.label) + '</td><td>' + esc(r.b) + '</td><td>' + esc(r.d) + '</td><td class="' +
           (r.better === true ? 'good' : r.better === false ? 'bad' : '') + '">' + esc(r.change) + '</td></tr>';
@@ -710,13 +730,13 @@
     lines.push("By Bristol type: " + (byType.join(", ") || "none"));
     var c = comparison();
     if (c && c.b) {
-      lines.push("", "BEFORE vs DURING TREATMENT (started " + c.start + ")");
-      lines.push("Before: " + c.b.from + " to " + c.b.to + " (" + c.b.days + " days). During: " + c.d.from + " to " + c.d.to + " (" + c.d.days + " days)");
+      lines.push("", (BL + " vs " + AL).toUpperCase() + " (" + treatOn(c.start, function (d) { return d; }) + ")");
+      lines.push(BL + ": " + c.b.from + " to " + c.b.to + " (" + c.b.days + " days). " + AL + ": " + c.d.from + " to " + c.d.to + " (" + c.d.days + " days)");
       cmpRows(c).forEach(function (r) { lines.push("  " + r.label + ": " + r.b + " -> " + r.d + " (" + r.change + ")"); });
     }
     lines.push("");
     allDates().sort().forEach(function (d) {
-      if (store.treatStart && d === store.treatStart) lines.push("--- Treatment started ---");
+      if (store.treatStart && d === store.treatStart) lines.push("--- " + treatOn(d, function (x) { return x; }) + " ---");
       lines.push(niceDate(d) + " (" + d + ")");
       var day = store.days[d];
       var es = entriesOn(d);
@@ -837,17 +857,17 @@
 
     // Before vs during treatment
     if (c && c.b) {
-      heading("Before vs during treatment", 80); y += 5;
+      heading(BL + " vs " + AL, 80); y += 5;
       color(MUTED); font("normal", 9);
-      var periodLines = doc.splitTextToSize("Treatment started " + longDate(c.start) + ".  Before: " + longDate(c.b.from) + " to " + longDate(c.b.to) + " (" + c.b.days +
-        " days).  During: " + longDate(c.d.from) + " to " + longDate(c.d.to) + " (" + c.d.days + " days).", R - M);
+      var periodLines = doc.splitTextToSize(pdfText(treatOn(c.start, longDate)) + ".  " + BL + ": " + longDate(c.b.from) + " to " + longDate(c.b.to) + " (" + c.b.days +
+        " days).  " + AL + ": " + longDate(c.d.from) + " to " + longDate(c.d.to) + " (" + c.d.days + " days).", R - M);
       doc.text(periodLines, M, y);
       y += periodLines.length * 4 + 2;
       var cx = [M, M + 82, M + 112, M + 142];
       doc.setFillColor(TEAL[0], TEAL[1], TEAL[2]);
       doc.rect(M, y, R - M, 7, "F");
       color(HEAD_INK); font("bold", 8.5);
-      ["Measure", "Before", "During", "Change"].forEach(function (h, i) { doc.text(h, cx[i] + 1.5, y + 4.8); });
+      ["Measure", pdfText(BL), pdfText(AL), "Change"].forEach(function (h, i) { doc.text(h, cx[i] + 1.5, y + 4.8); });
       y += 7;
       cmpRows(c).forEach(function (r, i) {
         if (i % 2 === 1) { doc.setFillColor(246, 249, 249); doc.rect(M, y, R - M, 6.5, "F"); }
@@ -914,7 +934,7 @@
         doc.setFillColor(SOFT[0], SOFT[1], SOFT[2]);
         doc.rect(M, y, R - M, 6, "F");
         color(TEAL); font("bold", 8.5);
-        doc.text("Treatment started " + longDate(c.start), M + 1.5, y + 4.2);
+        doc.text(pdfText(treatOn(c.start, longDate)), M + 1.5, y + 4.2);
         y += 6;
       }
       var es = entriesOn(d);

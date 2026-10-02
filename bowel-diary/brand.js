@@ -11,6 +11,11 @@ window.BRAND = {
   contact: "",
   // Short instructions shown at the top of the app
   instructions: "",
-  // How many days the diary runs for
-  days: 14
+  // How many days each period runs for (before treatment, and after it)
+  days: 14,
+  // The treatment being compared, e.g. "sacral nerve modulation (SNM)"
+  treatment: "sacral nerve modulation (SNM)",
+  // Names for the two periods, e.g. "Pre-op" and "Post-op"
+  beforeLabel: "Pre-op",
+  afterLabel: "Post-op"
 };
