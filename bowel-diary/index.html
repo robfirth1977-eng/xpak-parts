@@ -849,7 +849,12 @@
     $("installCard").classList.add("show");
   }
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("sw.js").catch(function () {});
+    // When a new version takes over, reload once so the update shows straight away.
+    var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
+    navigator.serviceWorker.register("sw.js").then(function (reg) { reg.update(); }).catch(function () {});
   }
 
   // ---- init

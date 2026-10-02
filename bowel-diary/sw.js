@@ -1,6 +1,6 @@
 // Offline support: cache the app files so the diary opens without a connection.
 // Bump VERSION whenever any cached file changes, so phones pick up the update.
-var VERSION = "bowel-diary-v4";
+var VERSION = "bowel-diary-v5";
 var FILES = [
   "./",
   "./index.html",
@@ -27,6 +27,20 @@ self.addEventListener("activate", function (e) {
 
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") return;
+  // The page itself: try the internet first so updates show straight away,
+  // and fall back to the saved copy when offline.
+  if (e.request.mode === "navigate") {
+    e.respondWith(fetch(e.request).then(function (res) {
+      if (res.ok) {
+        var copy = res.clone();
+        caches.open(VERSION).then(function (c) { c.put("./index.html", copy); });
+      }
+      return res;
+    }).catch(function () {
+      return caches.match("./index.html");
+    }));
+    return;
+  }
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
     if (hit) return hit;
     return fetch(e.request).then(function (res) {
