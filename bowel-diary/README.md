@@ -4,9 +4,11 @@ A private bowel diary that works on any phone or computer. Patients log each vis
 
 ## What it does
 
-- Logs each bowel movement: Bristol stool type, ease, emptying, pain, blood or mucus, and notes
-- Daily notes for food, drink, sleep and stress
-- PDF report with a summary, a stool type chart and the full daily log
+- Logs each bowel movement: Bristol stool type, ease, emptying, how long the person could hold on, pain, blood or mucus, and notes
+- Logs accidents (leakage): amount (stain, small or large), urge or passive, and notes
+- Daily notes for pads used, food, drink, sleep and stress
+- Before and during treatment comparison (for example a sacral nerve stimulation trial): accidents per week, days with an accident, urgency, hold time and pads per day, with the change for each
+- PDF report with a summary, the before and during comparison, a stool type chart and the full daily log
 - Backup and restore to a file
 - Can be installed on the home screen and works offline
 

@@ -23,6 +23,8 @@
     --accent-ink: #ffffff;
     --soft: #e0eeed;
     --warn: #b4472f;
+    --warn-soft: #f7e4df;
+    --good: #1f7848;
     box-sizing: border-box;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -30,12 +32,12 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #0f1c1c; --card: #172828; --ink: #e4f0ef; --muted: #93aeac;
-      --line: #284241; --accent: #4fb5ae; --accent-ink: #0b1a1a; --soft: #1f3a39; --warn: #e58a73;
+      --line: #284241; --accent: #4fb5ae; --accent-ink: #0b1a1a; --soft: #1f3a39; --warn: #e58a73; --warn-soft: #3d2620; --good: #6cc996;
     }
   }
   :root[data-theme="dark"] {
     --bg: #0f1c1c; --card: #172828; --ink: #e4f0ef; --muted: #93aeac;
-    --line: #284241; --accent: #4fb5ae; --accent-ink: #0b1a1a; --soft: #1f3a39; --warn: #e58a73;
+    --line: #284241; --accent: #4fb5ae; --accent-ink: #0b1a1a; --soft: #1f3a39; --warn: #e58a73; --warn-soft: #3d2620; --good: #6cc996;
   }
   html { scroll-padding-top: env(safe-area-inset-top, 0px); }
   * { box-sizing: border-box; }
@@ -108,6 +110,21 @@
   .brand strong { font-size: 1rem; }
   .instructions { display: none; }
   .instructions.show { display: block; }
+  .kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 4px; }
+  .kinds button { font-weight: 700; }
+  #kindLeak[aria-pressed="true"] { background: var(--warn); border-color: var(--warn); color: var(--card); }
+  .badge.leak { background: var(--warn-soft); color: var(--warn); }
+  .pill { font-size: .75rem; font-weight: 700; color: var(--accent); background: var(--soft); border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
+  .compare { margin-top: 10px; }
+  .tablewrap { overflow-x: auto; }
+  .compare table { width: 100%; border-collapse: collapse; font-size: .88rem; font-variant-numeric: tabular-nums; }
+  .compare th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 6px 6px 0; border-bottom: 1px solid var(--line); }
+  .compare td { padding: 7px 6px 7px 0; border-bottom: 1px solid var(--line); }
+  .compare tr:first-child td { font-weight: 700; }
+  .compare td:last-child { white-space: nowrap; }
+  .compare td.good { color: var(--good); font-weight: 700; }
+  .compare td.bad { color: var(--warn); font-weight: 700; }
+  input[type=number] { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
   .disclaimer { color: var(--muted); font-size: .82rem; text-align: center; margin-top: 24px; }
   @media (prefers-reduced-motion: reduce) { .progress > div { transition: none; } }
 </style>
@@ -116,7 +133,7 @@
 <main>
   <div class="brand" id="brand"><img id="brandLogo" alt="" hidden><strong id="brandName"></strong></div>
   <h1>Bowel diary</h1>
-  <p class="sub">Log each visit. Everything stays on this device.</p>
+  <p class="sub">Log each visit and any accidents. Everything stays on this device.</p>
   <section class="card instructions" id="instructions" aria-label="Instructions"></section>
 
   <section class="card install" id="installCard" aria-label="Install">
@@ -131,21 +148,37 @@
   </section>
 
   <section class="card" aria-label="New entry">
-    <h2>New bowel movement</h2>
+    <h2>New entry</h2>
+    <div class="kinds" role="group" aria-label="What happened?">
+      <button class="opt" id="kindBm" type="button" aria-pressed="true">Bowel movement</button>
+      <button class="opt" id="kindLeak" type="button" aria-pressed="false">Accident / leak</button>
+    </div>
     <div class="row">
       <div><label class="f" for="date">Date</label><input type="date" id="date"></div>
       <div><label class="f" for="time">Time</label><input type="time" id="time"></div>
     </div>
 
-    <label class="f">Type (Bristol scale)</label>
+    <div id="leakFields" hidden>
+      <label class="f">How much?</label>
+      <div class="seg" id="size"></div>
+      <label class="f">Did you feel it coming?</label>
+      <div class="seg" id="feel"></div>
+    </div>
+
+    <label class="f" id="bristolLabel">Type (Bristol scale)</label>
     <div class="bristol" id="bristol"></div>
     <div class="hint" id="bristolHint">1 = hard lumps, 4 = ideal, 7 = watery</div>
 
-    <label class="f">Ease</label>
-    <div class="seg" id="ease"></div>
+    <div id="bmFields">
+      <label class="f">Ease</label>
+      <div class="seg" id="ease"></div>
 
-    <label class="f">Felt empty afterwards?</label>
-    <div class="seg" id="empty"></div>
+      <label class="f">Felt empty afterwards?</label>
+      <div class="seg" id="empty"></div>
+
+      <label class="f">When you felt the urge, how long could you hold on?</label>
+      <div class="seg" id="hold"></div>
+    </div>
 
     <label class="f">Anything unusual?</label>
     <div class="seg" id="extras"></div>
@@ -158,14 +191,24 @@
 
   <section class="card" aria-label="Day notes">
     <h2>Day notes</h2>
-    <label class="f" for="dayDate">Date</label>
-    <input type="date" id="dayDate">
+    <div class="row">
+      <div><label class="f" for="dayDate">Date</label><input type="date" id="dayDate"></div>
+      <div><label class="f" for="dayPads">Pads used</label><input type="number" id="dayPads" min="0" max="50" inputmode="numeric" placeholder="0"></div>
+    </div>
     <label class="f" for="dayText">Food, drink, medication, stress, sleep, bloating</label>
     <textarea id="dayText" placeholder="e.g. 3 coffees, wine with dinner, poor sleep, bloated in the evening"></textarea>
     <div class="seg" style="margin-top:10px">
       <button class="opt" id="noBM" type="button" aria-pressed="false">No bowel movement this day</button>
     </div>
     <button class="primary" id="saveDay" type="button">Save day notes</button>
+  </section>
+
+  <section class="card" aria-label="Treatment">
+    <h2>Before and during treatment</h2>
+    <p class="small" style="margin:0">Enter the day your treatment started, for example the day your nerve stimulator was switched on. Entries before this date count as “before”, and entries from this date count as “during”.</p>
+    <label class="f" for="treatStart">Treatment start date</label>
+    <input type="date" id="treatStart">
+    <div id="compare" class="compare"></div>
   </section>
 
   <section aria-label="Log">
@@ -219,8 +262,9 @@
 (function () {
   var KEY = "bowel-diary-v1";
   var PROFILE_KEY = "bowel-diary-profile";
-  var store = { entries: [], days: {} };
-  var form = { type: null, ease: null, empty: null, extras: [] };
+  var store = { entries: [], days: {}, treatStart: "" };
+  var kind = "bm";
+  var form;
 
   var BRISTOL = {
     1: "Type 1: separate hard lumps",
@@ -233,6 +277,10 @@
   };
   var EASE = ["Easy", "Strained", "Urgent"];
   var EMPTY = ["Yes", "Partly", "No"];
+  var HOLD = ["Under 1 min", "1-5 min", "5-15 min", "Over 15 min"];
+  var HOLD_OK = ["5-15 min", "Over 15 min"];
+  var SIZE = ["Stain", "Small", "Large"];
+  var FEEL = ["Yes (urge)", "No (passive)"];
   var EXTRAS = ["Pain", "Blood", "Mucus"];
 
   // ---- clinic branding (from brand.js)
@@ -295,6 +343,7 @@
         var d = JSON.parse(raw);
         store.entries = d.entries || [];
         store.days = d.days || {};
+        store.treatStart = d.treatStart || "";
       }
     } catch (e) {}
   }
@@ -312,6 +361,7 @@
   function todayStr() { var d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function nowTime() { var d = new Date(); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
   function parseDate(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function daySpan(a, b) { return Math.round((parseDate(b) - parseDate(a)) / 86400000) + 1; }
   function niceDate(s) {
     return parseDate(s).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
   }
@@ -326,6 +376,7 @@
     clearTimeout(flash[id]);
     flash[id] = setTimeout(function () { $(id).textContent = ""; }, 5000);
   }
+  function isLeak(e) { return e.kind === "leak"; }
 
   // ---- build form buttons
   function seg(containerId, items, key, multi) {
@@ -371,11 +422,27 @@
     }
   }
 
+  function setKind(k) {
+    kind = k;
+    $("kindBm").setAttribute("aria-pressed", String(k === "bm"));
+    $("kindLeak").setAttribute("aria-pressed", String(k === "leak"));
+    $("bmFields").hidden = k !== "bm";
+    $("leakFields").hidden = k !== "leak";
+    $("bristolLabel").textContent = k === "leak" ? "Type (Bristol scale), if you know it" : "Type (Bristol scale)";
+    if (form && !form.type) $("bristolHint").textContent = "1 = hard lumps, 4 = ideal, 7 = watery";
+    $("note").placeholder = k === "leak" ? "e.g. while walking, at night, after a meal" : "e.g. after coffee, rushed";
+  }
+  $("kindBm").addEventListener("click", function () { setKind("bm"); });
+  $("kindLeak").addEventListener("click", function () { setKind("leak"); });
+
   function resetForm() {
-    form = { type: null, ease: null, empty: null, extras: [] };
+    form = { type: null, ease: null, empty: null, hold: null, size: null, feel: null, extras: [] };
     buildBristol();
     seg("ease", EASE, "ease", false);
     seg("empty", EMPTY, "empty", false);
+    seg("hold", HOLD, "hold", false);
+    seg("size", SIZE, "size", false);
+    seg("feel", FEEL, "feel", false);
     seg("extras", EXTRAS, "extras", true);
     $("bristolHint").textContent = "1 = hard lumps, 4 = ideal, 7 = watery";
     $("note").value = "";
@@ -385,15 +452,23 @@
 
   // ---- actions
   $("save").addEventListener("click", function () {
-    if (!form.type) { $("bristolHint").textContent = "Pick a type from 1 to 7 first."; return; }
-    store.entries.push({
-      id: Date.now(),
+    var e = {
+      id: Date.now(), kind: kind,
       date: $("date").value || todayStr(),
       time: $("time").value || nowTime(),
-      type: form.type, ease: form.ease, empty: form.empty,
-      extras: form.extras.slice(), note: $("note").value.trim()
-    });
+      type: form.type, extras: form.extras.slice(), note: $("note").value.trim()
+    };
+    if (kind === "bm") {
+      if (!form.type) { $("bristolHint").textContent = "Pick a type from 1 to 7 first."; return; }
+      e.ease = form.ease; e.empty = form.empty; e.hold = form.hold;
+    } else {
+      if (!form.size) { $("bristolHint").textContent = "Pick how much first (stain, small or large)."; return; }
+      e.size = form.size;
+      e.feel = form.feel === FEEL[0] ? "Urge" : form.feel === FEEL[1] ? "Passive" : null;
+    }
+    store.entries.push(e);
     save(); resetForm(); render();
+    $("bristolHint").textContent = kind === "leak" ? "Accident saved." : "Entry saved.";
   });
 
   var noBMOn = false;
@@ -405,20 +480,44 @@
   function loadDay() {
     var d = store.days[$("dayDate").value] || {};
     $("dayText").value = d.text || "";
+    $("dayPads").value = d.pads != null ? d.pads : "";
     noBMOn = !!d.none;
     $("noBM").setAttribute("aria-pressed", String(noBMOn));
   }
   $("saveDay").addEventListener("click", function () {
     var date = $("dayDate").value || todayStr();
     var text = $("dayText").value.trim();
-    if (!text && !noBMOn) delete store.days[date];
-    else store.days[date] = { text: text, none: noBMOn };
+    var padsRaw = $("dayPads").value.trim();
+    var pads = padsRaw === "" ? null : Math.max(0, Math.round(+padsRaw) || 0);
+    if (!text && !noBMOn && pads === null) delete store.days[date];
+    else store.days[date] = { text: text, none: noBMOn, pads: pads };
+    save(); render();
+  });
+
+  $("treatStart").addEventListener("change", function () {
+    store.treatStart = this.value || "";
     save(); render();
   });
 
   function removeEntry(id) {
     store.entries = store.entries.filter(function (e) { return e.id !== id; });
     save(); render();
+  }
+
+  // ---- describing entries
+  function bmDetails(e) {
+    var bits = [];
+    if (e.ease) bits.push(e.ease);
+    if (e.empty) bits.push("empty: " + e.empty.toLowerCase());
+    if (e.hold) bits.push("held " + e.hold.toLowerCase());
+    return bits;
+  }
+  function leakDetails(e) {
+    var bits = [e.size];
+    if (e.feel === "Urge") bits.push("urge");
+    if (e.feel === "Passive") bits.push("passive (not felt)");
+    if (e.type) bits.push("type " + e.type);
+    return bits;
   }
 
   // ---- render
@@ -432,6 +531,7 @@
     return store.entries.filter(function (e) { return e.date === date; })
       .sort(function (a, b) { return a.time < b.time ? -1 : 1; });
   }
+  function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
 
   function render() {
     var dates = allDates();
@@ -442,19 +542,25 @@
       log.innerHTML = dates.map(function (date) {
         var es = entriesOn(date).reverse();
         var day = store.days[date];
-        var html = '<div class="card day"><h3>' + esc(niceDate(date)) + ' <span class="small">(' + es.length + ' movement' + (es.length === 1 ? "" : "s") + ')</span></h3>';
-        if (day && day.none && !es.length) html += '<div class="small">No bowel movement</div>';
+        var nBm = es.filter(function (e) { return !isLeak(e); }).length;
+        var nLeak = es.length - nBm;
+        var counts = plural(nBm, "movement") + (nLeak ? ", " + plural(nLeak, "accident") : "");
+        var html = '<div class="card day"><h3>' + esc(niceDate(date)) + ' <span class="small">(' + counts + ')</span>' +
+          (store.treatStart && date === store.treatStart ? ' <span class="pill">Treatment started</span>' : '') + '</h3>';
+        if (day && day.none && !nBm) html += '<div class="small">No bowel movement</div>';
         es.forEach(function (e) {
-          var bits = [];
-          if (e.ease) bits.push(e.ease);
-          if (e.empty) bits.push("Empty: " + e.empty.toLowerCase());
-          html += '<div class="entry"><div class="badge">' + e.type + '</div><div class="body">' +
-            '<div><strong>' + esc(e.time) + '</strong> <span class="meta">' + esc(bits.join(" · ")) + '</span></div>' +
+          var leak = isLeak(e);
+          html += '<div class="entry"><div class="badge' + (leak ? ' leak' : '') + '">' + (leak ? '!' : e.type) + '</div><div class="body">' +
+            '<div><strong>' + esc(e.time) + '</strong> ' + (leak ? '<span class="flag">Accident</span> ' : '') +
+            '<span class="meta">' + esc((leak ? leakDetails(e) : bmDetails(e)).join(" · ")) + '</span></div>' +
             (e.extras.length ? '<div class="flag">' + esc(e.extras.join(", ")) + '</div>' : '') +
             (e.note ? '<div class="meta">' + esc(e.note) + '</div>' : '') +
             '</div><button class="x" data-id="' + e.id + '" aria-label="Delete entry">✕</button></div>';
         });
-        if (day && day.text) html += '<div class="daynote">' + esc(day.text) + '</div>';
+        var notes = [];
+        if (day && day.pads != null) notes.push("Pads used: " + day.pads);
+        if (day && day.text) notes.push(day.text);
+        if (notes.length) html += '<div class="daynote">' + esc(notes.join(" · ")) + '</div>';
         return html + '</div>';
       }).join("");
       Array.prototype.forEach.call(log.querySelectorAll(".x"), function (b) {
@@ -464,6 +570,7 @@
       });
     }
     renderProgress(dates);
+    renderCompare();
   }
 
   function renderProgress(dates) {
@@ -474,61 +581,153 @@
       $("progSub").textContent = "Add your first entry to start the " + DAYS + " days.";
       return;
     }
-    var start = parseDate(asc[0]);
-    var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-    var day = Math.min(DAYS, Math.max(1, Math.round((t - start) / 86400000) + 1));
+    var day = Math.min(DAYS, Math.max(1, daySpan(asc[0], todayStr())));
     $("progText").textContent = "Day " + day + " of " + DAYS;
     $("progBar").style.width = (day / DAYS * 100) + "%";
     $("progSub").textContent = day >= DAYS ? "All " + DAYS + " days done. Create your PDF report below." : "Started " + niceDate(asc[0]) + ".";
   }
 
-  // ---- shared numbers for the text summary and the PDF
-  function stats() {
-    var dates = allDates().sort();
+  // ---- numbers for a stretch of days (the whole diary, or before / during treatment)
+  function periodStats(from, to) {
+    var es = store.entries.filter(function (e) { return e.date >= from && e.date <= to; });
+    var bms = es.filter(function (e) { return !isLeak(e); });
+    var leaks = es.filter(isLeak);
+    var days = daySpan(from, to);
+    var leakDays = {};
+    leaks.forEach(function (e) { leakDays[e.date] = 1; });
+    var held = bms.filter(function (e) { return e.hold; });
+    var padDays = Object.keys(store.days).filter(function (d) { return d >= from && d <= to && store.days[d].pads != null; });
+    var pads = padDays.reduce(function (sum, d) { return sum + store.days[d].pads; }, 0);
+    var noneDays = 0;
+    for (var t = parseDate(from); t <= parseDate(to); t.setDate(t.getDate() + 1)) {
+      var ds = t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate());
+      if (!bms.some(function (e) { return e.date === ds; }) && store.days[ds] && store.days[ds].none) noneDays++;
+    }
     var s = {
-      dates: dates, total: store.entries.length, types: [0, 0, 0, 0, 0, 0, 0, 0],
-      strained: 0, urgent: 0, notEmpty: 0, pain: 0, blood: 0, mucus: 0, noneDays: 0
+      from: from, to: to, days: days, bms: bms.length, leaks: leaks.length,
+      types: [0, 0, 0, 0, 0, 0, 0, 0],
+      strained: 0, urgent: 0, notEmpty: 0, pain: 0, blood: 0, mucus: 0, noneDays: noneDays,
+      large: leaks.filter(function (e) { return e.size === "Large"; }).length,
+      passive: leaks.filter(function (e) { return e.feel === "Passive"; }).length,
+      urgeLeaks: leaks.filter(function (e) { return e.feel === "Urge"; }).length,
+      leakPerWeek: leaks.length / days * 7,
+      leakDayPct: Object.keys(leakDays).length / days * 100,
+      bmPerDay: bms.length / days,
+      holdOkPct: held.length ? held.filter(function (e) { return HOLD_OK.indexOf(e.hold) > -1; }).length / held.length * 100 : null,
+      padsPerDay: padDays.length ? pads / padDays.length : null
     };
-    store.entries.forEach(function (e) {
+    bms.forEach(function (e) {
       s.types[e.type]++;
       if (e.ease === "Strained") s.strained++;
       if (e.ease === "Urgent") s.urgent++;
       if (e.empty === "No" || e.empty === "Partly") s.notEmpty++;
+    });
+    es.forEach(function (e) {
       if (e.extras.indexOf("Pain") > -1) s.pain++;
       if (e.extras.indexOf("Blood") > -1) s.blood++;
       if (e.extras.indexOf("Mucus") > -1) s.mucus++;
     });
-    dates.forEach(function (d) { if (!entriesOn(d).length) s.noneDays++; });
-    if (dates.length) {
-      s.span = Math.round((parseDate(dates[dates.length - 1]) - parseDate(dates[0])) / 86400000) + 1;
-      s.perDay = s.total / s.span;
-    }
+    s.urgentPerWeek = s.urgent / days * 7;
     return s;
+  }
+  function overall() {
+    var dates = allDates().sort();
+    return dates.length ? periodStats(dates[0], dates[dates.length - 1]) : null;
+  }
+  // Before = first logged day to the day before treatment; during = treatment start to last logged day.
+  function comparison() {
+    var start = store.treatStart;
+    if (!start) return null;
+    var dates = allDates().sort();
+    var before = dates.filter(function (d) { return d < start; });
+    var during = dates.filter(function (d) { return d >= start; });
+    if (!before.length || !during.length) return { start: start, before: before.length, during: during.length };
+    return {
+      start: start,
+      b: periodStats(before[0], before[before.length - 1]),
+      d: periodStats(start, during[during.length - 1])
+    };
+  }
+  // Rows for the comparison table: label, value getter, decimals, unit, lower-is-better
+  var CMP_ROWS = [
+    ["Accidents per week", "leakPerWeek", 1, "", true],
+    ["Days with an accident", "leakDayPct", 0, "%", true],
+    ["Large accidents", "large", 0, "", true],
+    ["Passive accidents (not felt)", "passive", 0, "", true],
+    ["Bowel movements per day", "bmPerDay", 1, "", null],
+    ["Urgent movements per week", "urgentPerWeek", 1, "", true],
+    ["Could hold on 5+ minutes", "holdOkPct", 0, "%", false],
+    ["Pads per day", "padsPerDay", 1, "", true]
+  ];
+  function fmt(v, dp, unit) { return v == null ? "-" : v.toFixed(dp) + unit; }
+  function change(b, d, pctUnit) {
+    if (b == null || d == null) return "-";
+    if (pctUnit) { var pts = Math.round(d - b); return (pts > 0 ? "+" : "") + pts + " pts"; }
+    if (b === 0) return d === 0 ? "No change" : "-";
+    var pc = Math.round((d - b) / b * 100);
+    return pc === 0 ? "No change" : (pc > 0 ? "+" : "-") + Math.abs(pc) + "%";
+  }
+  function cmpRows(c) {
+    return CMP_ROWS.map(function (r) {
+      var b = c.b[r[1]], d = c.d[r[1]];
+      // Totals (large, passive) are compared per week so different lengths are fair.
+      if (r[1] === "large" || r[1] === "passive") { b = b / c.b.days * 7; d = d / c.d.days * 7; }
+      var label = r[1] === "large" || r[1] === "passive" ? r[0] + " per week" : r[0];
+      var better = null;
+      if (b != null && d != null && r[4] !== null && d !== b) better = r[4] ? d < b : d > b;
+      return { label: label, b: fmt(b, r[2] || (r[1] === "large" || r[1] === "passive" ? 1 : 0), r[3]),
+        d: fmt(d, r[2] || (r[1] === "large" || r[1] === "passive" ? 1 : 0), r[3]), change: change(b, d, r[3] === "%"), better: better };
+    });
+  }
+
+  function renderCompare() {
+    var box = $("compare");
+    var c = comparison();
+    if (!c) { box.innerHTML = ""; return; }
+    if (!c.b) {
+      box.innerHTML = '<p class="small">Logged so far: ' + plural(c.before, "day") + ' before and ' + plural(c.during, "day") +
+        ' during treatment. The comparison appears once both have entries.</p>';
+      return;
+    }
+    box.innerHTML = '<p class="small">Before: ' + esc(niceDate(c.b.from)) + ' to ' + esc(niceDate(c.b.to)) + ' (' + plural(c.b.days, "day") + '). ' +
+      'During: ' + esc(niceDate(c.d.from)) + ' to ' + esc(niceDate(c.d.to)) + ' (' + plural(c.d.days, "day") + ').</p>' +
+      '<div class="tablewrap"><table><thead><tr><th>Measure</th><th>Before</th><th>During</th><th>Change</th></tr></thead><tbody>' +
+      cmpRows(c).map(function (r) {
+        return '<tr><td>' + esc(r.label) + '</td><td>' + esc(r.b) + '</td><td>' + esc(r.d) + '</td><td class="' +
+          (r.better === true ? 'good' : r.better === false ? 'bad' : '') + '">' + esc(r.change) + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
   }
 
   // ---- plain text summary
   $("makeSummary").addEventListener("click", function () {
-    var s = stats();
-    if (!s.dates.length) { $("summary").value = "No entries yet."; return; }
-    var lines = ["BOWEL DIARY" + (BRAND.clinicName ? " - " + BRAND.clinicName : ""), s.dates[0] + " to " + s.dates[s.dates.length - 1], ""];
-    lines.push("Total movements: " + s.total + " over " + s.dates.length + " logged day(s)");
+    var s = overall();
+    if (!s) { $("summary").value = "No entries yet."; return; }
+    var lines = ["BOWEL DIARY" + (BRAND.clinicName ? " - " + BRAND.clinicName : ""), s.from + " to " + s.to + " (" + s.days + " days)", ""];
+    lines.push("Bowel movements: " + s.bms + " (" + s.bmPerDay.toFixed(1) + " per day)");
+    lines.push("Accidents: " + s.leaks + " (" + s.leakPerWeek.toFixed(1) + " per week; " + s.large + " large, " + s.passive + " passive)");
     var byType = [];
     for (var t = 1; t <= 7; t++) if (s.types[t]) byType.push("T" + t + " x" + s.types[t]);
     lines.push("By Bristol type: " + (byType.join(", ") || "none"));
+    var c = comparison();
+    if (c && c.b) {
+      lines.push("", "BEFORE vs DURING TREATMENT (started " + c.start + ")");
+      lines.push("Before: " + c.b.from + " to " + c.b.to + " (" + c.b.days + " days). During: " + c.d.from + " to " + c.d.to + " (" + c.d.days + " days)");
+      cmpRows(c).forEach(function (r) { lines.push("  " + r.label + ": " + r.b + " -> " + r.d + " (" + r.change + ")"); });
+    }
     lines.push("");
-    s.dates.forEach(function (d) {
+    allDates().sort().forEach(function (d) {
+      if (store.treatStart && d === store.treatStart) lines.push("--- Treatment started ---");
       lines.push(niceDate(d) + " (" + d + ")");
       var day = store.days[d];
       var es = entriesOn(d);
-      if (!es.length && day && day.none) lines.push("  No bowel movement");
+      if (!es.some(function (e) { return !isLeak(e); }) && day && day.none) lines.push("  No bowel movement");
       es.forEach(function (e) {
-        var parts = [e.time, "Type " + e.type];
-        if (e.ease) parts.push(e.ease.toLowerCase());
-        if (e.empty) parts.push("empty: " + e.empty.toLowerCase());
+        var parts = isLeak(e) ? [e.time, "ACCIDENT"].concat(leakDetails(e)) : [e.time, "Type " + e.type].concat(bmDetails(e));
         if (e.extras.length) parts.push(e.extras.join("/"));
         if (e.note) parts.push("note: " + e.note);
         lines.push("  " + parts.join(", "));
       });
+      if (day && day.pads != null) lines.push("  Pads used: " + day.pads);
       if (day && day.text) lines.push("  Day notes: " + day.text);
       lines.push("");
     });
@@ -560,14 +759,20 @@
   function buildPdf() {
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({ unit: "mm", format: "a4" });
-    var s = stats();
+    var s = overall();
+    var c = comparison();
     var profile = loadProfile();
     var W = 210, M = 16, R = W - M, BOTTOM = 280;
     var TEAL = brandRgb || [31, 111, 107], INK = [23, 48, 47], MUTED = [93, 116, 115], LINE = [214, 224, 223], SOFT = brandRgb ? tint(brandRgb) : [224, 238, 237], WARN = [180, 71, 47];
+    var GOOD = [31, 120, 72];
     var y;
 
     function color(c) { doc.setTextColor(c[0], c[1], c[2]); }
     function font(style, size) { doc.setFont("helvetica", style); doc.setFontSize(size); }
+    function heading(text, gap) {
+      if (y + (gap || 20) > BOTTOM) { doc.addPage(); y = 16; }
+      color(INK); font("bold", 12); doc.text(text, M, y);
+    }
 
     var HEAD_INK = brandRgb && isLight(brandRgb) ? INK : [255, 255, 255];
 
@@ -577,7 +782,7 @@
     color(HEAD_INK);
     font("bold", 18); doc.text("Bowel Diary Report", M, 14);
     font("normal", 10);
-    doc.text(longDate(s.dates[0]) + " to " + longDate(s.dates[s.dates.length - 1]) + "  (" + s.span + " days)", M, 22);
+    doc.text(longDate(s.from) + " to " + longDate(s.to) + "  (" + s.days + " days)", M, 22);
     if (logo) {
       var boxW = 50, boxH = 22, bx = R - boxW, by = 4;
       var fit = Math.min((boxW - 4) / logo.w, (boxH - 4) / logo.h);
@@ -602,21 +807,21 @@
     y += 9;
 
     // Summary tiles
-    font("bold", 12); doc.text("Summary", M, y); y += 4;
+    heading("Summary (whole diary)"); y += 4;
     var tiles = [
-      ["Movements", String(s.total)],
-      ["Per day (avg)", s.perDay.toFixed(1)],
-      ["Days with none", String(s.noneDays)],
-      ["Strained", String(s.strained)],
-      ["Urgent", String(s.urgent)],
-      ["Not fully empty", String(s.notEmpty)]
+      ["Accidents", String(s.leaks)],
+      ["Accidents / week", s.leakPerWeek.toFixed(1)],
+      ["Movements / day", s.bmPerDay.toFixed(1)],
+      ["Urgent / week", s.urgentPerWeek.toFixed(1)],
+      ["Pads / day", s.padsPerDay == null ? "-" : s.padsPerDay.toFixed(1)],
+      ["Days with none", String(s.noneDays)]
     ];
     var tw = (R - M - 5 * 3) / 6;
     tiles.forEach(function (t, i) {
       var x = M + i * (tw + 3);
       doc.setFillColor(SOFT[0], SOFT[1], SOFT[2]);
       doc.roundedRect(x, y, tw, 18, 2, 2, "F");
-      color(TEAL); font("bold", 14); doc.text(t[1], x + tw / 2, y + 9, { align: "center" });
+      color(i < 2 && s.leaks ? WARN : TEAL); font("bold", 14); doc.text(t[1], x + tw / 2, y + 9, { align: "center" });
       color(MUTED); font("normal", 7.5); doc.text(t[0], x + tw / 2, y + 14.5, { align: "center" });
     });
     y += 24;
@@ -626,13 +831,44 @@
     if (s.blood) warn.push("Blood x" + s.blood);
     if (s.pain) warn.push("Pain x" + s.pain);
     if (s.mucus) warn.push("Mucus x" + s.mucus);
-    font("bold", 10);
-    if (warn.length) { color(WARN); doc.text("Reported: " + warn.join(",  "), M, y); }
+    if (warn.length) { color(WARN); font("bold", 10); doc.text("Reported: " + warn.join(",  "), M, y); }
     else { color(MUTED); font("normal", 10); doc.text("No pain, blood or mucus reported.", M, y); }
     y += 10;
 
-    // Bristol type chart
-    color(INK); font("bold", 12); doc.text("Stool type (Bristol scale)", M, y); y += 6;
+    // Before vs during treatment
+    if (c && c.b) {
+      heading("Before vs during treatment", 80); y += 5;
+      color(MUTED); font("normal", 9);
+      var periodLines = doc.splitTextToSize("Treatment started " + longDate(c.start) + ".  Before: " + longDate(c.b.from) + " to " + longDate(c.b.to) + " (" + c.b.days +
+        " days).  During: " + longDate(c.d.from) + " to " + longDate(c.d.to) + " (" + c.d.days + " days).", R - M);
+      doc.text(periodLines, M, y);
+      y += periodLines.length * 4 + 2;
+      var cx = [M, M + 82, M + 112, M + 142];
+      doc.setFillColor(TEAL[0], TEAL[1], TEAL[2]);
+      doc.rect(M, y, R - M, 7, "F");
+      color(HEAD_INK); font("bold", 8.5);
+      ["Measure", "Before", "During", "Change"].forEach(function (h, i) { doc.text(h, cx[i] + 1.5, y + 4.8); });
+      y += 7;
+      cmpRows(c).forEach(function (r, i) {
+        if (i % 2 === 1) { doc.setFillColor(246, 249, 249); doc.rect(M, y, R - M, 6.5, "F"); }
+        var key = i === 0;
+        color(INK); font(key ? "bold" : "normal", 9);
+        doc.text(r.label, cx[0] + 1.5, y + 4.5);
+        doc.text(r.b, cx[1] + 1.5, y + 4.5);
+        doc.text(r.d, cx[2] + 1.5, y + 4.5);
+        color(r.better === true ? GOOD : r.better === false ? WARN : INK); font("bold", 9);
+        doc.text(r.change, cx[3] + 1.5, y + 4.5);
+        y += 6.5;
+      });
+      doc.setDrawColor(LINE[0], LINE[1], LINE[2]); doc.setLineWidth(0.2); doc.line(M, y, R, y);
+      y += 4;
+      color(MUTED); font("normal", 8);
+      doc.text("Weekly and daily figures are averaged over each period, so periods of different lengths can be compared.", M, y + 1);
+      y += 10;
+    }
+
+    // Bristol type chart (bowel movements only)
+    heading("Stool type (Bristol scale), bowel movements", 70); y += 6;
     var max = Math.max.apply(null, s.types.slice(1)) || 1;
     var labelW = 62, barMax = R - M - labelW - 14;
     for (var t = 1; t <= 7; t++) {
@@ -653,13 +889,13 @@
 
     // Daily log table
     var cols = [
-      { h: "Date", w: 26 }, { h: "Time", w: 13 }, { h: "Type", w: 11 }, { h: "Ease", w: 18 },
-      { h: "Empty", w: 15 }, { h: "Flags", w: 26 }, { h: "Note", w: R - M - 109 }
+      { h: "Date", w: 24 }, { h: "Time", w: 12 }, { h: "Event", w: 20 }, { h: "Details", w: 50 },
+      { h: "Flags", w: 22 }, { h: "Note", w: R - M - 128 }
     ];
     function tableHead() {
       doc.setFillColor(TEAL[0], TEAL[1], TEAL[2]);
       doc.rect(M, y, R - M, 7, "F");
-      color([255, 255, 255]); font("bold", 8.5);
+      color(HEAD_INK); font("bold", 8.5);
       var x = M;
       cols.forEach(function (c) { doc.text(c.h, x + 1.5, y + 4.8); x += c.w; });
       y += 7;
@@ -668,29 +904,40 @@
       if (y + h > BOTTOM) { doc.addPage(); y = 16; tableHead(); }
     }
 
-    color(INK); font("bold", 12);
-    if (y + 20 > BOTTOM) { doc.addPage(); y = 16; }
-    doc.text("Daily log", M, y); y += 3;
+    heading("Daily log", 45); y += 3;
     tableHead();
 
-    s.dates.forEach(function (d, di) {
+    var lineH = 4;
+    allDates().sort().forEach(function (d, di) {
+      if (c && d === c.start) {
+        ensure(7);
+        doc.setFillColor(SOFT[0], SOFT[1], SOFT[2]);
+        doc.rect(M, y, R - M, 6, "F");
+        color(TEAL); font("bold", 8.5);
+        doc.text("Treatment started " + longDate(c.start), M + 1.5, y + 4.2);
+        y += 6;
+      }
       var es = entriesOn(d);
       var day = store.days[d];
       var rows = es.map(function (e) {
-        return [e.time, String(e.type), e.ease || "-", e.empty || "-", e.extras.join(", ") || "", pdfText(e.note || "")];
+        var leak = isLeak(e);
+        return { leak: leak, cells: [e.time, leak ? "ACCIDENT" : "Type " + e.type,
+          (leak ? leakDetails(e) : bmDetails(e)).join(", ") || "-", e.extras.join(", "), pdfText(e.note || "")] };
       });
-      if (!rows.length) rows.push(["", "", day && day.none ? "No movement" : "-", "", "", ""]);
-      var dayLabel = niceDate(d);
-      var noteText = day && day.text ? pdfText("Day notes: " + day.text) : "";
+      if (!rows.length) rows.push({ leak: false, cells: ["", day && day.none ? "No movement" : "-", "", "", ""] });
+      var dayBits = [];
+      if (day && day.pads != null) dayBits.push("Pads used: " + day.pads);
+      if (day && day.text) dayBits.push("Day notes: " + pdfText(day.text));
+      var noteText = dayBits.join(".  ");
 
       font("normal", 8.5);
-      var lineH = 4;
-      var heights = rows.map(function (r) {
-        var lines = doc.splitTextToSize(r[5], cols[6].w - 3).length;
-        return Math.max(1, lines) * lineH + 2.5;
+      rows.forEach(function (r) {
+        r.details = doc.splitTextToSize(r.cells[2], cols[3].w - 3);
+        r.note = doc.splitTextToSize(r.cells[4], cols[5].w - 3);
+        r.h = Math.max(1, r.details.length, r.note.length) * lineH + 2.5;
       });
       var noteLines = noteText ? doc.splitTextToSize(noteText, R - M - cols[0].w - 3) : [];
-      var blockH = heights.reduce(function (a, b) { return a + b; }, 0) + (noteLines.length ? noteLines.length * lineH + 2.5 : 0);
+      var blockH = rows.reduce(function (a, r) { return a + r.h; }, 0) + (noteLines.length ? noteLines.length * lineH + 2.5 : 0);
       ensure(Math.min(blockH, 60));
 
       if (di % 2 === 1) {
@@ -698,20 +945,17 @@
         doc.rect(M, y, R - M, Math.min(blockH, BOTTOM - y), "F");
       }
       var blockTop = y;
-      color(INK); font("bold", 8.5); doc.text(dayLabel, M + 1.5, y + 4.5);
+      color(INK); font("bold", 8.5); doc.text(niceDate(d), M + 1.5, y + 4.5);
 
-      rows.forEach(function (r, ri) {
-        ensure(heights[ri]);
+      rows.forEach(function (r) {
+        ensure(r.h);
         var x = M + cols[0].w;
-        for (var c = 0; c < 6; c++) {
-          var isFlag = c === 4 && r[4];
-          color(isFlag ? WARN : (c === 5 ? MUTED : INK));
-          font(c === 1 || isFlag ? "bold" : "normal", 8.5);
-          var txt = c === 5 ? doc.splitTextToSize(r[5], cols[6].w - 3) : r[c];
-          doc.text(txt, x + 1.5, y + 4.5);
-          x += cols[c + 1].w;
-        }
-        y += heights[ri];
+        color(INK); font("normal", 8.5); doc.text(r.cells[0], x + 1.5, y + 4.5); x += cols[1].w;
+        color(r.leak ? WARN : INK); font("bold", 8.5); doc.text(r.cells[1], x + 1.5, y + 4.5); x += cols[2].w;
+        color(r.leak ? WARN : INK); font("normal", 8.5); doc.text(r.details, x + 1.5, y + 4.5); x += cols[3].w;
+        color(WARN); font("bold", 8.5); doc.text(r.cells[3], x + 1.5, y + 4.5); x += cols[4].w;
+        color(MUTED); font("normal", 8.5); doc.text(r.note, x + 1.5, y + 4.5);
+        y += r.h;
       });
       if (noteLines.length) {
         ensure(noteLines.length * lineH + 2.5);
@@ -768,14 +1012,15 @@
       }
       flash("pdfStatus", "Report created: " + name);
     } catch (e) {
-      flash("pdfStatus", "Sorry, the report could not be created.");
+      flash("pdfStatus", "The report could not be created. Please try again.");
     }
     btn.disabled = false;
   });
 
   // ---- backup and restore
   $("backup").addEventListener("click", function () {
-    var data = JSON.stringify({ app: "bowel-diary", version: 1, saved: new Date().toISOString(), entries: store.entries, days: store.days }, null, 2);
+    var data = JSON.stringify({ app: "bowel-diary", version: 2, saved: new Date().toISOString(),
+      entries: store.entries, days: store.days, treatStart: store.treatStart }, null, 2);
     var url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
     var a = document.createElement("a");
     a.href = url; a.download = "bowel-diary-backup-" + todayStr() + ".json";
@@ -814,15 +1059,17 @@
       return false;
     }
     if (!confirm("Replace this diary with the backup (" + d.entries.length + " entries)?")) return false;
-    store = { entries: d.entries, days: d.days || {} };
+    store = { entries: d.entries, days: d.days || {}, treatStart: d.treatStart || store.treatStart || "" };
     save(); render(); loadDay();
+    $("treatStart").value = store.treatStart;
     flash("backupStatus", "Backup restored: " + d.entries.length + " entries.");
     return true;
   }
 
   $("wipe").addEventListener("click", function () {
     if (confirm("Delete the whole diary from this device? This can't be undone.")) {
-      store = { entries: [], days: {} }; save(); $("summary").value = ""; render(); loadDay();
+      store = { entries: [], days: {}, treatStart: "" }; save(); $("summary").value = ""; $("treatStart").value = "";
+      render(); loadDay();
     }
   });
 
@@ -863,7 +1110,9 @@
   var prof = loadProfile();
   $("pName").value = prof.name || "";
   $("pDob").value = prof.dob || "";
+  $("treatStart").value = store.treatStart;
   resetForm();
+  setKind("bm");
   $("dayDate").value = todayStr();
   loadDay();
   render();
