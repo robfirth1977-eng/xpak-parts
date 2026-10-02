@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bowel Diary</title>
+<meta name="description" content="A private 14-day bowel diary with a PDF report for your doctor.">
+<meta name="theme-color" content="#1f6f6b">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bowel Diary">
+<style>
+  :root {
+    --bg: #f3f6f6;
+    --card: #ffffff;
+    --ink: #17302f;
+    --muted: #5d7473;
+    --line: #d6e0df;
+    --accent: #1f6f6b;
+    --accent-ink: #ffffff;
+    --soft: #e0eeed;
+    --warn: #b4472f;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1c1c; --card: #172828; --ink: #e4f0ef; --muted: #93aeac;
+      --line: #284241; --accent: #4fb5ae; --accent-ink: #0b1a1a; --soft: #1f3a39; --warn: #e58a73;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1c1c; --card: #172828; --ink: #e4f0ef; --muted: #93aeac;
+    --line: #284241; --accent: #4fb5ae; --accent-ink: #0b1a1a; --soft: #1f3a39; --warn: #e58a73;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Atkinson Hyperlegible", -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px; line-height: 1.45;
+  }
+  main { max-width: 560px; margin: 0 auto; padding: 16px 14px 48px; }
+  h1 { font-size: 1.6rem; margin: 8px 0 2px; letter-spacing: -0.01em; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .sub { color: var(--muted); margin: 0 0 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+  label.f { display: block; font-weight: 600; margin: 12px 0 6px; font-size: .95rem; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+  input[type=date], input[type=time], input[type=text], textarea {
+    width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .bristol { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .bristol button { padding: 10px 0; font-size: 1.05rem; font-weight: 700; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  button.opt {
+    font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; cursor: pointer; min-height: 44px;
+  }
+  button.opt[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.opt:focus-visible, .primary:focus-visible, .ghost:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 2px;
+  }
+  .hint { color: var(--muted); font-size: .88rem; margin-top: 6px; min-height: 1.3em; }
+  .primary {
+    width: 100%; margin-top: 16px; font: inherit; font-weight: 700; padding: 13px;
+    background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; cursor: pointer;
+  }
+  .primary:disabled { opacity: .6; cursor: wait; }
+  .ghost {
+    font: inherit; background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 9px 12px; cursor: pointer; min-height: 44px;
+  }
+  .ghost.danger { color: var(--warn); border-color: var(--warn); }
+  .progress { height: 8px; background: var(--soft); border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  .day { margin-bottom: 14px; }
+  .day h3 { margin: 0 0 6px; font-size: 1rem; }
+  .entry { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); }
+  .badge {
+    min-width: 36px; height: 36px; border-radius: 10px; background: var(--soft); color: var(--accent);
+    display: grid; place-items: center; font-weight: 800;
+  }
+  .entry .body { flex: 1; min-width: 0; }
+  .entry .meta { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+  .x { background: none; border: 0; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 4px 8px; min-width: 44px; min-height: 44px; }
+  .flag { color: var(--warn); font-weight: 600; }
+  .daynote { background: var(--bg); border-radius: 10px; padding: 8px 10px; margin-top: 6px; font-size: .92rem; overflow-wrap: anywhere; }
+  .empty { color: var(--muted); text-align: center; padding: 18px 0; }
+  .tools { display: flex; gap: 8px; flex-wrap: wrap; }
+  #summary { min-height: 180px; font-family: ui-monospace, Menlo, monospace; font-size: .8rem; }
+  .small { color: var(--muted); font-size: .85rem; }
+  .status { color: var(--muted); font-size: .9rem; margin-top: 8px; min-height: 1.3em; }
+  .install { display: none; align-items: center; gap: 10px; }
+  .install.show { display: flex; }
+  .install p { margin: 0; flex: 1; font-size: .92rem; }
+  details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+  .disclaimer { color: var(--muted); font-size: .82rem; text-align: center; margin-top: 24px; }
+  @media (prefers-reduced-motion: reduce) { .progress > div { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Bowel diary</h1>
+  <p class="sub">Log each visit. Everything stays on this device.</p>
+
+  <section class="card install" id="installCard" aria-label="Install">
+    <p id="installText">Add Bowel Diary to your home screen so it works like an app, even offline.</p>
+    <button class="ghost" id="installBtn" type="button">Install</button>
+  </section>
+
+  <section class="card" aria-label="Progress">
+    <strong id="progText">Day 0 of 14</strong>
+    <div class="progress"><div id="progBar"></div></div>
+    <div class="small" id="progSub">Add your first entry to start the two weeks.</div>
+  </section>
+
+  <section class="card" aria-label="New entry">
+    <h2>New bowel movement</h2>
+    <div class="row">
+      <div><label class="f" for="date">Date</label><input type="date" id="date"></div>
+      <div><label class="f" for="time">Time</label><input type="time" id="time"></div>
+    </div>
+
+    <label class="f">Type (Bristol scale)</label>
+    <div class="bristol" id="bristol"></div>
+    <div class="hint" id="bristolHint">1 = hard lumps, 4 = ideal, 7 = watery</div>
+
+    <label class="f">Ease</label>
+    <div class="seg" id="ease"></div>
+
+    <label class="f">Felt empty afterwards?</label>
+    <div class="seg" id="empty"></div>
+
+    <label class="f">Anything unusual?</label>
+    <div class="seg" id="extras"></div>
+
+    <label class="f" for="note">Note (optional)</label>
+    <textarea id="note" placeholder="e.g. after coffee, rushed"></textarea>
+
+    <button class="primary" id="save" type="button">Save entry</button>
+  </section>
+
+  <section class="card" aria-label="Day notes">
+    <h2>Day notes</h2>
+    <label class="f" for="dayDate">Date</label>
+    <input type="date" id="dayDate">
+    <label class="f" for="dayText">Food, drink, medication, stress, sleep, bloating</label>
+    <textarea id="dayText" placeholder="e.g. 3 coffees, wine with dinner, poor sleep, bloated in the evening"></textarea>
+    <div class="seg" style="margin-top:10px">
+      <button class="opt" id="noBM" type="button" aria-pressed="false">No bowel movement this day</button>
+    </div>
+    <button class="primary" id="saveDay" type="button">Save day notes</button>
+  </section>
+
+  <section aria-label="Log">
+    <h2>Your log</h2>
+    <div id="log"></div>
+  </section>
+
+  <section class="card" aria-label="Report">
+    <h2>Report for your doctor</h2>
+    <p class="small" style="margin:0 0 4px">Your name and date of birth appear on the report only. Leave blank if you prefer.</p>
+    <div class="row">
+      <div><label class="f" for="pName">Name</label><input type="text" id="pName" autocomplete="name"></div>
+      <div><label class="f" for="pDob">Date of birth</label><input type="date" id="pDob"></div>
+    </div>
+    <button class="primary" id="pdf" type="button">Create PDF report</button>
+    <div class="status" id="pdfStatus" role="status"></div>
+
+    <details style="margin-top:8px">
+      <summary>Plain text summary</summary>
+      <div class="tools">
+        <button class="ghost" id="makeSummary" type="button">Create summary</button>
+        <button class="ghost" id="copy" type="button">Copy</button>
+      </div>
+      <textarea id="summary" readonly style="margin-top:10px" placeholder="Tap “Create summary”, then copy and paste it into a message or email."></textarea>
+    </details>
+  </section>
+
+  <section class="card" aria-label="Backup">
+    <h2>Backup</h2>
+    <p class="small" style="margin:0 0 10px">Your diary lives only on this device. Save a backup file in case you clear your browser or change phone.</p>
+    <div class="tools">
+      <button class="ghost" id="backup" type="button">Save backup</button>
+      <button class="ghost" id="restore" type="button">Restore backup</button>
+      <button class="ghost danger" id="wipe" type="button">Clear all</button>
+    </div>
+    <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+    <div class="status" id="backupStatus" role="status"></div>
+  </section>
+
+  <p class="disclaimer">This diary is a record-keeping tool, not medical advice. If you see blood in your stool, or have ongoing pain or changes in your bowel habits, speak to a doctor.</p>
+</main>
+
+<script src="jspdf.umd.min.js"></script>
+<script>
+(function () {
+  var KEY = "bowel-diary-v1";
+  var PROFILE_KEY = "bowel-diary-profile";
+  var store = { entries: [], days: {} };
+  var form = { type: null, ease: null, empty: null, extras: [] };
+
+  var BRISTOL = {
+    1: "Type 1: separate hard lumps",
+    2: "Type 2: lumpy sausage",
+    3: "Type 3: sausage with cracks",
+    4: "Type 4: smooth, soft sausage (ideal)",
+    5: "Type 5: soft blobs, easy to pass",
+    6: "Type 6: mushy, fluffy pieces",
+    7: "Type 7: watery, no solid bits"
+  };
+  var EASE = ["Easy", "Strained", "Urgent"];
+  var EMPTY = ["Yes", "Partly", "No"];
+  var EXTRAS = ["Pain", "Blood", "Mucus"];
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var d = JSON.parse(raw);
+        store.entries = d.entries || [];
+        store.days = d.days || {};
+      }
+    } catch (e) {}
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+  }
+  function loadProfile() {
+    try { return JSON.parse(localStorage.getItem(PROFILE_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveProfile() {
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: $("pName").value.trim(), dob: $("pDob").value })); } catch (e) {}
+  }
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function todayStr() { var d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function nowTime() { var d = new Date(); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function parseDate(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function niceDate(s) {
+    return parseDate(s).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  }
+  function longDate(s) {
+    return parseDate(s).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; });
+  }
+  function flash(id, msg) {
+    $(id).textContent = msg;
+    clearTimeout(flash[id]);
+    flash[id] = setTimeout(function () { $(id).textContent = ""; }, 5000);
+  }
+
+  // ---- build form buttons
+  function seg(containerId, items, key, multi) {
+    var box = $(containerId);
+    box.innerHTML = "";
+    items.forEach(function (label) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "opt"; b.textContent = label;
+      b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", function () {
+        if (multi) {
+          var i = form[key].indexOf(label);
+          if (i > -1) form[key].splice(i, 1); else form[key].push(label);
+          b.setAttribute("aria-pressed", String(i === -1));
+        } else {
+          var same = form[key] === label;
+          form[key] = same ? null : label;
+          Array.prototype.forEach.call(box.children, function (c) { c.setAttribute("aria-pressed", "false"); });
+          if (!same) b.setAttribute("aria-pressed", "true");
+        }
+      });
+      box.appendChild(b);
+    });
+  }
+  function buildBristol() {
+    var box = $("bristol");
+    box.innerHTML = "";
+    for (var n = 1; n <= 7; n++) {
+      (function (n) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "opt"; b.textContent = n;
+        b.setAttribute("aria-pressed", "false");
+        b.setAttribute("aria-label", BRISTOL[n]);
+        b.addEventListener("click", function () {
+          form.type = form.type === n ? null : n;
+          Array.prototype.forEach.call(box.children, function (c, i) {
+            c.setAttribute("aria-pressed", String(form.type === i + 1));
+          });
+          $("bristolHint").textContent = form.type ? BRISTOL[form.type] : "1 = hard lumps, 4 = ideal, 7 = watery";
+        });
+        box.appendChild(b);
+      })(n);
+    }
+  }
+
+  function resetForm() {
+    form = { type: null, ease: null, empty: null, extras: [] };
+    buildBristol();
+    seg("ease", EASE, "ease", false);
+    seg("empty", EMPTY, "empty", false);
+    seg("extras", EXTRAS, "extras", true);
+    $("bristolHint").textContent = "1 = hard lumps, 4 = ideal, 7 = watery";
+    $("note").value = "";
+    $("time").value = nowTime();
+    $("date").value = todayStr();
+  }
+
+  // ---- actions
+  $("save").addEventListener("click", function () {
+    if (!form.type) { $("bristolHint").textContent = "Pick a type from 1 to 7 first."; return; }
+    store.entries.push({
+      id: Date.now(),
+      date: $("date").value || todayStr(),
+      time: $("time").value || nowTime(),
+      type: form.type, ease: form.ease, empty: form.empty,
+      extras: form.extras.slice(), note: $("note").value.trim()
+    });
+    save(); resetForm(); render();
+  });
+
+  var noBMOn = false;
+  $("dayDate").addEventListener("change", loadDay);
+  $("noBM").addEventListener("click", function () {
+    noBMOn = !noBMOn;
+    $("noBM").setAttribute("aria-pressed", String(noBMOn));
+  });
+  function loadDay() {
+    var d = store.days[$("dayDate").value] || {};
+    $("dayText").value = d.text || "";
+    noBMOn = !!d.none;
+    $("noBM").setAttribute("aria-pressed", String(noBMOn));
+  }
+  $("saveDay").addEventListener("click", function () {
+    var date = $("dayDate").value || todayStr();
+    var text = $("dayText").value.trim();
+    if (!text && !noBMOn) delete store.days[date];
+    else store.days[date] = { text: text, none: noBMOn };
+    save(); render();
+  });
+
+  function removeEntry(id) {
+    store.entries = store.entries.filter(function (e) { return e.id !== id; });
+    save(); render();
+  }
+
+  // ---- render
+  function allDates() {
+    var set = {};
+    store.entries.forEach(function (e) { set[e.date] = 1; });
+    Object.keys(store.days).forEach(function (d) { set[d] = 1; });
+    return Object.keys(set).sort().reverse();
+  }
+  function entriesOn(date) {
+    return store.entries.filter(function (e) { return e.date === date; })
+      .sort(function (a, b) { return a.time < b.time ? -1 : 1; });
+  }
+
+  function render() {
+    var dates = allDates();
+    var log = $("log");
+    if (!dates.length) {
+      log.innerHTML = '<div class="empty card">No entries yet. Add one above.</div>';
+    } else {
+      log.innerHTML = dates.map(function (date) {
+        var es = entriesOn(date).reverse();
+        var day = store.days[date];
+        var html = '<div class="card day"><h3>' + esc(niceDate(date)) + ' <span class="small">(' + es.length + ' movement' + (es.length === 1 ? "" : "s") + ')</span></h3>';
+        if (day && day.none && !es.length) html += '<div class="small">No bowel movement</div>';
+        es.forEach(function (e) {
+          var bits = [];
+          if (e.ease) bits.push(e.ease);
+          if (e.empty) bits.push("Empty: " + e.empty.toLowerCase());
+          html += '<div class="entry"><div class="badge">' + e.type + '</div><div class="body">' +
+            '<div><strong>' + esc(e.time) + '</strong> <span class="meta">' + esc(bits.join(" · ")) + '</span></div>' +
+            (e.extras.length ? '<div class="flag">' + esc(e.extras.join(", ")) + '</div>' : '') +
+            (e.note ? '<div class="meta">' + esc(e.note) + '</div>' : '') +
+            '</div><button class="x" data-id="' + e.id + '" aria-label="Delete entry">✕</button></div>';
+        });
+        if (day && day.text) html += '<div class="daynote">' + esc(day.text) + '</div>';
+        return html + '</div>';
+      }).join("");
+      Array.prototype.forEach.call(log.querySelectorAll(".x"), function (b) {
+        b.addEventListener("click", function () {
+          if (confirm("Delete this entry?")) removeEntry(+b.getAttribute("data-id"));
+        });
+      });
+    }
+    renderProgress(dates);
+  }
+
+  function renderProgress(dates) {
+    var asc = dates.slice().sort();
+    if (!asc.length) {
+      $("progText").textContent = "Day 0 of 14";
+      $("progBar").style.width = "0%";
+      $("progSub").textContent = "Add your first entry to start the two weeks.";
+      return;
+    }
+    var start = parseDate(asc[0]);
+    var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    var day = Math.min(14, Math.max(1, Math.round((t - start) / 86400000) + 1));
+    $("progText").textContent = "Day " + day + " of 14";
+    $("progBar").style.width = (day / 14 * 100) + "%";
+    $("progSub").textContent = day >= 14 ? "Two weeks done. Create your PDF report below." : "Started " + niceDate(asc[0]) + ".";
+  }
+
+  // ---- shared numbers for the text summary and the PDF
+  function stats() {
+    var dates = allDates().sort();
+    var s = {
+      dates: dates, total: store.entries.length, types: [0, 0, 0, 0, 0, 0, 0, 0],
+      strained: 0, urgent: 0, notEmpty: 0, pain: 0, blood: 0, mucus: 0, noneDays: 0
+    };
+    store.entries.forEach(function (e) {
+      s.types[e.type]++;
+      if (e.ease === "Strained") s.strained++;
+      if (e.ease === "Urgent") s.urgent++;
+      if (e.empty === "No" || e.empty === "Partly") s.notEmpty++;
+      if (e.extras.indexOf("Pain") > -1) s.pain++;
+      if (e.extras.indexOf("Blood") > -1) s.blood++;
+      if (e.extras.indexOf("Mucus") > -1) s.mucus++;
+    });
+    dates.forEach(function (d) { if (!entriesOn(d).length) s.noneDays++; });
+    if (dates.length) {
+      s.span = Math.round((parseDate(dates[dates.length - 1]) - parseDate(dates[0])) / 86400000) + 1;
+      s.perDay = s.total / s.span;
+    }
+    return s;
+  }
+
+  // ---- plain text summary
+  $("makeSummary").addEventListener("click", function () {
+    var s = stats();
+    if (!s.dates.length) { $("summary").value = "No entries yet."; return; }
+    var lines = ["BOWEL DIARY", s.dates[0] + " to " + s.dates[s.dates.length - 1], ""];
+    lines.push("Total movements: " + s.total + " over " + s.dates.length + " logged day(s)");
+    var byType = [];
+    for (var t = 1; t <= 7; t++) if (s.types[t]) byType.push("T" + t + " x" + s.types[t]);
+    lines.push("By Bristol type: " + (byType.join(", ") || "none"));
+    lines.push("");
+    s.dates.forEach(function (d) {
+      lines.push(niceDate(d) + " (" + d + ")");
+      var day = store.days[d];
+      var es = entriesOn(d);
+      if (!es.length && day && day.none) lines.push("  No bowel movement");
+      es.forEach(function (e) {
+        var parts = [e.time, "Type " + e.type];
+        if (e.ease) parts.push(e.ease.toLowerCase());
+        if (e.empty) parts.push("empty: " + e.empty.toLowerCase());
+        if (e.extras.length) parts.push(e.extras.join("/"));
+        if (e.note) parts.push("note: " + e.note);
+        lines.push("  " + parts.join(", "));
+      });
+      if (day && day.text) lines.push("  Day notes: " + day.text);
+      lines.push("");
+    });
+    $("summary").value = lines.join("\n");
+  });
+
+  $("copy").addEventListener("click", function () {
+    var ta = $("summary");
+    if (!ta.value) $("makeSummary").click();
+    ta.focus(); ta.select();
+    function done() { $("copy").textContent = "Copied"; setTimeout(function () { $("copy").textContent = "Copy"; }, 1500); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ta.value).then(done, function () { document.execCommand("copy"); done(); });
+      } else { document.execCommand("copy"); done(); }
+    } catch (e) {}
+  });
+
+  // ---- PDF report
+  // The built-in PDF font only covers Western European characters, so swap
+  // anything else (emoji, smart symbols) for a plain equivalent.
+  function pdfText(s) {
+    return String(s)
+      .replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
+      .replace(/[–—]/g, "-").replace(/…/g, "...")
+      .replace(/[^\x20-\x7E -ÿ\n]/g, "");
+  }
+
+  function buildPdf() {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ unit: "mm", format: "a4" });
+    var s = stats();
+    var profile = loadProfile();
+    var W = 210, M = 16, R = W - M, BOTTOM = 280;
+    var TEAL = [31, 111, 107], INK = [23, 48, 47], MUTED = [93, 116, 115], LINE = [214, 224, 223], SOFT = [224, 238, 237], WARN = [180, 71, 47];
+    var y;
+
+    function color(c) { doc.setTextColor(c[0], c[1], c[2]); }
+    function font(style, size) { doc.setFont("helvetica", style); doc.setFontSize(size); }
+
+    // Header band
+    doc.setFillColor(TEAL[0], TEAL[1], TEAL[2]);
+    doc.rect(0, 0, W, 30, "F");
+    color([255, 255, 255]);
+    font("bold", 18); doc.text("Bowel Diary Report", M, 14);
+    font("normal", 10);
+    doc.text(longDate(s.dates[0]) + " to " + longDate(s.dates[s.dates.length - 1]) + "  (" + s.span + " days)", M, 22);
+    doc.text("Created " + longDate(todayStr()), R, 22, { align: "right" });
+
+    y = 40;
+    color(INK);
+    var who = [];
+    if (profile.name) who.push("Name: " + pdfText(profile.name));
+    if (profile.dob) who.push("Date of birth: " + longDate(profile.dob));
+    if (who.length) { font("normal", 11); doc.text(who.join("      "), M, y); y += 9; }
+
+    // Summary tiles
+    font("bold", 12); doc.text("Summary", M, y); y += 4;
+    var tiles = [
+      ["Movements", String(s.total)],
+      ["Per day (avg)", s.perDay.toFixed(1)],
+      ["Days with none", String(s.noneDays)],
+      ["Strained", String(s.strained)],
+      ["Urgent", String(s.urgent)],
+      ["Not fully empty", String(s.notEmpty)]
+    ];
+    var tw = (R - M - 5 * 3) / 6;
+    tiles.forEach(function (t, i) {
+      var x = M + i * (tw + 3);
+      doc.setFillColor(SOFT[0], SOFT[1], SOFT[2]);
+      doc.roundedRect(x, y, tw, 18, 2, 2, "F");
+      color(TEAL); font("bold", 14); doc.text(t[1], x + tw / 2, y + 9, { align: "center" });
+      color(MUTED); font("normal", 7.5); doc.text(t[0], x + tw / 2, y + 14.5, { align: "center" });
+    });
+    y += 24;
+
+    // Warning signs line
+    var warn = [];
+    if (s.blood) warn.push("Blood x" + s.blood);
+    if (s.pain) warn.push("Pain x" + s.pain);
+    if (s.mucus) warn.push("Mucus x" + s.mucus);
+    font("bold", 10);
+    if (warn.length) { color(WARN); doc.text("Reported: " + warn.join(",  "), M, y); }
+    else { color(MUTED); font("normal", 10); doc.text("No pain, blood or mucus reported.", M, y); }
+    y += 10;
+
+    // Bristol type chart
+    color(INK); font("bold", 12); doc.text("Stool type (Bristol scale)", M, y); y += 6;
+    var max = Math.max.apply(null, s.types.slice(1)) || 1;
+    var labelW = 62, barMax = R - M - labelW - 14;
+    for (var t = 1; t <= 7; t++) {
+      color(INK); font("normal", 9);
+      doc.text(BRISTOL[t], M, y + 3.6);
+      doc.setFillColor(SOFT[0], SOFT[1], SOFT[2]);
+      doc.rect(M + labelW, y, barMax, 5, "F");
+      if (s.types[t]) {
+        doc.setFillColor(TEAL[0], TEAL[1], TEAL[2]);
+        doc.rect(M + labelW, y, Math.max(1, barMax * s.types[t] / max), 5, "F");
+      }
+      font("bold", 9); doc.text(String(s.types[t]), R, y + 3.6, { align: "right" });
+      y += 7;
+    }
+    color(MUTED); font("normal", 8);
+    doc.text("Types 1-2 suggest constipation, 3-5 are usual, 6-7 suggest diarrhoea.", M, y + 1);
+    y += 10;
+
+    // Daily log table
+    var cols = [
+      { h: "Date", w: 26 }, { h: "Time", w: 13 }, { h: "Type", w: 11 }, { h: "Ease", w: 18 },
+      { h: "Empty", w: 15 }, { h: "Flags", w: 26 }, { h: "Note", w: R - M - 109 }
+    ];
+    function tableHead() {
+      doc.setFillColor(TEAL[0], TEAL[1], TEAL[2]);
+      doc.rect(M, y, R - M, 7, "F");
+      color([255, 255, 255]); font("bold", 8.5);
+      var x = M;
+      cols.forEach(function (c) { doc.text(c.h, x + 1.5, y + 4.8); x += c.w; });
+      y += 7;
+    }
+    function ensure(h) {
+      if (y + h > BOTTOM) { doc.addPage(); y = 16; tableHead(); }
+    }
+
+    color(INK); font("bold", 12);
+    if (y + 20 > BOTTOM) { doc.addPage(); y = 16; }
+    doc.text("Daily log", M, y); y += 3;
+    tableHead();
+
+    s.dates.forEach(function (d, di) {
+      var es = entriesOn(d);
+      var day = store.days[d];
+      var rows = es.map(function (e) {
+        return [e.time, String(e.type), e.ease || "-", e.empty || "-", e.extras.join(", ") || "", pdfText(e.note || "")];
+      });
+      if (!rows.length) rows.push(["", "", day && day.none ? "No movement" : "-", "", "", ""]);
+      var dayLabel = niceDate(d);
+      var noteText = day && day.text ? pdfText("Day notes: " + day.text) : "";
+
+      font("normal", 8.5);
+      var lineH = 4;
+      var heights = rows.map(function (r) {
+        var lines = doc.splitTextToSize(r[5], cols[6].w - 3).length;
+        return Math.max(1, lines) * lineH + 2.5;
+      });
+      var noteLines = noteText ? doc.splitTextToSize(noteText, R - M - cols[0].w - 3) : [];
+      var blockH = heights.reduce(function (a, b) { return a + b; }, 0) + (noteLines.length ? noteLines.length * lineH + 2.5 : 0);
+      ensure(Math.min(blockH, 60));
+
+      if (di % 2 === 1) {
+        doc.setFillColor(246, 249, 249);
+        doc.rect(M, y, R - M, Math.min(blockH, BOTTOM - y), "F");
+      }
+      var blockTop = y;
+      color(INK); font("bold", 8.5); doc.text(dayLabel, M + 1.5, y + 4.5);
+
+      rows.forEach(function (r, ri) {
+        ensure(heights[ri]);
+        var x = M + cols[0].w;
+        for (var c = 0; c < 6; c++) {
+          var isFlag = c === 4 && r[4];
+          color(isFlag ? WARN : (c === 5 ? MUTED : INK));
+          font(c === 1 || isFlag ? "bold" : "normal", 8.5);
+          var txt = c === 5 ? doc.splitTextToSize(r[5], cols[6].w - 3) : r[c];
+          doc.text(txt, x + 1.5, y + 4.5);
+          x += cols[c + 1].w;
+        }
+        y += heights[ri];
+      });
+      if (noteLines.length) {
+        ensure(noteLines.length * lineH + 2.5);
+        color(MUTED); font("italic", 8.5);
+        doc.text(noteLines, M + cols[0].w + 1.5, y + 4.5);
+        y += noteLines.length * lineH + 2.5;
+      }
+      if (y > blockTop) {
+        doc.setDrawColor(LINE[0], LINE[1], LINE[2]); doc.setLineWidth(0.2);
+        doc.line(M, y, R, y);
+      }
+    });
+
+    // Footer on every page
+    var pages = doc.getNumberOfPages();
+    for (var p = 1; p <= pages; p++) {
+      doc.setPage(p);
+      color(MUTED); font("normal", 7.5);
+      doc.text("Patient-recorded diary. This is a record, not a diagnosis.", M, 290);
+      doc.text("Page " + p + " of " + pages, R, 290, { align: "right" });
+    }
+    return doc;
+  }
+
+  $("pName").addEventListener("change", saveProfile);
+  $("pDob").addEventListener("change", saveProfile);
+
+  $("pdf").addEventListener("click", function () {
+    if (!allDates().length) { flash("pdfStatus", "Add some entries first."); return; }
+    if (!window.jspdf) { flash("pdfStatus", "The PDF tool did not load. Check your connection and reload the page."); return; }
+    saveProfile();
+    var btn = $("pdf");
+    btn.disabled = true;
+    try {
+      var doc = buildPdf();
+      var name = "bowel-diary-" + todayStr() + ".pdf";
+      var blob = doc.output("blob");
+      var file = null;
+      try { file = new File([blob], name, { type: "application/pdf" }); } catch (e) {}
+      // On phones, open the share sheet so the report can go straight to email or messages.
+      var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      if (touch && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: "Bowel diary report" }).catch(function (err) {
+          if (err && err.name !== "AbortError") doc.save(name);
+        });
+      } else {
+        doc.save(name);
+      }
+      flash("pdfStatus", "Report created: " + name);
+    } catch (e) {
+      flash("pdfStatus", "Sorry, the report could not be created.");
+    }
+    btn.disabled = false;
+  });
+
+  // ---- backup and restore
+  $("backup").addEventListener("click", function () {
+    var data = JSON.stringify({ app: "bowel-diary", version: 1, saved: new Date().toISOString(), entries: store.entries, days: store.days }, null, 2);
+    var url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    var a = document.createElement("a");
+    a.href = url; a.download = "bowel-diary-backup-" + todayStr() + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    flash("backupStatus", "Backup saved to your downloads.");
+  });
+  $("restore").addEventListener("click", function () { $("restoreFile").click(); });
+  $("restoreFile").addEventListener("change", function () {
+    var f = this.files && this.files[0];
+    this.value = "";
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var d = JSON.parse(reader.result);
+        if (!d || d.app !== "bowel-diary" || !Array.isArray(d.entries)) throw new Error("bad file");
+        if (!confirm("Replace this diary with the backup (" + d.entries.length + " entries)?")) return;
+        store = { entries: d.entries, days: d.days || {} };
+        save(); render(); loadDay();
+        flash("backupStatus", "Backup restored.");
+      } catch (e) {
+        flash("backupStatus", "That file is not a Bowel Diary backup.");
+      }
+    };
+    reader.readAsText(f);
+  });
+
+  $("wipe").addEventListener("click", function () {
+    if (confirm("Delete the whole diary from this device? This can't be undone.")) {
+      store = { entries: [], days: {} }; save(); $("summary").value = ""; render(); loadDay();
+    }
+  });
+
+  // ---- install as an app
+  var installPrompt = null;
+  var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone;
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();
+    installPrompt = e;
+    $("installCard").classList.add("show");
+  });
+  $("installBtn").addEventListener("click", function () {
+    if (installPrompt) {
+      installPrompt.prompt();
+      installPrompt.userChoice.then(function () { installPrompt = null; $("installCard").classList.remove("show"); });
+    } else {
+      $("installCard").classList.remove("show");
+    }
+  });
+  if (ios && !standalone) {
+    $("installText").textContent = "To install: tap the Share button, then “Add to Home Screen”. It will then work like an app, even offline.";
+    $("installBtn").textContent = "OK";
+    $("installCard").classList.add("show");
+  }
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  }
+
+  // ---- init
+  load();
+  var prof = loadProfile();
+  $("pName").value = prof.name || "";
+  $("pDob").value = prof.dob || "";
+  resetForm();
+  $("dayDate").value = todayStr();
+  loadDay();
+  render();
+})();
+</script>
+</body>
+</html>
