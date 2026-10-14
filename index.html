@@ -255,6 +255,30 @@
 </div>
 
 <!-- PO Detail Modal -->
+<div class="overlay" id="orderReqOverlay" style="z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeOrderRequest()">
+  <div class="modal" style="border-top:3px solid #10b981;max-width:760px;width:96%;border-radius:12px">
+    <div class="modal-header">
+      <div class="modal-title">Order Request <span id="orJobTitle" style="font-size:12px;font-weight:400;color:#8aa8c0"></span></div>
+      <button class="modal-close" onclick="closeOrderRequest()">x</button>
+    </div>
+    <div style="font-size:11px;color:#8aa8c0;margin-bottom:8px">Builds an email to purchasing@xpak.com.au from this job's To Order parts. Untick anything you don't want ordered.</div>
+    <div id="orLines" style="margin-bottom:10px"></div>
+    <div class="g2">
+      <div class="field"><label>Supplier</label><select id="orSupplier" onchange="refreshOrderRequestText()"></select></div>
+      <div class="field"><label>Supplier quote ref (optional)</label><input id="orQuote" placeholder="e.g. SQ-090149" oninput="refreshOrderRequestText()"></div>
+      <div class="field full"><label>Deliver to</label><input id="orDelivery" oninput="refreshOrderRequestText()"></div>
+      <div class="field full"><label>Subject</label><input id="orSubject"></div>
+      <div class="field full"><label>Email text (you can edit it before sending)</label><textarea id="orText" style="min-height:230px;font-family:monospace;font-size:12px"></textarea></div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin:8px 0;cursor:pointer"><input type="checkbox" id="orMarkOrdered" checked> Mark the ticked parts as Ordered on the job when I open the email</label>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-clear" onclick="closeOrderRequest()">Cancel</button>
+      <button class="btn-clear" onclick="copyOrderRequest()">Copy text</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="sendOrderRequest()">Open email</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="poOverlay" onclick="if(event.target===this)closePOModal()">
   <div class="modal" style="border-top:3px solid #60a5fa;max-width:920px;width:96%">
     <div class="modal-header">
@@ -675,7 +699,7 @@
     <div style="font-size:10px;color:#5a7090;margin:-4px 0 8px">Tick the tools below that need to split off (e.g. different pace, parts wait, or on hold), then Split.</div>
     <div id="jobToolsList"></div>
 
-    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center"><span>Parts Required</span><button onclick="pushPartsToStockOrder()" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #10b98170;color:#10b981;border-radius:6px;cursor:pointer;font-weight:600">📦 Push To Order</button></div>
+    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center"><span>Parts Required</span><span style="display:flex;gap:6px"><button onclick="openOrderRequest(null,true)" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #f9731670;color:#f97316;border-radius:6px;cursor:pointer;font-weight:600">✉ Order Email</button><button onclick="pushPartsToStockOrder()" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #10b98170;color:#10b981;border-radius:6px;cursor:pointer;font-weight:600">📦 Push To Order</button></span></div>
 
     <div class="section-label">Job Cost Summary</div>
     <input id="jParts" type="hidden" value="">
@@ -3119,6 +3143,7 @@ function renderList() {
         '<button class="job-link-tile" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')" style="cursor:pointer;background:#0a1a2a;border-color:#f59e0b;color:#f59e0b">Job Card</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Assessment Report</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\',{partsOnly:true})" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Parts Quote</button>' +
+        '<button class="job-link-tile" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Order Email</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')" style="cursor:pointer;background:#1a0a2a;border-color:#e879f9;color:#e879f9">Invoice Notice</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Export Quote</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();openActModal(\'' + j.id + '\',null)" style="cursor:pointer;background:#0a1a2a;border-color:#00c8e0;color:#00c8e0">+ Log Activity</button>' +
@@ -3258,6 +3283,7 @@ function renderBoard() {
           '<button class="bca-btn" style="background:#0a1a2a;color:#f59e0b" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')">📋 Job Card</button>' +
           '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')">📄 Report</button>' +
           '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\',{partsOnly:true})">💲 Parts Quote</button>' +
+          '<button class="bca-btn report" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')">✉ Order Email</button>' +
           '<button class="bca-btn" style="background:#1a0a2a;color:#e879f9" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')">🧾 Invoice</button>' +
           '<button class="bca-btn quote" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')">📦 Quote</button>' +
           '<button class="bca-btn" style="background:#0a1a2a;color:#00c8e0" onclick="event.stopPropagation();openActModal(\'' + j.id + '\',null)">🗒 Log</button>' +
@@ -3567,6 +3593,143 @@ function populateMachineDropdown(selId) {
   // Machine selection is now per-tool via renderToolsList
 }
 
+
+// ── ORDER REQUEST EMAIL ───────────────────────────────────────────
+// Builds an order request email to purchasing from a job's To Order parts. Works from a job card
+// (reads the saved parts) or from inside the open job (reads what is on screen, saved or not).
+var ORDER_REQUEST_TO = 'purchasing@xpak.com.au';
+var _orderReq = null;
+
+function _orEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _orStore(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch(e) {} return null; }
+
+async function openOrderRequest(jobId, fromModal) {
+  try {
+    var j, rows;
+    if (fromModal) {
+      if (!editingJob) { showToast('Save the job first, then build the order request', 'error'); return; }
+      j = Object.assign({}, editingJob, {
+        customer: document.getElementById('jCustomer').value.trim() || editingJob.customer,
+        order_number: document.getElementById('jOrderNum').value.trim() || null
+      });
+      rows = jobPartsLocal.filter(function(jp){ return jp.status === 'to_order'; })
+        .map(function(jp){ return { id: jp.id || jp._existingId || null, local: jp, part_id: jp.part_id, part_key_no: jp.part_key_no, part_description: jp.part_description, quantity: jp.quantity || 1, tool_number: jp.tool_number || 1 }; });
+    } else {
+      var jr = await db('GET', 'jobs?id=eq.' + jobId + '&select=*');
+      j = jr && jr[0]; if (!j) { showToast('Job not found', 'error'); return; }
+      var jp2 = await db('GET', 'job_parts?job_id=eq.' + jobId + '&status=eq.to_order&select=*&order=created_at.asc');
+      rows = (jp2 || []).map(function(p){ return { id: p.id, part_id: p.part_id, part_key_no: p.part_key_no, part_description: p.part_description, quantity: p.quantity || 1, tool_number: p.tool_number || 1 }; });
+    }
+    if (!rows.length) { showToast('No parts marked To Order on this job', 'error'); return; }
+
+    // Merge the same part across tools (e.g. a knife needed on two tools = one line, qty 2)
+    var lines = [];
+    rows.forEach(function(r) {
+      var line = lines.find(function(l){ return l.key === r.part_key_no && l.part_id === r.part_id; });
+      if (!line) {
+        var pd = r.part_id ? allParts.find(function(x){ return x.id === r.part_id; }) : null;
+        line = { key: r.part_key_no || '', desc: r.part_description || '', part_id: r.part_id, qty: 0, cost: pd && pd.cost_price ? parseFloat(pd.cost_price) : null, rows: [], on: true };
+        lines.push(line);
+      }
+      line.qty += r.quantity; line.rows.push(r);
+    });
+
+    // Default supplier: the parts' preferred supplier if recorded, else the one used last time
+    var counts = {};
+    rows.forEach(function(r) {
+      var p = allParts.find(function(x){ return x.id === r.part_id; });
+      if (p && p.suppliers) {
+        var sups = Array.isArray(p.suppliers) ? p.suppliers : [];
+        try { if (!Array.isArray(sups)) sups = JSON.parse(p.suppliers); } catch(e) {}
+        var pref = sups.find(function(s){ return s.is_preferred; }) || sups[0];
+        if (pref && pref.name) counts[pref.name] = (counts[pref.name] || 0) + 1;
+      }
+    });
+    var detected = Object.keys(counts).sort(function(a,b){ return counts[b] - counts[a]; })[0] || _orStore('xpak_or_supplier') || '';
+
+    if (!_supplierCache) { try { _supplierCache = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order'); } catch(e) { _supplierCache = []; } }
+    _orderReq = { job: j, lines: lines, fromModal: !!fromModal };
+    var names = (_supplierCache || []).map(function(s){ return s.company_name || s.name; }).filter(Boolean);
+    if (detected && names.indexOf(detected) === -1) names.unshift(detected);
+    document.getElementById('orSupplier').innerHTML = '<option value="">Select supplier...</option>' + names.map(function(n){ return '<option value="' + _orEsc(n) + '"' + (n === detected ? ' selected' : '') + '>' + _orEsc(n) + '</option>'; }).join('');
+    document.getElementById('orQuote').value = '';
+    document.getElementById('orDelivery').value = _orStore('xpak_or_delivery') || 'X-Pak Global, C/- Storeplan, 3 Curtiss Cl, Tamworth NSW 2340, attention Rob Firth';
+    document.getElementById('orMarkOrdered').checked = true;
+    document.getElementById('orJobTitle').textContent = xpsNum(j.job_number) + ' - ' + (j.customer || '');
+    renderOrderRequestLines();
+    refreshOrderRequestText();
+    document.getElementById('orderReqOverlay').classList.add('show');
+  } catch(e) { showToast('Could not build order request: ' + e.message, 'error'); }
+}
+
+function renderOrderRequestLines() {
+  document.getElementById('orLines').innerHTML = _orderReq.lines.map(function(l, i) {
+    var price = l.cost != null ? '$' + l.cost.toFixed(2) + ' ea' : '<span style="color:#f97316">no cost on file</span>';
+    return '<label style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #1e2f45;font-size:12px;cursor:pointer">' +
+      '<input type="checkbox" ' + (l.on ? 'checked' : '') + ' onchange="_orderReq.lines[' + i + '].on=this.checked;refreshOrderRequestText()">' +
+      '<span style="font-family:monospace;color:#60a5fa;min-width:100px">' + _orEsc(l.key) + '</span>' +
+      '<span style="flex:1">' + _orEsc(l.desc) + '</span><span>x' + l.qty + '</span><span style="min-width:90px;text-align:right">' + price + '</span></label>';
+  }).join('');
+}
+
+function refreshOrderRequestText() {
+  var r = _orderReq; if (!r) return;
+  var supplier = document.getElementById('orSupplier').value || '[supplier]';
+  var quote = document.getElementById('orQuote').value.trim();
+  var delivery = document.getElementById('orDelivery').value.trim();
+  var j = r.job, picked = r.lines.filter(function(l){ return l.on; });
+  var total = 0, unpriced = 0;
+  var rowsTxt = picked.map(function(l) {
+    var t = l.cost != null ? l.cost * l.qty : null;
+    if (t != null) total += t; else unpriced++;
+    return '- ' + l.key + ' | ' + l.desc + ' | Qty ' + l.qty + (l.cost != null ? ' | $' + l.cost.toFixed(2) + ' ea | $' + t.toFixed(2) : ' | price TBC');
+  });
+  var jobRef = xpsNum(j.job_number) + ' (' + (j.customer || '') + (j.order_number ? ', customer order ' + j.order_number : '') + ')';
+  var txt = 'Hi,\n\nPlease order the following from ' + supplier + ' for service job ' + jobRef + '.' +
+    (quote ? ' Pricing is per ' + supplier + ' quote ' + quote + '.' : '') + ' Prices are ex GST.\n\n' +
+    rowsTxt.join('\n') + '\n\n' +
+    (total > 0 ? 'Total: $' + total.toFixed(2) + ' ex GST' + (unpriced ? ' (plus ' + unpriced + ' item' + (unpriced > 1 ? 's' : '') + ' not yet priced)' : '') + '\n\n' : '') +
+    (delivery ? 'Please deliver to ' + delivery + '.\n\n' : '') + 'Thanks,\nRob';
+  document.getElementById('orText').value = txt;
+  document.getElementById('orSubject').value = 'Order request - ' + supplier + ' parts - ' + xpsNum(j.job_number) + ' ' + (j.customer || '') + (quote ? ' (quote ' + quote + ')' : '');
+}
+
+function copyOrderRequest() {
+  var t = 'To: ' + ORDER_REQUEST_TO + '\nSubject: ' + document.getElementById('orSubject').value + '\n\n' + document.getElementById('orText').value;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ showToast('Order request copied'); }).catch(function(){
+    var ta = document.getElementById('orText'); ta.focus(); ta.select(); showToast('Select and copy the text above', 'error');
+  });
+}
+
+async function sendOrderRequest() {
+  var r = _orderReq; if (!r) return;
+  var supplier = document.getElementById('orSupplier').value;
+  if (!supplier) { showToast('Pick the supplier first', 'error'); return; }
+  var picked = r.lines.filter(function(l){ return l.on; });
+  if (!picked.length) { showToast('Tick at least one part', 'error'); return; }
+  _orStore('xpak_or_supplier', supplier);
+  _orStore('xpak_or_delivery', document.getElementById('orDelivery').value.trim());
+  var subject = document.getElementById('orSubject').value, body = document.getElementById('orText').value;
+  var href = 'mailto:' + ORDER_REQUEST_TO + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
+  if (href.length > 1900) { copyOrderRequest(); showToast('Long email - copied to clipboard; paste it into a new email to ' + ORDER_REQUEST_TO, 'error'); }
+  else { window.location.href = href; }
+  if (document.getElementById('orMarkOrdered').checked) {
+    var patches = [];
+    picked.forEach(function(l) {
+      l.rows.forEach(function(row) {
+        if (row.local) row.local.status = 'ordered';
+        if (row.id) patches.push(db('PATCH', 'job_parts?id=eq.' + row.id, { status: 'ordered', updated_at: new Date().toISOString() }).catch(function(){}));
+      });
+    });
+    await Promise.all(patches);
+    if (r.fromModal) renderJobPartsList();
+    loadJobs();
+    showToast(picked.length + ' part' + (picked.length > 1 ? 's' : '') + ' marked Ordered');
+  }
+  closeOrderRequest();
+}
+
+function closeOrderRequest() { document.getElementById('orderReqOverlay').classList.remove('show'); _orderReq = null; }
 
 async function pushPartsToStockOrder() {
   var toOrder = jobPartsLocal.filter(function(jp){ return jp.status==='to_order'; });
