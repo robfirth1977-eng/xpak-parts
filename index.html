@@ -206,7 +206,9 @@
     <button class="loan-view-btn"        id="poBtnPartial"  onclick="setPOFilter('Partially Received')">Part Received</button>
     <button class="loan-view-btn"        id="poBtnReceived" onclick="setPOFilter('Received')">Received</button>
     <button class="loan-view-btn"        id="poBtnAll"      onclick="setPOFilter('All')">All</button>
+    <button class="loan-view-btn"        id="poBtnArchived" onclick="setPOFilter('Archived')">Archived</button>
   </div>
+  <button class="btn-sm" id="poBtnCleanup" onclick="clearOutOldOrders()" style="margin-left:8px;padding:7px 14px;font-size:12px">🧹 Clear out old</button>
   <button class="btn-sm" id="poBtnStockBuilder" onclick="togglePOStockBuilder()" style="margin-left:8px;padding:7px 14px;font-size:12px">📦 Stock Order Builder</button>
   <button class="btn-add" id="btnNewPO" style="background:#60a5fa;margin-left:auto;color:#0f1923;font-weight:700" onclick="openNewPOModal()">+ New PO</button>
 </div>
@@ -311,6 +313,7 @@
       <button id="btnMarkPOSent" class="btn-save" style="background:#f59e0b;color:#0f1923" onclick="markPOSent()">Mark as Sent</button>
       <button id="btnExportPO"   class="btn-save green" onclick="exportPOExcel()">⬇ Export Excel</button>
       <button onclick="closePOModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
+      <button id="btnArchivePO" onclick="togglePOArchive()" style="padding:11px 16px;background:transparent;border:1px solid #8aa8c070;color:#8aa8c0;border-radius:10px;font-size:12px;cursor:pointer;font-weight:600">🗄 Archive</button>
       <button id="btnDeletePO" onclick="deletePO()" style="margin-left:auto;padding:11px 16px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:10px;font-size:12px;cursor:pointer;font-weight:600">🗑 Delete PO</button>
     </div>
   </div>
@@ -3749,7 +3752,7 @@ async function pushPartsToStockOrder() {
   var supplier = Object.keys(supplierCounts).sort(function(a,b){ return supplierCounts[b]-supplierCounts[a]; })[0] || 'Unknown';
 
   // Find existing Draft PO for this supplier or create new one
-  var existingPO = purchaseOrders.find(function(po){ return po.status==='Draft' && po.supplier===supplier; });
+  var existingPO = purchaseOrders.find(function(po){ return po.status==='Draft' && po.supplier===supplier && !po.archived_at; });
   var poId, poNum;
   if (existingPO) {
     poId = existingPO.id; poNum = existingPO.po_number;
@@ -6267,7 +6270,7 @@ async function renderHome() {
   var draftSv    = (siteVisits||[]).filter(function(v){ return v.status==='Draft'; }).length;
 
   // Pending parts - fetch fresh
-  var draftPOCount = (purchaseOrders||[]).filter(function(po){ return po.status === 'Draft'; }).length;
+  var draftPOCount = (purchaseOrders||[]).filter(function(po){ return po.status === 'Draft' && !po.archived_at; }).length;
 
   // Recent jobs (last 5)
   var recentJobs = jobs.slice(0,5);
@@ -7086,9 +7089,53 @@ function togglePOStockBuilder() {
   if (_poShowingStockBuilder) initStockOrderBuilder();
 }
 
+// Archived orders are hidden, not deleted - purchase_orders.archived_at is set, and the order stays in the Archived tab.
+function poIsArchived(po) { return !!po.archived_at; }
+
+async function togglePOArchive() {
+  if (!editingPOId) return;
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; });
+  if (!po) return;
+  var archiving = !poIsArchived(po);
+  if (archiving && po.status !== 'Received' && !confirm(po.po_number + ' (' + po.supplier + ') is ' + po.status + ', not Received. Archive it anyway? You can restore it from the Archived tab.')) return;
+  try {
+    var ts = archiving ? new Date().toISOString() : null;
+    await db('PATCH', 'purchase_orders?id=eq.' + editingPOId, { archived_at: ts, updated_at: new Date().toISOString() });
+    po.archived_at = ts;
+    showToast(po.po_number + (archiving ? ' archived' : ' restored'));
+    closePOModal();
+    renderPurchaseOrders();
+  } catch(e) { showToast('Failed: ' + e.message, 'error'); }
+}
+
+async function clearOutOldOrders() {
+  var ans = prompt('Archive Received orders not touched for how many days? (Empty drafts older than 7 days are archived too.)', '30');
+  if (ans === null) return;
+  var days = parseInt(ans, 10);
+  if (isNaN(days) || days < 0) { showToast('Enter a number of days', 'error'); return; }
+  var recvCut = Date.now() - days * 86400000, draftCut = Date.now() - 7 * 86400000;
+  var targets = purchaseOrders.filter(function(po) {
+    if (poIsArchived(po)) return false;
+    var last = new Date(po.updated_at || po.created_at).getTime();
+    if (po.status === 'Received') return last < recvCut;
+    if (po.status === 'Draft' && !(po._items || []).length) return new Date(po.created_at).getTime() < draftCut;
+    return false;
+  });
+  if (!targets.length) { showToast('Nothing to clear out'); return; }
+  var recv = targets.filter(function(p){ return p.status === 'Received'; }).length;
+  if (!confirm('Archive ' + targets.length + ' order' + (targets.length > 1 ? 's' : '') + ' (' + recv + ' Received, ' + (targets.length - recv) + ' empty draft' + (targets.length - recv === 1 ? '' : 's') + ')? Nothing is deleted - they move to the Archived tab.')) return;
+  var ts = new Date().toISOString();
+  try {
+    await Promise.all(targets.map(function(po) { return db('PATCH', 'purchase_orders?id=eq.' + po.id, { archived_at: ts }); }));
+    targets.forEach(function(po){ po.archived_at = ts; });
+    showToast(targets.length + ' order' + (targets.length > 1 ? 's' : '') + ' archived');
+    renderPurchaseOrders();
+  } catch(e) { showToast('Clear-out failed part-way: ' + e.message, 'error'); await loadPurchaseOrders(); renderPurchaseOrders(); }
+}
+
 function setPOFilter(f) {
   _poFilter = f;
-  var map = {Draft:'poBtnDraft', Sent:'poBtnSent', 'Partially Received':'poBtnPartial', Received:'poBtnReceived', All:'poBtnAll'};
+  var map = {Draft:'poBtnDraft', Sent:'poBtnSent', 'Partially Received':'poBtnPartial', Received:'poBtnReceived', All:'poBtnAll', Archived:'poBtnArchived'};
   Object.keys(map).forEach(function(k){ var el=document.getElementById(map[k]); if(el) el.classList.toggle('active', k===f); });
   renderPurchaseOrders();
 }
@@ -7098,9 +7145,10 @@ function poStatusColor(s) {
 }
 
 function renderPurchaseOrders() {
-  var filtered = _poFilter === 'All' ? purchaseOrders : purchaseOrders.filter(function(po){ return po.status === _poFilter; });
-  var draft = purchaseOrders.filter(function(po){ return po.status === 'Draft'; }).length;
-  var sent  = purchaseOrders.filter(function(po){ return po.status === 'Sent' || po.status === 'Partially Received'; }).length;
+  var live = purchaseOrders.filter(function(po){ return !poIsArchived(po); });
+  var filtered = _poFilter === 'Archived' ? purchaseOrders.filter(poIsArchived) : _poFilter === 'All' ? live : live.filter(function(po){ return po.status === _poFilter; });
+  var draft = live.filter(function(po){ return po.status === 'Draft'; }).length;
+  var sent  = live.filter(function(po){ return po.status === 'Sent' || po.status === 'Partially Received'; }).length;
   document.getElementById('hSub').textContent = 'Purchase Orders \u2014 ' + draft + ' draft' + (sent ? ' \u00B7 ' + sent + ' in transit' : '');
   if (!filtered.length) {
     document.getElementById('poList').innerHTML = '<div class="center"><div class="icon">\uD83D\uDCCB</div><div style="color:#5a8090">No ' + (_poFilter!=='All'?_poFilter.toLowerCase()+' ':'') + 'purchase orders</div></div>';
@@ -7145,6 +7193,7 @@ function openPODetail(id) {
   document.getElementById('btnMarkPOSent').style.display = isDraft ? 'inline-flex' : 'none';
   document.getElementById('btnExportPO').style.display   = items.length ? 'inline-flex' : 'none';
   document.getElementById('btnDeletePO').style.display   = isDraft ? 'inline-flex' : 'none';
+  document.getElementById('btnArchivePO').textContent    = poIsArchived(po) ? '↩ Restore' : '🗄 Archive';
   document.getElementById('poItemsBody').innerHTML = items.length ? items.map(function(it) {
     var lineTotal = (it.unit_cost||0)*(it.qty||1);
     var itCol = it.status==='Arrived'?'#10b981':'#60a5fa';
