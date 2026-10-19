@@ -4733,6 +4733,25 @@ function setToolRecommendation(tempId, text) {
   });
 }
 
+// Standard Work Completed wording - pick one from the dropdown on a tool, then edit the text as needed.
+var WORK_COMPLETED_OPTIONS = [
+  { label: 'Parts replaced, tested under load', text: 'Parts listed were replaced. Tested under load, operation confirmed satisfactory.' },
+  { label: 'Inspected, cleaned and adjusted (no parts)', text: 'Tool inspected, cleaned and adjusted. No parts required. Tested under load, no faults.' }
+];
+function applyWorkCompletedOption(tempId, sel) {
+  var opt = WORK_COMPLETED_OPTIONS[parseInt(sel.value, 10)];
+  sel.selectedIndex = 0;
+  if (!opt) return;
+  var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; }); if (!t) return;
+  var ta = sel.closest('.field').querySelector('textarea');
+  // Fill an empty box; if there is already text, add the wording on a new line instead of overwriting it
+  var cur = (t.work_completed || '').trim();
+  // The automatic default wording counts as empty - replace it rather than stacking on top
+  var def = ''; try { def = (getDefaultWorkCompleted(t.machine_id || '') || '').trim(); } catch(e) {}
+  t.work_completed = (cur && cur !== def) ? t.work_completed.replace(/\s+$/, '') + '\n' + opt.text : opt.text;
+  if (ta) { ta.value = t.work_completed; ta.focus(); }
+}
+
 function setToolField(tempId, field, val) {
   var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; });
   if (!t) return;
@@ -4792,7 +4811,7 @@ function renderToolsList() {
           '<button type="button" id="recbtn_writtenoff_' + t._tempId + '" onclick="setToolRecommendation(\'' + t._tempId + '\',\'Tool written off — uneconomical to repair. Recommend replacement.\')" style="' + recButtonStyle('writtenoff', recActive.writtenoff) + '">Written off</button>' +
         '</div>' +
         '<textarea id="rec_' + t._tempId + '" oninput="setToolField(\'' + t._tempId + '\',\'recommendation\',this.value)" placeholder="Recommended work and parts..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.recommendation||'') + '</textarea></div>' +
-        '<div class="field full"><label>Work Completed</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'work_completed\',this.value)" placeholder="Describe all work carried out..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.work_completed||'') + '</textarea></div>' +
+        '<div class="field full"><label style="display:flex;justify-content:space-between;align-items:center;gap:8px">Work Completed<select onchange="applyWorkCompletedOption(\'' + t._tempId + '\',this)" style="width:auto;max-width:60%;padding:3px 6px;font-size:11px;font-weight:400"><option value="">Insert standard wording...</option>' + WORK_COMPLETED_OPTIONS.map(function(o, oi){ return '<option value="' + oi + '">' + o.label + '</option>'; }).join('') + '</select></label><textarea oninput="setToolField(\'' + t._tempId + '\',\'work_completed\',this.value)" placeholder="Describe all work carried out..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.work_completed||'') + '</textarea></div>' +
         '<div class="field"><label>Service Fee ($)</label><input type="number" step="0.01" min="0" value="' + (t.service_fee||'') + '" placeholder="400.00" oninput="setToolField(\'' + t._tempId + '\',\'service_fee\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #f97316;background:#0f1923;color:#f97316;font-size:13px;outline:none;font-weight:700"></div>' +
       '</div>' +
       '<div style="margin-top:10px;border-top:1px solid #1e3048;padding-top:10px">' +
