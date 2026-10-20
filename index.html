@@ -4615,6 +4615,15 @@ function printCaseLabel(jobId) {
     if (!tools.length && j.machine_id) {
       tools = [{ tool_number:1, machine_id: j.machine_id, serial_number: j.serial_number, fault_type: j.fault_type }];
     }
+    // which loan tool (if any) is out with the customer for this job - shown on the right of the label
+    return db('GET', 'loans?job_id=eq.' + jobId + '&status=neq.RETURNED&select=loan_number,loan_tool_id').then(function(a) {
+      return (a && a.length) ? a : db('GET', 'loans?linked_job=eq.' + xpsNum(j.job_number) + '&status=neq.RETURNED&select=loan_number,loan_tool_id');
+    }).catch(function() { return []; }).then(function(a) {
+      var ln = (a && a[0]) ? a[0] : null, lt = ln ? loanTools.find(function(x) { return x.id === ln.loan_tool_id; }) : null;
+      return { tools: tools, loanRef: ln ? { num: xplNum(ln.loan_number), serial: (lt && lt.serial_number) || '' } : null };
+    });
+  }).then(function(res) {
+    var tools = res.tools, loanRef = res.loanRef;
     var w = window.open('', '_blank');
     if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
     w.document.write('<html><head><title>Labels ' + xpsNum(j.job_number) + '</title>');
@@ -4630,6 +4639,8 @@ function printCaseLabel(jobId) {
     w.document.write('.fault-line { font-size: 6.5pt; color: #555; margin-top: 0.5mm; line-height: 1.3; }');
     w.document.write('.right { width: 18mm; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; background: #f0f0f0; flex-shrink: 0; }');
     w.document.write('.xpak { font-size: 7pt; font-weight: 900; color: #333; letter-spacing: 0.5px; text-transform: uppercase; text-align: center; line-height: 1.5; }');
+    w.document.write('.xpak.na { color: #777; font-weight: 700; }');
+    w.document.write('.xpak .lsn { font-size: 6.5pt; letter-spacing: 0; text-transform: none; }');
     w.document.write('.tool-num { font-size: 6pt; color: #888; margin-top: 1mm; }');
     w.document.write('</style></head><body>');
     tools.forEach(function(t, idx) {
@@ -4643,7 +4654,7 @@ function printCaseLabel(jobId) {
       if (t.fault_type) w.document.write('<div class="fault-line">' + t.fault_type + '</div>');
       w.document.write('</div>');
       w.document.write('</div>');
-      w.document.write('<div class="right"><div class="xpak">X-PAK<br>SERVICE</div></div>');
+      w.document.write('<div class="right">' + (loanRef ? '<div class="xpak">LOAN<br>S/N<br><span class="lsn">' + (loanRef.serial || loanRef.num) + '</span></div>' : '<div class="xpak na">LOAN TOOL<br>N/A</div>') + '</div>');
       w.document.write('</div>');
     });
     w.document.write('</body></html>');
