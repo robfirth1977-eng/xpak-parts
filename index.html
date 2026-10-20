@@ -3052,6 +3052,15 @@ async function nextJobNumber() {
 function xsaNum(n) { return 'XSA-' + String(n).padStart(3, '0'); }
 function xsvNum(n) { return 'XSV-' + String(n).padStart(3, '0'); }
 
+// Name for every printed document, which becomes the default PDF file name when you Save as PDF:
+//   "<job or visit number> - <document type> - <customer>"  e.g. "XPS-060 - Invoice Notice - Bunnings Minto Frame & Truss"
+// Number first so files sort by job, type second so different documents for one job never share a name.
+// Characters Windows does not allow in file names are replaced, and stray spaces/trailing dots are tidied.
+function docTitle(ref, type, customer) {
+  var c = String(customer == null ? '' : customer).replace(/[\\\/:*?"<>|]/g, '-').replace(/\s+\)/g, ')').replace(/\s+/g, ' ').trim().replace(/\.+$/, '');
+  return [ref, type, c].filter(Boolean).join(' - ');
+}
+
 async function loadJobs() {
   try {
     var jRows = await db('GET', 'jobs?select=*,job_tools(*)&order=created_at.desc');
@@ -4919,7 +4928,7 @@ function renderJobCard(j, tools, jparts) {
 
   var w = window.open('', '_blank');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
-  w.document.write('<title>Job Card - ' + xpsNum(j.job_number) + ' - ' + (j.customer||'') + '</title><style>');
+  w.document.write('<title>' + docTitle(xpsNum(j.job_number), 'Job Card', j.customer) + '</title><style>');
   w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
   w.document.write('body{font-family:Arial,sans-serif;font-size:10.5pt;color:#111;background:#fff;padding:14mm 14mm 10mm}');
   w.document.write('@media print{body{padding:10mm 12mm}@page{size:A4 portrait;margin:0}}');
@@ -5140,9 +5149,8 @@ function renderAssessmentReport(j, tools, jparts, opts) {
   var grandTotal = partsTotal + serviceFeeTotal;
 
   var w = window.open('', '_blank');
-  // Title leads with the job number, not the customer name or report type, so a saved
-  // PDF's default filename files numerically alongside every other report for this job.
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + xpsNum(j.job_number) + ' - ' + (j.customer||'') + '</title><style>');
+  // Title (= default PDF file name): job number first, then the document type, then the customer
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + docTitle(xpsNum(j.job_number), partsOnly ? 'Parts Quote' : (hasCompletedWork ? 'Service Report' : 'Assessment Report'), j.customer) + '</title><style>');
   w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
   w.document.write('body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a2e;background:#fff;padding:20mm 18mm}');
   w.document.write('.header-row{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3799;padding-bottom:12px;margin-bottom:18px}');
@@ -5902,7 +5910,7 @@ function printSvQuote() {
   if (!w) { showToast('Allow pop-ups for this site to print quotes', 'error'); return; }
 
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
-  w.document.write('<title>Field Service Quote - ' + customer + '</title><style>');
+  w.document.write('<title>' + docTitle(quoteRef === 'DRAFT' ? '' : quoteRef, 'Field Service Quote', customer) + '</title><style>');
   w.document.write('*{box-sizing:border-box;margin:0;padding:0}');
   w.document.write('body{font-family:Arial,sans-serif;color:#1a1a1a;font-size:11pt;padding:18mm 18mm 14mm;max-width:210mm;margin:0 auto}');
   w.document.write('@media print{body{padding:12mm 14mm}@page{size:A4 portrait;margin:0}button{display:none}}');
@@ -6073,7 +6081,8 @@ function printSvReport() {
   }
   var w=window.open('','_blank');
   if(!w){showToast('Allow pop-ups for this site to print reports','error');return;}
-  w.document.write('<!DOCTYPE html><html><head><title>Site Visit Report - '+customer+'</title>');
+  var svRefR = editingSvId ? (siteVisits.find(function(x){return x.id===editingSvId;})||{}).visit_number : null;
+  w.document.write('<!DOCTYPE html><html><head><title>' + docTitle(svRefR ? xsvNum(svRefR) : '', 'Site Visit Report', customer) + '</title>');
   w.document.write('<style>body{font-family:"Segoe UI",sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:30px;font-size:13px}');
   w.document.write('.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #fb923c}');
   w.document.write('.company{font-size:20px;font-weight:900;color:#0f1923}.sub{font-size:11px;color:#555;margin-top:2px}');
@@ -6249,7 +6258,7 @@ function printSvInvoiceNotice() {
   var w = window.open('','_blank');
   if (!w) { showToast('Allow pop-ups to generate invoice notice','error'); return; }
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
-  w.document.write('<title>' + refLabel + ' - ' + customer + '</title>');
+  w.document.write('<title>' + docTitle(refLabel, 'Invoice Notice', customer) + '</title>');
   w.document.write('<style>');
   w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:28px;font-size:11pt}');
   w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #e879f9}');
@@ -8316,7 +8325,7 @@ function renderInvoiceNotice(j, tools, jparts) {
   var w = window.open('','_blank');
   if (!w) { showToast('Allow pop-ups to generate invoice notice','error'); return; }
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
-  w.document.write('<title>' + xpsNum(j.job_number) + ' - ' + (j.customer||'') + '</title>');
+  w.document.write('<title>' + docTitle(xpsNum(j.job_number), 'Invoice Notice', j.customer) + '</title>');
   w.document.write('<style>');
   w.document.write('body{font-family:"Segoe UI",Arial,sans-serif;color:#1a1a1a;max-width:800px;margin:0 auto;padding:28px;font-size:11pt}');
   w.document.write('.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #e879f9}');
