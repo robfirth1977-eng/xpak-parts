@@ -799,7 +799,7 @@
       <div class="field"><label>Loaned Date</label><input id="lLoanedDate" type="date"></div>
       <div class="field"><label>Expected Return</label><input id="lExpectedReturn" type="date"></div>
       <div class="field"><label>Loaned By</label><input id="lLoanedBy" placeholder="e.g. Rob"></div>
-      <div class="field"><label>Linked Job</label><input id="lLinkedJob" placeholder="e.g. XPS-008"></div>
+      <div class="field"><label>Linked Job <span id="lLinkedJobHint" style="font-weight:400;font-size:10px;color:#10b981"></span></label><input id="lLinkedJob" list="lLinkedJobOpts" placeholder="e.g. XPS-008" autocomplete="off" oninput="onLoanJobRefChange(false)" onchange="onLoanJobRefChange(true)"><datalist id="lLinkedJobOpts"></datalist></div>
     </div>
     <div class="field"><label>Notes</label><textarea id="lNotes" placeholder="Any notes about the loan..." style="min-height:60px"></textarea></div>
     <div id="lReturnSection" style="display:none">
@@ -1642,6 +1642,30 @@ function clearLoanForm(){
   document.getElementById('lIsTrial').checked=false; document.getElementById('lTrialOutcome').value=''; document.getElementById('lTrialOutcomeField').style.display='none';
   toggleTrialMode(false);
 }
+// Loan <-> job link: typing a job number on the loan finds the job, fills in the customer details,
+// and (on save) ties the loan to that job so the job shows the loan and no longer needs "No loan tool needed".
+function normJobRef(txt) { var m = String(txt || '').match(/(\d{1,4})\s*$/); return m ? xpsNum(parseInt(m[1], 10)) : null; }
+function findJobByRef(txt) {
+  var ref = normJobRef(txt); if (!ref) return null;
+  return (jobs || []).find(function(j) { return xpsNum(j.job_number) === ref; }) || null;
+}
+function fillLoanJobOptions() {
+  var dl = document.getElementById('lLinkedJobOpts'); if (!dl) return;
+  dl.innerHTML = (jobs || []).filter(function(j) { return j.status !== 'COMPLETED' && j.status !== 'INVOICED AND SENT'; })
+    .sort(function(a, b) { return b.job_number - a.job_number; })
+    .map(function(j) { return '<option value="' + xpsNum(j.job_number) + '">' + (j.customer || '').replace(/"/g, '') + ' (' + (j.status || '') + ')</option>'; }).join('');
+}
+function onLoanJobRefChange(commit) {
+  var inp = document.getElementById('lLinkedJob'), hint = document.getElementById('lLinkedJobHint'); if (!inp) return;
+  var j = findJobByRef(inp.value);
+  if (hint) hint.textContent = j ? '→ ' + (j.customer || '') : (inp.value.trim() ? '(no matching job)' : '');
+  if (!commit || !j) return;
+  inp.value = xpsNum(j.job_number);
+  // fill only boxes that are still empty, so nothing already typed is overwritten
+  var fill = { lCustomer: j.customer, lContact: j.contact_name, lPhone: j.phone, lMobile: j.mobile, lEmail: j.email, lReason: 'Loan tool while ' + xpsNum(j.job_number) + ' is being repaired' };
+  Object.keys(fill).forEach(function(id) { var el = document.getElementById(id); if (el && !el.value && fill[id]) el.value = fill[id]; });
+}
+
 function openNewLoanModal(){
   editingLoan=null; document.getElementById('loanModalTitle').textContent='New Loan'; clearLoanForm();
   document.getElementById('lReturnSection').style.display='none';
@@ -1656,6 +1680,7 @@ function openNewLoanModal(){
     var al=loans.find(function(l){return l.loan_tool_id===t.id&&l.status!=='RETURNED';});
     return al?'':'<option value="'+t.id+'">'+t.name+(t.serial_number?' ('+t.serial_number+')':'')+'</option>';
   }).join('');
+  fillLoanJobOptions(); onLoanJobRefChange(false);
   document.getElementById('loanOverlay').classList.add('show');
   setTimeout(function(){document.getElementById('lCustomer').focus();},100);
 }
@@ -1681,6 +1706,7 @@ function openEditLoanModal(loanId){
   document.getElementById('btnPrintShelfCard').style.display=isR?'none':'block';
   document.getElementById('btnDeleteLoan').style.display='block';
   document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
+  fillLoanJobOptions(); onLoanJobRefChange(false);
   document.getElementById('loanOverlay').classList.add('show');
 }
 function closeLoanModal(){document.getElementById('loanOverlay').classList.remove('show');}
@@ -1689,6 +1715,9 @@ async function saveLoan(){
   if(!toolId){showToast('Select a tool','error');return;} if(!customer){showToast('Customer required','error');return;}
   var btn=document.getElementById('btnSaveLoan'); btn.disabled=true; btn.textContent='Saving...';
   var payload={loan_tool_id:toolId,customer:customer,contact_name:document.getElementById('lContact').value||null,phone:document.getElementById('lPhone').value||null,mobile:document.getElementById('lMobile').value||null,email:document.getElementById('lEmail').value||null,condition_out:document.getElementById('lConditionOut').value||null,condition_in:document.getElementById('lConditionIn').value||null,cycle_count_out:parseInt(document.getElementById('lCycleCountOut').value)||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_out:document.getElementById('lPhotoOut').value||null,photo_in:document.getElementById('lPhotoIn').value||null,reason_for_loan:document.getElementById('lReason').value||null,loaned_date:document.getElementById('lLoanedDate').value||null,expected_return:document.getElementById('lExpectedReturn').value||null,returned_date:document.getElementById('lReturnedDate').value||null,loaned_by:document.getElementById('lLoanedBy').value||null,linked_job:document.getElementById('lLinkedJob').value||null,notes:document.getElementById('lNotes').value||null,is_trial:document.getElementById('lIsTrial').checked,trial_outcome:document.getElementById('lTrialOutcome').value||null,status:'ACTIVE',updated_at:new Date().toISOString()};
+  var linkedJobObj=findJobByRef(payload.linked_job);
+  if(linkedJobObj){ payload.linked_job=xpsNum(linkedJobObj.job_number); payload.job_id=linkedJobObj.id; }
+  else if(!payload.linked_job){ payload.job_id=null; }
   try{
     if(editingLoan) await db('PATCH','loans?id=eq.'+editingLoan.id,payload);
     else{
@@ -1706,7 +1735,11 @@ async function saveLoan(){
         }
       } catch(e) { console.error('loan activity auto-log failed', e); }
     }
-    showToast(editingLoan?'Loan updated':'Loan created');
+    if(linkedJobObj && linkedJobObj.no_loan_needed){
+      // a loan now exists for this job, so it can no longer say "no loan tool needed"
+      try{ await db('PATCH','jobs?id=eq.'+linkedJobObj.id,{no_loan_needed:false}); linkedJobObj.no_loan_needed=false; }catch(e2){ console.error('could not clear no_loan_needed',e2); }
+    }
+    showToast((editingLoan?'Loan updated':'Loan created')+(linkedJobObj?' - linked to '+xpsNum(linkedJobObj.job_number):''));
     await loadLoans();
     if (!editingLoan) closeLoanModal(); // Only close on new loan, stay open when editing
   }catch(e){showToast('Save failed: '+e.message,'error');}
@@ -3570,7 +3603,15 @@ async function openEditJobModal(jobId) {
   jobLoanState = { linkedLoan: null, noLoanNeeded: !!j.no_loan_needed, selectedToolId: null };
   renderJobLoanSection();
   db('GET', 'loans?job_id=eq.' + j.id + '&status=neq.RETURNED&select=*').then(function(activeLoans) {
-    if (activeLoans && activeLoans.length) { jobLoanState.linkedLoan = activeLoans[0]; renderJobLoanSection(); }
+    if (activeLoans && activeLoans.length) return activeLoans;
+    // a loan made from the Loans page only has the job number typed on it - find it that way too
+    return db('GET', 'loans?linked_job=eq.' + xpsNum(j.job_number) + '&status=neq.RETURNED&select=*');
+  }).then(function(activeLoans) {
+    if (!activeLoans || !activeLoans.length) return;
+    var ln = activeLoans[0];
+    jobLoanState.linkedLoan = ln; jobLoanState.noLoanNeeded = false;
+    if (!ln.job_id) { ln.job_id = j.id; db('PATCH', 'loans?id=eq.' + ln.id, { job_id: j.id }).catch(function() {}); }
+    renderJobLoanSection();
   }).catch(function() {});
   try { jobLinks = j.links ? JSON.parse(j.links) : []; } catch(e) { jobLinks = []; }
   renderLinksList();
@@ -3890,7 +3931,7 @@ async function saveJob() {
     labour_discount: parseFloat(document.getElementById('jLabourDiscount').value) || null,
     parts_discount: parseFloat(document.getElementById('jPartsDiscount').value) || null,
     freight_cost: parseFloat(document.getElementById('jFreight').value) || null,
-    no_loan_needed: jobLoanState.noLoanNeeded,
+    no_loan_needed: jobLoanState.linkedLoan ? false : jobLoanState.noLoanNeeded,
     links: JSON.stringify(jobLinks),
     updated_at: new Date().toISOString()
   };
