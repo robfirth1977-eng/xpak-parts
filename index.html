@@ -202,7 +202,8 @@
 <div class="loan-toolbar" id="poToolbar" style="display:none">
   <div class="loan-view-toggle" id="poStatusFilters">
     <button class="loan-view-btn active" id="poBtnDraft"    onclick="setPOFilter('Draft')">Draft</button>
-    <button class="loan-view-btn"        id="poBtnSent"     onclick="setPOFilter('Sent')">Sent</button>
+    <button class="loan-view-btn"        id="poBtnRequested" onclick="setPOFilter('Requested')">Requested</button>
+    <button class="loan-view-btn"        id="poBtnOrdered"  onclick="setPOFilter('Ordered')">Ordered</button>
     <button class="loan-view-btn"        id="poBtnPartial"  onclick="setPOFilter('Partially Received')">Part Received</button>
     <button class="loan-view-btn"        id="poBtnReceived" onclick="setPOFilter('Received')">Received</button>
     <button class="loan-view-btn"        id="poBtnAll"      onclick="setPOFilter('All')">All</button>
@@ -232,7 +233,8 @@
       <button class="filter-btn" id="soChipStar" onclick="setStockOrderFilter('star',this)" >★ Stock Items</button>
       <button class="filter-btn" id="soChipSel"  onclick="setStockOrderFilter('sel',this)"  >☑ Selected</button>
     </div>
-    <button class="btn-add green" onclick="exportStockOrder()" style="margin-left:auto">⬇ Export Excel</button>
+    <button class="btn-add" onclick="addSelectedToOrderRequest()" style="margin-left:auto;background:#f59e0b;color:#0f1923;font-weight:700">+ Add to order request</button>
+    <button class="btn-add green" onclick="exportStockOrder()">⬇ Export Excel</button>
   </div>
   <div id="stockOrderList"></div>
 </div>
@@ -264,25 +266,64 @@
 
 <!-- PO Detail Modal -->
 <div class="overlay" id="orderReqOverlay" style="z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeOrderRequest()">
-  <div class="modal" style="border-top:3px solid #10b981;max-width:760px;width:96%;border-radius:12px">
+  <div class="modal" style="border-top:3px solid #10b981;max-width:640px;width:96%;border-radius:12px">
     <div class="modal-header">
-      <div class="modal-title">Order Request <span id="orJobTitle" style="font-size:12px;font-weight:400;color:#8aa8c0"></span></div>
+      <div class="modal-title">Add to order request <span id="orJobTitle" style="font-size:12px;font-weight:400;color:#8aa8c0"></span></div>
       <button class="modal-close" onclick="closeOrderRequest()">x</button>
     </div>
-    <div style="font-size:11px;color:#8aa8c0;margin-bottom:8px">Builds an email to purchasing@xpak.com.au from this job's To Order parts. Untick anything you don't want ordered.</div>
+    <div style="font-size:11px;color:#8aa8c0;margin-bottom:8px">These parts go onto the open order request for the supplier (a new one is started if there isn't one). You review and send it to Purchasing from there. Untick anything you don't want ordered.</div>
     <div id="orLines" style="margin-bottom:10px"></div>
     <div class="g2">
-      <div class="field"><label>Supplier</label><select id="orSupplier" onchange="refreshOrderRequestText()"></select></div>
-      <div class="field"><label>Supplier quote ref (optional)</label><input id="orQuote" placeholder="e.g. SQ-090149" oninput="refreshOrderRequestText()"></div>
-      <div class="field full"><label>Deliver to</label><input id="orDelivery" oninput="refreshOrderRequestText()"></div>
-      <div class="field full"><label>Subject</label><input id="orSubject"></div>
-      <div class="field full"><label>Email text (you can edit it before sending)</label><textarea id="orText" style="min-height:230px;font-family:monospace;font-size:12px"></textarea></div>
+      <div class="field"><label>Supplier</label><select id="orSupplier"></select></div>
+      <div class="field"><label>Supplier quote ref (optional)</label><input id="orQuote" placeholder="e.g. SQ-090149"></div>
     </div>
-    <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin:8px 0;cursor:pointer"><input type="checkbox" id="orMarkOrdered" checked> Mark the ticked parts as Ordered on the job when I open the email</label>
-    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px">
       <button class="btn-clear" onclick="closeOrderRequest()">Cancel</button>
-      <button class="btn-clear" onclick="copyOrderRequest()">Copy text</button>
-      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="sendOrderRequest()">Open email</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="addToOrderRequest()">Add to order request</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="poSendOverlay" style="z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeSendRequest()">
+  <div class="modal" style="border-top:3px solid #f59e0b;max-width:760px;width:96%;border-radius:12px">
+    <div class="modal-header"><div class="modal-title">Send order request</div><button class="modal-close" onclick="closeSendRequest()">x</button></div>
+    <div class="g2">
+      <div class="field"><label>To</label><input id="psTo" readonly></div>
+      <div class="field"><label>Cc (Brent and Trent every time)</label><input id="psCc" readonly></div>
+      <div class="field full"><label>Subject</label><input id="psSubject"></div>
+      <div class="field full"><label>Email text (you can edit it before sending)</label><textarea id="psText" style="min-height:250px;font-family:monospace;font-size:12px"></textarea></div>
+    </div>
+    <label id="psMarkRow" style="display:flex;gap:8px;align-items:center;font-size:12px;margin:8px 0;cursor:pointer"><input type="checkbox" id="psMark" checked> Mark the request as Requested when I open the email</label>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-clear" onclick="closeSendRequest()">Cancel</button>
+      <button class="btn-clear" onclick="copyRequestText()">Copy text</button>
+      <button class="btn-clear" onclick="exportPOExcel()">Download Excel</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="sendRequestEmail()">Open email</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="poReceiveOverlay" style="z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeReceive()">
+  <div class="modal" style="border-top:3px solid #10b981;max-width:760px;width:96%;border-radius:12px">
+    <div class="modal-header"><div class="modal-title">Receive goods <span id="prTitle" style="font-size:12px;font-weight:400;color:#8aa8c0"></span></div><button class="modal-close" onclick="closeReceive()">x</button></div>
+    <div style="font-size:11px;color:#8aa8c0;margin-bottom:8px">Tick what has arrived and set the quantity. Parts for a job arrive on that job; other parts add to stock. Receiving the same line again only counts what is still outstanding.</div>
+    <table class="po-table"><thead><tr><th></th><th>Part No.</th><th>Description</th><th style="text-align:center">Ordered</th><th style="text-align:center">Already in</th><th style="text-align:center">Arrived now</th><th>Goes to</th></tr></thead><tbody id="prBody"></tbody></table>
+    <div class="field" style="margin-top:10px"><label>Delivery docket / invoice (scan it to SERVICE\Receipts with this name)</label><input id="prReceipt"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn-clear" onclick="closeReceive()">Cancel</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="applyReceive()">Receive ticked</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="supPickOverlay" style="z-index:400;align-items:center;justify-content:center">
+  <div class="modal" style="border-top:3px solid #f59e0b;max-width:460px;width:96%;border-radius:12px">
+    <div class="modal-header"><div class="modal-title">Which supplier?</div></div>
+    <div id="spInfo" style="font-size:12px;color:#8aa8c0;margin-bottom:10px"></div>
+    <select id="spSelect" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px"></select>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn-clear" onclick="supPickDone(false)">Cancel</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="supPickDone(true)">Use this supplier</button>
     </div>
   </div>
 </div>
@@ -295,10 +336,15 @@
     </div>
     <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px">
       <div style="flex:1;min-width:160px"><div style="font-size:10px;color:#5a8090;margin-bottom:3px">SUPPLIER</div><input id="poDetailSupplier" style="font-size:15px;font-weight:700;color:#e2e8f0;background:transparent;border:none;border-bottom:1px solid #2a4060;outline:none;width:100%;padding:2px 0" onblur="savePOSupplier()"></div>
-      <div class="field" style="width:140px"><label>Sent Date</label><input type="date" id="poDetailSentDate"></div>
+      <div class="field" style="width:140px"><label>Requested</label><input type="date" id="poDetailSentDate" readonly></div>
       <div class="field" style="width:140px"><label>Expected</label><input type="date" id="poDetailExpDate"></div>
       <div class="field" style="flex:1;min-width:180px"><label>Notes</label><input id="poDetailNotes" placeholder="e.g. Ref number, special instructions..."></div>
     </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="field" style="flex:1;min-width:200px"><label>Supplier PO no. <span style="font-size:10px;color:#3a5070;font-weight:400">from the supplier email you are copied on</span></label><input id="poDetailSupPO" placeholder="e.g. PO-12345"></div>
+      <div class="field" style="flex:2;min-width:240px"><label>Delivery docket / invoice <span style="font-size:10px;color:#3a5070;font-weight:400">file name in SERVICE\Receipts</span></label><input id="poDetailReceipt" placeholder="set when goods are received"></div>
+    </div>
+    <div id="poApprovalBanner" style="display:none;padding:8px 12px;margin-bottom:10px;border-radius:8px;border:1px solid;font-size:12px;font-weight:700"></div>
     <table class="po-table">
       <thead><tr>
         <th>Job</th><th>Part No.</th><th>Description</th>
@@ -316,7 +362,9 @@
       <span style="font-size:14px">Total: <strong id="poTotal" style="color:#10b981;display:inline-block;width:90px;text-align:right">-</strong></span>
     </div>
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button id="btnMarkPOSent" class="btn-save" style="background:#f59e0b;color:#0f1923" onclick="markPOSent()">Mark as Sent</button>
+      <button id="btnSendRequest" class="btn-save" style="background:#f59e0b;color:#0f1923" onclick="openSendRequest()">&#9993; Send request</button>
+      <button id="btnMarkOrdered" class="btn-save" style="background:#38bdf8;color:#0f1923" onclick="markPOOrdered()">Mark Ordered</button>
+      <button id="btnReceive" class="btn-save green" onclick="openReceive()">&#128230; Receive goods</button>
       <button id="btnExportPO"   class="btn-save green" onclick="exportPOExcel()">⬇ Export Excel</button>
       <button onclick="closePOModal()" style="padding:11px 20px;background:transparent;border:1px solid #2a4060;color:#8aa8c0;border-radius:10px;font-size:13px;cursor:pointer">Close</button>
       <button id="btnArchivePO" onclick="togglePOArchive()" style="padding:11px 16px;background:transparent;border:1px solid #8aa8c070;color:#8aa8c0;border-radius:10px;font-size:12px;cursor:pointer;font-weight:600">🗄 Archive</button>
@@ -712,7 +760,7 @@
     <div style="font-size:10px;color:#5a7090;margin:-4px 0 8px">Tick the tools below that need to split off (e.g. different pace, parts wait, or on hold), then Split.</div>
     <div id="jobToolsList"></div>
 
-    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center"><span>Parts Required</span><span style="display:flex;gap:6px"><button onclick="openOrderRequest(null,true)" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #f9731670;color:#f97316;border-radius:6px;cursor:pointer;font-weight:600">✉ Order Email</button><button onclick="pushPartsToStockOrder()" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #10b98170;color:#10b981;border-radius:6px;cursor:pointer;font-weight:600">📦 Push To Order</button></span></div>
+    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center"><span>Parts Required</span><span style="display:flex;gap:6px"><button onclick="openOrderRequest(null,true)" style="font-size:11px;padding:4px 10px;background:transparent;border:1px solid #f9731670;color:#f97316;border-radius:6px;cursor:pointer;font-weight:600">&#43; Order Request</button></span></div>
 
     <div class="section-label">Job Cost Summary</div>
     <input id="jParts" type="hidden" value="">
@@ -1432,6 +1480,7 @@ function renderStockOrderBuilder() {
     (selectedCount > 0 ? '<button onclick="bulkSetStockItem(true)" title="Mark every ticked part as a stock item" style="padding:5px 10px;font-size:11px;background:transparent;border:1px solid #f59e0b80;color:#f59e0b;border-radius:6px;cursor:pointer;font-weight:600">★ Make stock items</button>' : '') +
     (selectedCount > 0 ? '<button onclick="bulkSetStockItem(false)" title="Remove stock item status from every ticked part" style="padding:5px 10px;font-size:11px;background:transparent;border:1px solid #5a809080;color:#8aa8c0;border-radius:6px;cursor:pointer;font-weight:600">☆ Remove stock items</button>' : '') +
     (selectedCount > 0 ? '<button onclick="clearStockOrderDraft()" style="padding:5px 10px;font-size:11px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:6px;cursor:pointer;font-weight:600">✕ Clear</button>' : '') +
+    (selectedCount > 0 ? '<button class="btn-add" onclick="addSelectedToOrderRequest()" style="padding:6px 14px;font-size:12px;background:#f59e0b;color:#0f1923;font-weight:700">+ Add to order request</button>' : '') +
     (selectedCount > 0 ? '<button class="btn-add green" onclick="exportStockOrder()" style="padding:6px 14px;font-size:12px">⬇ Export Excel</button>' : '') +
   '</div>';
 
@@ -3237,7 +3286,7 @@ function renderList() {
         '<button class="job-link-tile" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')" style="cursor:pointer;background:#0a1a2a;border-color:#f59e0b;color:#f59e0b">Job Card</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Assessment Report</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\',{partsOnly:true})" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Parts Quote</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Order Email</button>' +
+        '<button class="job-link-tile" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Order Request</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')" style="cursor:pointer;background:#1a0a2a;border-color:#e879f9;color:#e879f9">Invoice Notice</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Export Quote</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();openActModal(\'' + j.id + '\',null)" style="cursor:pointer;background:#0a1a2a;border-color:#00c8e0;color:#00c8e0">+ Log Activity</button>' +
@@ -3377,7 +3426,7 @@ function renderBoard() {
           '<button class="bca-btn" style="background:#0a1a2a;color:#f59e0b" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')">📋 Job Card</button>' +
           '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')">📄 Report</button>' +
           '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\',{partsOnly:true})">💲 Parts Quote</button>' +
-          '<button class="bca-btn report" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')">✉ Order Email</button>' +
+          '<button class="bca-btn report" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')">＋ Order Request</button>' +
           '<button class="bca-btn" style="background:#1a0a2a;color:#e879f9" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')">🧾 Invoice</button>' +
           '<button class="bca-btn quote" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')">📦 Quote</button>' +
           '<button class="bca-btn" style="background:#0a1a2a;color:#00c8e0" onclick="event.stopPropagation();openActModal(\'' + j.id + '\',null)">🗒 Log</button>' +
@@ -3725,20 +3774,69 @@ function populateMachineDropdown(selId) {
 }
 
 
-// ── ORDER REQUEST EMAIL ───────────────────────────────────────────
-// Builds an order request email to purchasing from a job's To Order parts. Works from a job card
-// (reads the saved parts) or from inside the open job (reads what is on screen, saved or not).
-var ORDER_REQUEST_TO = 'purchasing@xpak.com.au';
+// ── ORDER REQUESTS ────────────────────────────────────────────────
+// Parts are gathered into one request per supplier, sent to Purchasing (Brent and Trent copied), then
+// tracked Requested -> Ordered (supplier PO number) -> Received. Job parts arrive on the job; any other
+// line adds to stock when received. The records are the purchase_orders / purchase_order_items tables.
+var ORDER_REQUEST_TO = 'Purchasing@xpak.com.au';
+var ORDER_REQUEST_CC = ['brent.reardon@xpak.com.au', 'trent.firth@xpak.com.au'];
+var ORDER_APPROVAL_BRENT = 2000, ORDER_APPROVAL_TRENT = 5000;   // ex GST: over $2,000 Brent approves; over $5,000 Brent and Trent
+var ORDER_DELIVERY = 'X-Pak Global, C/- Storeplan, 3 Curtiss Cl, Tamworth NSW 2340, attention Rob Firth';
 var _orderReq = null;
 
 function _orEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function _orStore(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch(e) {} return null; }
+function _money(n) { return '$' + (parseFloat(n) || 0).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
+function poItemsTotal(po) { return (po._items || []).reduce(function(s, i) { return s + ((parseFloat(i.unit_cost) || 0) * (i.qty || 1)); }, 0); }
+function poApproval(total) { return total > ORDER_APPROVAL_TRENT ? 'Brent and Trent' : total > ORDER_APPROVAL_BRENT ? 'Brent' : ''; }
+function poDisplayStatus(po) { return po.status === 'Sent' ? 'Ordered' : po.status; }   // older orders say Sent
+
+async function supplierNameList(extra) {
+  if (!_supplierCache || !_supplierCache.length) {
+    try { _supplierCache = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order'); } catch(e) { _supplierCache = _supplierCache || []; }
+  }
+  var names = (_supplierCache || []).map(function(s) { return s.company_name || s.name; }).filter(Boolean);
+  if (extra && names.indexOf(extra) === -1) names.unshift(extra);
+  return names;
+}
+
+// The open (Draft) request for a supplier, or a new one
+async function findOrCreateDraftPO(supplier) {
+  var po = purchaseOrders.find(function(p) { return p.status === 'Draft' && p.supplier === supplier && !p.archived_at; });
+  if (po) return po;
+  var maxNum = 0;
+  purchaseOrders.forEach(function(p) { var m = p.po_number ? p.po_number.match(/XPO-(\d+)/) : null; if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); });
+  var res = await db('POST', 'purchase_orders', { po_number: 'XPO-' + String(maxNum + 1).padStart(3, '0'), supplier: supplier, status: 'Draft', updated_at: new Date().toISOString() });
+  var made = res[0]; made._items = []; purchaseOrders.unshift(made);
+  return made;
+}
+
+// lines: { part_id, key_no, description, qty, unit_cost, job_id, job_number }
+async function addLinesToPO(po, lines) {
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i];
+    var ex = l.part_id ? (po._items || []).find(function(it) { return it.part_id === l.part_id && (it.job_id || null) === (l.job_id || null); }) : null;
+    if (ex) {
+      await db('PATCH', 'purchase_order_items?id=eq.' + ex.id, { qty: (ex.qty || 0) + l.qty, updated_at: new Date().toISOString() });
+    } else {
+      await db('POST', 'purchase_order_items', { purchase_order_id: po.id, part_id: l.part_id || null, job_id: l.job_id || null, job_number: l.job_number || null,
+        key_no: l.key_no, description: l.description, qty: l.qty, unit_cost: l.unit_cost, status: 'Ordered', updated_at: new Date().toISOString() });
+    }
+  }
+}
+
+function showOrderRequestsFor(po) {
+  switchToPurchasing(); setPOFilter('Draft');
+  setTimeout(function() { openPODetail(po.id); }, 250);
+}
+
+// ── Add a job's To Order parts to an order request (from a job card, or from inside the job) ──
 async function openOrderRequest(jobId, fromModal) {
   try {
     var j, rows;
     if (fromModal) {
-      if (!editingJob) { showToast('Save the job first, then build the order request', 'error'); return; }
+      if (!editingJob) { showToast('Save the job first, then add its parts to an order request', 'error'); return; }
       j = Object.assign({}, editingJob, {
         customer: document.getElementById('jCustomer').value.trim() || editingJob.customer,
         order_number: document.getElementById('jOrderNum').value.trim() || null
@@ -3772,161 +3870,114 @@ async function openOrderRequest(jobId, fromModal) {
       if (p && p.suppliers) {
         var sups = Array.isArray(p.suppliers) ? p.suppliers : [];
         try { if (!Array.isArray(sups)) sups = JSON.parse(p.suppliers); } catch(e) {}
-        var pref = sups.find(function(s){ return s.is_preferred; }) || sups[0];
+        var pref = sups.find(function(s){ return s.is_preferred || s.preferred; }) || sups[0];
         if (pref && pref.name) counts[pref.name] = (counts[pref.name] || 0) + 1;
       }
     });
     var detected = Object.keys(counts).sort(function(a,b){ return counts[b] - counts[a]; })[0] || _orStore('xpak_or_supplier') || '';
-
-    if (!_supplierCache) { try { _supplierCache = await db('GET', 'suppliers?select=*,supplier_brands(brand_name)&order=sort_order'); } catch(e) { _supplierCache = []; } }
+    var names = await supplierNameList(detected);
     _orderReq = { job: j, lines: lines, fromModal: !!fromModal };
-    var names = (_supplierCache || []).map(function(s){ return s.company_name || s.name; }).filter(Boolean);
-    if (detected && names.indexOf(detected) === -1) names.unshift(detected);
     document.getElementById('orSupplier').innerHTML = '<option value="">Select supplier...</option>' + names.map(function(n){ return '<option value="' + _orEsc(n) + '"' + (n === detected ? ' selected' : '') + '>' + _orEsc(n) + '</option>'; }).join('');
     document.getElementById('orQuote').value = '';
-    document.getElementById('orDelivery').value = _orStore('xpak_or_delivery') || 'X-Pak Global, C/- Storeplan, 3 Curtiss Cl, Tamworth NSW 2340, attention Rob Firth';
-    document.getElementById('orMarkOrdered').checked = true;
     document.getElementById('orJobTitle').textContent = xpsNum(j.job_number) + ' - ' + (j.customer || '');
     renderOrderRequestLines();
-    refreshOrderRequestText();
     document.getElementById('orderReqOverlay').classList.add('show');
-  } catch(e) { showToast('Could not build order request: ' + e.message, 'error'); }
+  } catch(e) { showToast('Could not build the order request: ' + e.message, 'error'); }
 }
 
 function renderOrderRequestLines() {
   document.getElementById('orLines').innerHTML = _orderReq.lines.map(function(l, i) {
     var price = l.cost != null ? '$' + l.cost.toFixed(2) + ' ea' : '<span style="color:#f97316">no cost on file</span>';
     return '<label style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #1e2f45;font-size:12px;cursor:pointer">' +
-      '<input type="checkbox" ' + (l.on ? 'checked' : '') + ' onchange="_orderReq.lines[' + i + '].on=this.checked;refreshOrderRequestText()">' +
+      '<input type="checkbox" ' + (l.on ? 'checked' : '') + ' onchange="_orderReq.lines[' + i + '].on=this.checked">' +
       '<span style="font-family:monospace;color:#60a5fa;min-width:100px">' + _orEsc(l.key) + '</span>' +
       '<span style="flex:1">' + _orEsc(l.desc) + '</span><span>x' + l.qty + '</span><span style="min-width:90px;text-align:right">' + price + '</span></label>';
   }).join('');
 }
 
-function refreshOrderRequestText() {
-  var r = _orderReq; if (!r) return;
-  var supplier = document.getElementById('orSupplier').value || '[supplier]';
-  var quote = document.getElementById('orQuote').value.trim();
-  var delivery = document.getElementById('orDelivery').value.trim();
-  var j = r.job, picked = r.lines.filter(function(l){ return l.on; });
-  var total = 0, unpriced = 0;
-  var rowsTxt = picked.map(function(l) {
-    var t = l.cost != null ? l.cost * l.qty : null;
-    if (t != null) total += t; else unpriced++;
-    return '- ' + l.key + ' | ' + l.desc + ' | Qty ' + l.qty + (l.cost != null ? ' | $' + l.cost.toFixed(2) + ' ea | $' + t.toFixed(2) : ' | price TBC');
-  });
-  var jobRef = xpsNum(j.job_number) + ' (' + (j.customer || '') + (j.order_number ? ', customer order ' + j.order_number : '') + ')';
-  var txt = 'Hi,\n\nPlease order the following from ' + supplier + ' for service job ' + jobRef + '.' +
-    (quote ? ' Pricing is per ' + supplier + ' quote ' + quote + '.' : '') + ' Prices are ex GST.\n\n' +
-    rowsTxt.join('\n') + '\n\n' +
-    (total > 0 ? 'Total: $' + total.toFixed(2) + ' ex GST' + (unpriced ? ' (plus ' + unpriced + ' item' + (unpriced > 1 ? 's' : '') + ' not yet priced)' : '') + '\n\n' : '') +
-    (delivery ? 'Please deliver to ' + delivery + '.\n\n' : '') + 'Thanks,\nRob';
-  document.getElementById('orText').value = txt;
-  document.getElementById('orSubject').value = 'Order request - ' + supplier + ' parts - ' + xpsNum(j.job_number) + ' ' + (j.customer || '') + (quote ? ' (quote ' + quote + ')' : '');
-}
-
-function copyOrderRequest() {
-  var t = 'To: ' + ORDER_REQUEST_TO + '\nSubject: ' + document.getElementById('orSubject').value + '\n\n' + document.getElementById('orText').value;
-  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ showToast('Order request copied'); }).catch(function(){
-    var ta = document.getElementById('orText'); ta.focus(); ta.select(); showToast('Select and copy the text above', 'error');
-  });
-}
-
-async function sendOrderRequest() {
+async function addToOrderRequest() {
   var r = _orderReq; if (!r) return;
   var supplier = document.getElementById('orSupplier').value;
   if (!supplier) { showToast('Pick the supplier first', 'error'); return; }
   var picked = r.lines.filter(function(l){ return l.on; });
   if (!picked.length) { showToast('Tick at least one part', 'error'); return; }
   _orStore('xpak_or_supplier', supplier);
-  _orStore('xpak_or_delivery', document.getElementById('orDelivery').value.trim());
-  var subject = document.getElementById('orSubject').value, body = document.getElementById('orText').value;
-  var href = 'mailto:' + ORDER_REQUEST_TO + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
-  if (href.length > 1900) { copyOrderRequest(); showToast('Long email - copied to clipboard; paste it into a new email to ' + ORDER_REQUEST_TO, 'error'); }
-  else { window.location.href = href; }
-  if (document.getElementById('orMarkOrdered').checked) {
+  try {
+    var po = await findOrCreateDraftPO(supplier);
+    var quote = document.getElementById('orQuote').value.trim();
+    if (quote && (po.notes || '').indexOf(quote) === -1) {
+      var nn = ((po.notes || '') + (po.notes ? '; ' : '') + 'Supplier quote ' + quote);
+      await db('PATCH', 'purchase_orders?id=eq.' + po.id, { notes: nn, updated_at: new Date().toISOString() }); po.notes = nn;
+    }
+    await addLinesToPO(po, picked.map(function(l) {
+      return { part_id: l.part_id, key_no: l.key, description: l.desc, qty: l.qty, unit_cost: l.cost, job_id: r.job.id, job_number: xpsNum(r.job.job_number) };
+    }));
+    // the parts are now on an order request, so they leave the To Order list
     var patches = [];
-    picked.forEach(function(l) {
-      l.rows.forEach(function(row) {
-        if (row.local) row.local.status = 'ordered';
-        if (row.id) patches.push(db('PATCH', 'job_parts?id=eq.' + row.id, { status: 'ordered', updated_at: new Date().toISOString() }).catch(function(){}));
-      });
-    });
+    picked.forEach(function(l) { l.rows.forEach(function(row) {
+      if (row.local) row.local.status = 'ordered';
+      if (row.id) patches.push(db('PATCH', 'job_parts?id=eq.' + row.id, { status: 'ordered', updated_at: new Date().toISOString() }).catch(function(){}));
+    }); });
     await Promise.all(patches);
     if (r.fromModal) renderJobPartsList();
     loadJobs();
-    showToast(picked.length + ' part' + (picked.length > 1 ? 's' : '') + ' marked Ordered');
-  }
-  closeOrderRequest();
+    await loadPurchaseOrders();
+    showToast(picked.length + ' part' + (picked.length > 1 ? 's' : '') + ' added to ' + po.po_number + ' (' + supplier + ')');
+    closeOrderRequest();
+    showOrderRequestsFor(po);
+  } catch(e) { showToast('Could not add to the order request: ' + e.message, 'error'); }
 }
 
 function closeOrderRequest() { document.getElementById('orderReqOverlay').classList.remove('show'); _orderReq = null; }
 
-async function pushPartsToStockOrder() {
-  var toOrder = jobPartsLocal.filter(function(jp){ return jp.status==='to_order'; });
-  if (!toOrder.length) { showToast('No parts marked To Order','error'); return; }
-
-  // Detect supplier from parts
-  var supplierCounts = {};
-  toOrder.forEach(function(jp) {
-    var p = allParts.find(function(x){ return x.id===jp.part_id; });
-    if (p && p.suppliers) {
-      var sups = Array.isArray(p.suppliers)?p.suppliers:[];
-      try { if(!Array.isArray(sups)) sups=JSON.parse(p.suppliers); } catch(e){}
-      var pref = sups.find(function(s){ return s.is_preferred; })||sups[0];
-      if (pref && pref.name) supplierCounts[pref.name] = (supplierCounts[pref.name]||0)+1;
-    }
-  });
-  var supplier = Object.keys(supplierCounts).sort(function(a,b){ return supplierCounts[b]-supplierCounts[a]; })[0] || 'Unknown';
-
-  // Find existing Draft PO for this supplier or create new one
-  var existingPO = purchaseOrders.find(function(po){ return po.status==='Draft' && po.supplier===supplier && !po.archived_at; });
-  var poId, poNum;
-  if (existingPO) {
-    poId = existingPO.id; poNum = existingPO.po_number;
-  } else {
-    var maxNum = 0;
-    purchaseOrders.forEach(function(po){ var m=po.po_number?po.po_number.match(/XPO-(\d+)/):null; if(m) maxNum=Math.max(maxNum,parseInt(m[1])); });
-    poNum = 'XPO-' + String(maxNum+1).padStart(3,'0');
-    var newPO = await db('POST','purchase_orders',{po_number:poNum,supplier:supplier,status:'Draft',updated_at:new Date().toISOString()});
-    poId = newPO[0].id; newPO[0]._items=[]; purchaseOrders.unshift(newPO[0]);
-  }
-
-  // Add items to PO
-  var jobNum = editingJob ? xplNum(editingJob.job_number) : '';
-  var jobId  = editingJob ? editingJob.id : null;
-  var itemPromises = toOrder.map(function(jp) {
-    var p = allParts.find(function(x){ return x.id===jp.part_id; });
-    return db('POST','purchase_order_items',{
-      purchase_order_id: poId,
-      part_id: jp.part_id||null,
-      job_id: jobId,
-      job_number: jobNum,
-      key_no: jp.part_key_no,
-      description: jp.part_description,
-      qty: jp.quantity||1,
-      unit_cost: p&&p.cost_price?parseFloat(p.cost_price):null,
-      status: 'Ordered',
-      updated_at: new Date().toISOString()
-    });
-  });
-  await Promise.all(itemPromises);
-
-  // Mark job parts as Ordered
-  var patches = [];
-  toOrder.forEach(function(jp) {
-    jp.status='ordered';
-    if (jp.id) patches.push(db('PATCH','job_parts?id=eq.'+jp.id,{status:'ordered',updated_at:new Date().toISOString()}).catch(function(){}));
-  });
-  if (patches.length) await Promise.all(patches);
-  renderJobPartsList();
-
-  await loadPurchaseOrders();
-  var isNew = !existingPO;
-  showToast(toOrder.length+' part'+(toOrder.length>1?'s':'')+' added to '+poNum+(isNew?' (new PO)':' (existing draft)'));
-  closeJobModal();
-  setTimeout(function(){ switchToPurchasing(); setPOFilter('Draft'); }, 250);
+// ── Pick a supplier for parts that have none recorded (used by the stock builder) ──
+var _supPickResolve = null;
+async function pickSupplier(info) {
+  var names = await supplierNameList('');
+  document.getElementById('spInfo').textContent = info;
+  document.getElementById('spSelect').innerHTML = '<option value="">Select supplier...</option>' + names.map(function(n) { return '<option value="' + _orEsc(n) + '"' + (n === _orStore('xpak_or_supplier') ? ' selected' : '') + '>' + _orEsc(n) + '</option>'; }).join('');
+  document.getElementById('supPickOverlay').classList.add('show');
+  return new Promise(function(resolve) { _supPickResolve = resolve; });
 }
+function supPickDone(ok) {
+  var v = document.getElementById('spSelect').value;
+  if (ok && !v) { showToast('Pick a supplier', 'error'); return; }
+  document.getElementById('supPickOverlay').classList.remove('show');
+  var r = _supPickResolve; _supPickResolve = null; if (r) r(ok ? v : null);
+}
+
+// ── Add the ticked parts in the Stock Order Builder to order requests (one per supplier) ──
+async function addSelectedToOrderRequest() {
+  var ids = Object.keys(_stockOrderSelections);
+  if (!ids.length) { showToast('Tick at least one part', 'error'); return; }
+  var groups = {};
+  ids.forEach(function(pid) {
+    var p = allParts.find(function(x){ return x.id === pid; }); if (!p) return;
+    var sups = []; try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e) {}
+    var pref = sups.find(function(s){ return s.preferred || s.is_preferred; }) || sups[0];
+    var name = pref && pref.name ? pref.name : '';
+    (groups[name] = groups[name] || []).push({ part_id: p.id, key_no: p.key_no, description: p.description, qty: _stockOrderSelections[pid], unit_cost: p.cost_price != null ? parseFloat(p.cost_price) : null, job_id: null, job_number: null });
+  });
+  try {
+    var made = [];
+    if (groups['']) {
+      var chosen = await pickSupplier(groups[''].length + ' part' + (groups[''].length > 1 ? 's have' : ' has') + ' no supplier recorded. Which supplier is this order for?');
+      if (!chosen) return;
+      _orStore('xpak_or_supplier', chosen);
+      groups[chosen] = (groups[chosen] || []).concat(groups['']); delete groups[''];
+    }
+    for (var sName in groups) {
+      var po = await findOrCreateDraftPO(sName);
+      await addLinesToPO(po, groups[sName]);
+      made.push(po.po_number + ' (' + sName + ')');
+    }
+    await loadPurchaseOrders();
+    _stockOrderSelections = {}; saveStockOrderDraft(); renderStockOrderBuilder();
+    showToast('Added to ' + made.join(', '));
+    switchToPurchasing(); setPOFilter('Draft');
+  } catch(e) { showToast('Could not add to the order request: ' + e.message, 'error'); }
+}
+
 function closeJobModal() { document.getElementById('jobOverlay').classList.remove('show'); _returnToJobPartsAfterEdit = null; _convertingIntakeId = null; document.getElementById('overlay').style.zIndex = ''; }
 
 async function saveJob() {
@@ -7297,43 +7348,53 @@ async function clearOutOldOrders() {
   } catch(e) { showToast('Clear-out failed part-way: ' + e.message, 'error'); await loadPurchaseOrders(); renderPurchaseOrders(); }
 }
 
+function poMatchesFilter(po, f) {
+  if (f === 'Ordered') return po.status === 'Ordered' || po.status === 'Sent';
+  return po.status === f;
+}
+
 function setPOFilter(f) {
   _poFilter = f;
-  var map = {Draft:'poBtnDraft', Sent:'poBtnSent', 'Partially Received':'poBtnPartial', Received:'poBtnReceived', All:'poBtnAll', Archived:'poBtnArchived'};
+  var map = {Draft:'poBtnDraft', Requested:'poBtnRequested', Ordered:'poBtnOrdered', 'Partially Received':'poBtnPartial', Received:'poBtnReceived', All:'poBtnAll', Archived:'poBtnArchived'};
   Object.keys(map).forEach(function(k){ var el=document.getElementById(map[k]); if(el) el.classList.toggle('active', k===f); });
   renderPurchaseOrders();
 }
 
 function poStatusColor(s) {
-  return {Draft:'#60a5fa', Sent:'#f59e0b', 'Partially Received':'#a78bfa', Received:'#10b981', Cancelled:'#ef4444'}[s] || '#4a6080';
+  return {Draft:'#60a5fa', Requested:'#f59e0b', Ordered:'#38bdf8', Sent:'#38bdf8', 'Partially Received':'#a78bfa', Received:'#10b981', Cancelled:'#ef4444'}[s] || '#4a6080';
 }
 
 function renderPurchaseOrders() {
   var live = purchaseOrders.filter(function(po){ return !poIsArchived(po); });
-  var filtered = _poFilter === 'Archived' ? purchaseOrders.filter(poIsArchived) : _poFilter === 'All' ? live : live.filter(function(po){ return po.status === _poFilter; });
-  var draft = live.filter(function(po){ return po.status === 'Draft'; }).length;
-  var sent  = live.filter(function(po){ return po.status === 'Sent' || po.status === 'Partially Received'; }).length;
-  document.getElementById('hSub').textContent = 'Purchase Orders \u2014 ' + draft + ' draft' + (sent ? ' \u00B7 ' + sent + ' in transit' : '');
+  var filtered = _poFilter === 'Archived' ? purchaseOrders.filter(poIsArchived) : _poFilter === 'All' ? live : live.filter(function(po){ return poMatchesFilter(po, _poFilter); });
+  var nDraft = live.filter(function(po){ return po.status === 'Draft'; }).length;
+  var nReq   = live.filter(function(po){ return po.status === 'Requested'; }).length;
+  var nOrd   = live.filter(function(po){ return po.status === 'Ordered' || po.status === 'Sent' || po.status === 'Partially Received'; }).length;
+  document.getElementById('hSub').textContent = 'Order Requests — ' + nDraft + ' draft · ' + nReq + ' requested · ' + nOrd + ' on order';
   if (!filtered.length) {
-    document.getElementById('poList').innerHTML = '<div class="center"><div class="icon">\uD83D\uDCCB</div><div style="color:#5a8090">No ' + (_poFilter!=='All'?_poFilter.toLowerCase()+' ':'') + 'purchase orders</div></div>';
+    document.getElementById('poList').innerHTML = '<div class="center"><div class="icon">📋</div><div style="color:#5a8090">No ' + (_poFilter!=='All'?_poFilter.toLowerCase()+' ':'') + 'order requests</div></div>';
     return;
   }
   document.getElementById('poList').innerHTML = filtered.map(function(po) {
     var items = po._items || [];
-    var totalVal = items.reduce(function(s,i){ return s + ((i.unit_cost||0)*(i.qty||1)); }, 0);
-    var arrived  = items.filter(function(i){ return i.status==='Arrived'; }).length;
+    var totalVal = poItemsTotal(po);
+    var ds = poDisplayStatus(po);
+    var arrived = items.filter(function(i){ return (i.qty_received || 0) >= (i.qty || 1) || i.status==='Arrived'; }).length;
     var col = poStatusColor(po.status);
-    var cls = po.status==='Sent'?'sent':po.status==='Partially Received'?'partial':po.status==='Received'?'received':'';
+    var cls = (ds==='Requested'||ds==='Ordered')?'sent':ds==='Partially Received'?'partial':ds==='Received'?'received':'';
+    var appr = (po.status==='Draft'||po.status==='Requested') ? poApproval(totalVal) : '';
     var preview = items.slice(0,3).map(function(i){ return i.description; }).join(', ') + (items.length>3?' +' +(items.length-3)+' more':'');
     return '<div class="po-card '+cls+'" onclick="openPODetail(\x27'+po.id+'\x27)">'
       +'<div class="po-card-top"><div><div class="po-number">'+po.po_number+'</div><div class="po-supplier">'+po.supplier+'</div></div>'
-      +'<span class="po-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+po.status.toUpperCase()+'</span></div>'
+      +'<span class="po-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+ds.toUpperCase()+'</span></div>'
       +'<div class="po-meta">'
       +'<span>'+items.length+' item'+(items.length!==1?'s':'')+'</span>'
       +(totalVal>0?'<span>$'+totalVal.toFixed(2)+' ex-GST</span>':'')
-      +(po.sent_date?'<span>Sent: '+fmtDate(po.sent_date)+'</span>':'')
+      +(appr?'<span style="color:#f59e0b;font-weight:700">Needs '+appr+'</span>':'')
+      +(po.supplier_po_number?'<span>PO: '+po.supplier_po_number+'</span>':'')
+      +(po.sent_date?'<span>Requested: '+fmtDate(po.sent_date)+'</span>':'')
       +(po.expected_date?'<span>Expected: '+fmtDate(po.expected_date)+'</span>':'')
-      +(arrived>0?'<span style="color:#10b981">'+arrived+'/'+items.length+' arrived</span>':'')
+      +(arrived>0&&po.status!=='Draft'?'<span style="color:#10b981">'+arrived+'/'+items.length+' received</span>':'')
       +'</div>'
       +(preview?'<div style="font-size:10px;color:#3a5070;margin-top:4px">'+preview+'</div>':'')
       +'</div>';
@@ -7345,40 +7406,56 @@ function openPODetail(id) {
   var po = purchaseOrders.find(function(p){ return p.id===id; });
   if (!po) return;
   var items = po._items || [];
+  var ds = poDisplayStatus(po);
   var col = poStatusColor(po.status);
-  var totalVal = items.reduce(function(s,i){ return s+((i.unit_cost||0)*(i.qty||1)); }, 0);
-  var isDraft   = po.status === 'Draft';
-  var canArrive = po.status === 'Sent' || po.status === 'Partially Received';
-  document.getElementById('poDetailTitle').innerHTML = po.po_number + ' <span class="po-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40;font-size:12px;vertical-align:middle">'+po.status+'</span>';
-  document.getElementById('poDetailSupplier').textContent = po.supplier;
+  var totalVal = poItemsTotal(po);
+  var isDraft     = po.status === 'Draft';
+  var isRequested = po.status === 'Requested';
+  var canReceive  = po.status === 'Ordered' || po.status === 'Sent' || po.status === 'Partially Received';
+  document.getElementById('poDetailTitle').innerHTML = po.po_number + ' <span class="po-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40;font-size:12px;vertical-align:middle">'+ds+'</span>';
+  document.getElementById('poDetailSupplier').value = po.supplier;
   document.getElementById('poDetailSentDate').value = po.sent_date || '';
   document.getElementById('poDetailExpDate').value  = po.expected_date || '';
   document.getElementById('poDetailNotes').value    = po.notes || '';
-  document.getElementById('btnMarkPOSent').style.display = isDraft ? 'inline-flex' : 'none';
-  document.getElementById('btnExportPO').style.display   = items.length ? 'inline-flex' : 'none';
-  document.getElementById('btnDeletePO').style.display   = isDraft ? 'inline-flex' : 'none';
-  document.getElementById('btnArchivePO').textContent    = poIsArchived(po) ? '↩ Restore' : '🗄 Archive';
+  document.getElementById('poDetailSupPO').value    = po.supplier_po_number || '';
+  document.getElementById('poDetailReceipt').value  = po.receipt_ref || '';
+  var banner = document.getElementById('poApprovalBanner'), appr = poApproval(totalVal);
+  if (isDraft || isRequested) {
+    banner.style.display = 'block';
+    banner.style.background = appr ? '#2a1f0a' : '#0d1f12'; banner.style.borderColor = appr ? '#f59e0b80' : '#10b98160'; banner.style.color = appr ? '#f59e0b' : '#10b981';
+    banner.textContent = appr ? ('⚠ Total ' + _money(totalVal) + ' ex GST - needs approval from ' + appr + (appr === 'Brent and Trent' ? ' (over $' + ORDER_APPROVAL_TRENT.toLocaleString('en-AU') + ')' : ' (over $' + ORDER_APPROVAL_BRENT.toLocaleString('en-AU') + ')'))
+                       : ('Total ' + _money(totalVal) + ' ex GST - under $' + ORDER_APPROVAL_BRENT.toLocaleString('en-AU') + ', no approval needed');
+  } else { banner.style.display = 'none'; }
+  var show = function(id, on) { document.getElementById(id).style.display = on ? 'inline-flex' : 'none'; };
+  show('btnSendRequest', (isDraft || isRequested) && items.length);
+  document.getElementById('btnSendRequest').textContent = isDraft ? '✉ Send request' : '✉ Re-send request';
+  show('btnMarkOrdered', isRequested);
+  show('btnReceive', canReceive);
+  show('btnExportPO', items.length);
+  show('btnDeletePO', isDraft);
+  document.getElementById('btnArchivePO').textContent = poIsArchived(po) ? '↩ Restore' : '🗄 Archive';
   document.getElementById('poItemsBody').innerHTML = items.length ? items.map(function(it) {
     var lineTotal = (it.unit_cost||0)*(it.qty||1);
-    var itCol = it.status==='Arrived'?'#10b981':'#60a5fa';
+    var got = it.qty_received || 0, full = got >= (it.qty || 1) || it.status === 'Arrived';
+    var itCol = full ? '#10b981' : got > 0 ? '#a78bfa' : '#60a5fa';
+    var stTxt = isDraft ? 'On request' : full ? 'Received' : got > 0 ? (got + ' of ' + it.qty) : 'Awaiting';
     return '<tr>'
-      +'<td style="color:#60a5fa;font-size:11px">'+(it.job_number||'-')+'</td>'
+      +'<td style="color:#60a5fa;font-size:11px">'+(it.job_number||'<span style="color:#5a8090">Stock</span>')+'</td>'
       +'<td style="font-family:monospace;font-size:11px">'+(it.key_no||'-')+'</td>'
       +'<td>'+(it.description||'-')+'</td>'
       +'<td style="text-align:center">'+(it.qty||1)+'</td>'
       +'<td style="text-align:right">'+(it.unit_cost?'$'+parseFloat(it.unit_cost).toFixed(2):'-')+'</td>'
       +'<td style="text-align:right;font-weight:700">'+(lineTotal>0?'$'+lineTotal.toFixed(2):'-')+'</td>'
-      +'<td style="text-align:center"><span class="po-status-badge" style="background:'+itCol+'20;color:'+itCol+';border:1px solid '+itCol+'40">'+it.status+'</span></td>'
+      +'<td style="text-align:center"><span class="po-status-badge" style="background:'+itCol+'20;color:'+itCol+';border:1px solid '+itCol+'40">'+stTxt+'</span></td>'
       +'<td style="text-align:center">'
-        +(canArrive&&it.status!=='Arrived'?'<button onclick="markPOItemArrived(\x27'+it.id+'\x27,\x27'+id+'\x27)" style="padding:3px 8px;background:#10b981;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:700">Arrived</button>':'')
-        +(isDraft?'<button onclick="deletePOItem(\x27'+it.id+'\x27,\x27'+id+'\x27)" style="padding:3px 6px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:5px;font-size:10px;cursor:pointer;margin-left:4px">x</button>':'')
+        +(isDraft?'<button onclick="deletePOItem(\x27'+it.id+'\x27,\x27'+id+'\x27)" style="padding:3px 6px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:5px;font-size:10px;cursor:pointer">✕</button>':'')
       +'</td>'
       +'</tr>';
-  }).join('') : '<tr><td colspan="8" style="padding:16px;text-align:center;color:#3a5070">No items on this order</td></tr>';
+  }).join('') : '<tr><td colspan="8" style="padding:16px;text-align:center;color:#3a5070">No items on this request</td></tr>';
   document.getElementById('poSubtotal').textContent = totalVal>0?'$'+totalVal.toFixed(2):'-';
   document.getElementById('poGST').textContent      = totalVal>0?'$'+(totalVal*0.1).toFixed(2):'-';
   document.getElementById('poTotal').textContent    = totalVal>0?'$'+(totalVal*1.1).toFixed(2):'-';
-  document.getElementById('poOverlay').style.display = 'flex';
+  var ov = document.getElementById('poOverlay'); ov.style.zIndex = '250'; ov.style.display = 'flex';
 }
 
 function closePOModal() { document.getElementById('poOverlay').style.display='none'; editingPOId=null; }
@@ -7411,41 +7488,147 @@ async function savePOSupplier() {
 
 async function savePODetails() {
   if (!editingPOId) return;
-  var patch = { notes: document.getElementById('poDetailNotes').value||null, expected_date: document.getElementById('poDetailExpDate').value||null, updated_at: new Date().toISOString() };
-  await db('PATCH','purchase_orders?id=eq.'+editingPOId, patch).catch(function(){});
+  var patch = {
+    notes: document.getElementById('poDetailNotes').value || null,
+    expected_date: document.getElementById('poDetailExpDate').value || null,
+    supplier_po_number: document.getElementById('poDetailSupPO').value.trim() || null,
+    receipt_ref: document.getElementById('poDetailReceipt').value.trim() || null,
+    updated_at: new Date().toISOString()
+  };
+  await db('PATCH','purchase_orders?id=eq.'+editingPOId, patch).catch(function(e){ console.error('savePODetails failed', e); });
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; });
+  if (po) { po.notes = patch.notes; po.expected_date = patch.expected_date; po.supplier_po_number = patch.supplier_po_number; po.receipt_ref = patch.receipt_ref; }
 }
 
-async function markPOSent() {
+// ── Send the request to Purchasing (Brent and Trent copied) ──
+function buildPORequestText(po) {
+  var items = po._items || [], total = poItemsTotal(po), appr = poApproval(total);
+  var quote = (po.notes || '').match(/Supplier quote ([^;]+)/);
+  var rows = items.map(function(i) {
+    var t = (parseFloat(i.unit_cost) || 0) * (i.qty || 1);
+    return '- ' + (i.key_no || '') + ' | ' + (i.description || '') + ' | Qty ' + (i.qty || 1) + (i.unit_cost ? ' | $' + parseFloat(i.unit_cost).toFixed(2) + ' ea | $' + t.toFixed(2) : ' | price TBC') + ' | ' + (i.job_number ? 'for ' + i.job_number : 'stock');
+  });
+  return 'Hi Lyndon,\n\nPlease order the following from ' + po.supplier + '.' + (quote ? ' Pricing is per ' + po.supplier + ' quote ' + quote[1].trim() + '.' : '') + ' Prices are ex GST.\n\n' +
+    'Request: ' + po.po_number + '\n\n' + rows.join('\n') + '\n\n' +
+    'Total: ' + _money(total) + ' ex GST\n' +
+    'Approval: ' + (appr ? 'over $' + (appr === 'Brent and Trent' ? ORDER_APPROVAL_TRENT : ORDER_APPROVAL_BRENT).toLocaleString('en-AU') + ' - ' + appr + (appr === 'Brent and Trent' ? ' to approve' : ' to approve') : 'under $' + ORDER_APPROVAL_BRENT.toLocaleString('en-AU') + ' - no approval needed') + '\n\n' +
+    'Please deliver to ' + ORDER_DELIVERY + '.\nPlease copy me in on the order to the supplier.\n\nThanks,\nRob';
+}
+
+async function openSendRequest() {
   if (!editingPOId) return;
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; }); if (!po) return;
+  if (!(po._items || []).length) { showToast('Add parts to the request first', 'error'); return; }
   await savePODetails();
-  var sentDate = document.getElementById('poDetailSentDate').value || new Date().toISOString().split('T')[0];
+  var total = poItemsTotal(po), appr = poApproval(total);
+  document.getElementById('psTo').value = ORDER_REQUEST_TO;
+  document.getElementById('psCc').value = ORDER_REQUEST_CC.join('; ');
+  document.getElementById('psSubject').value = 'Order request ' + po.po_number + ' - ' + po.supplier + ' - ' + _money(total) + ' ex GST' + (appr ? ' - approval: ' + appr : '');
+  document.getElementById('psText').value = buildPORequestText(po);
+  document.getElementById('psMark').checked = po.status === 'Draft';
+  document.getElementById('psMarkRow').style.display = po.status === 'Draft' ? 'flex' : 'none';
+  document.getElementById('poSendOverlay').classList.add('show');
+}
+function closeSendRequest() { document.getElementById('poSendOverlay').classList.remove('show'); }
+function copyRequestText() {
+  var t = 'To: ' + document.getElementById('psTo').value + '\nCc: ' + document.getElementById('psCc').value + '\nSubject: ' + document.getElementById('psSubject').value + '\n\n' + document.getElementById('psText').value;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ showToast('Request copied'); }).catch(function(){
+    var ta = document.getElementById('psText'); ta.focus(); ta.select(); showToast('Select and copy the text above', 'error');
+  });
+}
+async function sendRequestEmail() {
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; }); if (!po) return;
+  var subject = document.getElementById('psSubject').value, body = document.getElementById('psText').value;
+  var href = 'mailto:' + ORDER_REQUEST_TO + '?cc=' + ORDER_REQUEST_CC.map(encodeURIComponent).join(',') + '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
+  if (href.length > 1900) { copyRequestText(); showToast('Long request - copied to the clipboard; paste it into a new email', 'error'); }
+  else { window.location.href = href; }
+  if (document.getElementById('psMark').checked && po.status === 'Draft') {
+    var ts = new Date().toISOString(), total = poItemsTotal(po);
+    try {
+      await db('PATCH', 'purchase_orders?id=eq.' + po.id, { status: 'Requested', requested_at: ts, sent_date: ts.split('T')[0], approval_level: poApproval(total) || 'None', updated_at: ts });
+      await loadPurchaseOrders(); showToast(po.po_number + ' marked as Requested');
+    } catch(e) { showToast('Email opened, but the status did not update: ' + e.message, 'error'); }
+  }
+  closeSendRequest(); closePOModal(); renderPurchaseOrders();
+}
+
+// ── Purchasing has ordered it: record the supplier PO number from the supplier email you are copied on ──
+async function markPOOrdered() {
+  if (!editingPOId) return;
+  var spo = document.getElementById('poDetailSupPO').value.trim();
+  if (!spo) { showToast('Enter the supplier PO number first (it is on the supplier email you are copied on)', 'error'); document.getElementById('poDetailSupPO').focus(); return; }
+  await savePODetails();
   try {
-    await db('PATCH','purchase_orders?id=eq.'+editingPOId,{status:'Sent',sent_date:sentDate,updated_at:new Date().toISOString()});
-    await loadPurchaseOrders(); showToast('PO marked as Sent'); closePOModal(); renderPurchaseOrders();
+    await db('PATCH','purchase_orders?id=eq.'+editingPOId,{status:'Ordered',updated_at:new Date().toISOString()});
+    await loadPurchaseOrders(); showToast('Marked as Ordered'); closePOModal(); renderPurchaseOrders();
   } catch(e){ showToast('Failed: '+e.message,'error'); }
 }
 
-async function markPOItemArrived(itemId, poId) {
+// ── Receive goods: tick what arrived. Job parts arrive on the job; other lines add to stock. ──
+function openReceive() {
+  if (!editingPOId) return;
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; }); if (!po) return;
+  var open = (po._items || []).filter(function(i) { return (i.qty || 1) - (i.qty_received || 0) > 0 && i.status !== 'Arrived'; });
+  if (!open.length) { showToast('Everything on this request is already received', 'error'); return; }
+  document.getElementById('prTitle').textContent = po.po_number + ' - ' + po.supplier;
+  document.getElementById('prBody').innerHTML = open.map(function(i) {
+    var left = (i.qty || 1) - (i.qty_received || 0);
+    var dest = i.job_id ? '<span style="color:#60a5fa">' + (i.job_number || 'job') + '</span>' : (i.part_id ? '<span style="color:#10b981">adds to stock</span>' : '<span style="color:#f97316">no part on file</span>');
+    return '<tr data-item="' + i.id + '">' +
+      '<td><input type="checkbox" class="pr-tick" checked></td>' +
+      '<td style="font-family:monospace;font-size:11px">' + _orEsc(i.key_no || '-') + '</td>' +
+      '<td>' + _orEsc(i.description || '-') + '</td>' +
+      '<td style="text-align:center">' + (i.qty || 1) + '</td>' +
+      '<td style="text-align:center">' + (i.qty_received || 0) + '</td>' +
+      '<td style="text-align:center"><input type="number" class="pr-qty" min="0" max="' + left + '" value="' + left + '" style="width:60px;padding:4px 6px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;text-align:center"></td>' +
+      '<td>' + dest + '</td></tr>';
+  }).join('');
+  document.getElementById('prReceipt').value = po.receipt_ref || (po.po_number + ' - Delivery Docket - ' + po.supplier + '.pdf');
+  document.getElementById('poReceiveOverlay').classList.add('show');
+}
+function closeReceive() { document.getElementById('poReceiveOverlay').classList.remove('show'); }
+
+async function applyReceive() {
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; }); if (!po) return;
+  var rows = [].slice.call(document.querySelectorAll('#prBody tr'));
+  var done = [], problems = [];
   try {
-    var po = purchaseOrders.find(function(p){ return p.id===poId; });
-    var item = po?(po._items||[]).find(function(i){ return i.id===itemId; }):null;
-    await db('PATCH','purchase_order_items?id=eq.'+itemId,{status:'Arrived',updated_at:new Date().toISOString()});
-    if (item && item.job_id && item.part_id) {
-      await db('PATCH','job_parts?job_id=eq.'+item.job_id+'&part_id=eq.'+item.part_id+'&status=eq.ordered',{status:'arrived',updated_at:new Date().toISOString()}).catch(function(){});
+    for (var r = 0; r < rows.length; r++) {
+      var tr = rows[r];
+      if (!tr.querySelector('.pr-tick').checked) continue;
+      var it = (po._items || []).find(function(x) { return x.id === tr.getAttribute('data-item'); }); if (!it) continue;
+      var left = (it.qty || 1) - (it.qty_received || 0);
+      var n = Math.min(left, Math.max(0, parseInt(tr.querySelector('.pr-qty').value, 10) || 0));
+      if (n <= 0) continue;
+      var now = new Date().toISOString(), newRecv = (it.qty_received || 0) + n, full = newRecv >= (it.qty || 1);
+      await db('PATCH', 'purchase_order_items?id=eq.' + it.id, { qty_received: newRecv, status: full ? 'Arrived' : 'Partial', received_at: now, updated_at: now });
+      it.qty_received = newRecv; it.status = full ? 'Arrived' : 'Partial';
+      if (it.job_id) {
+        // goods for a job: the job part arrives once the whole line is in
+        if (full && it.part_id) await db('PATCH', 'job_parts?job_id=eq.' + it.job_id + '&part_id=eq.' + it.part_id + '&status=eq.ordered', { status: 'arrived', updated_at: now }).catch(function(){});
+        done.push(n + ' x ' + (it.key_no || '') + ' for ' + (it.job_number || 'job'));
+      } else if (it.part_id) {
+        // stock: add what arrived to the count
+        var srows = await db('GET', 'stock?part_id=eq.' + it.part_id + '&select=*');
+        if (srows && srows.length) await db('PATCH', 'stock?id=eq.' + srows[0].id, { quantity: (srows[0].quantity || 0) + n, updated_at: now });
+        else await db('POST', 'stock', { part_id: it.part_id, quantity: n, location: '', reorder_threshold: 1, updated_at: now });
+        var ap = allParts.find(function(x) { return x.id === it.part_id; });
+        if (ap) { if (ap.stock && ap.stock[0]) ap.stock[0].quantity = (ap.stock[0].quantity || 0) + n; else ap.stock = [{ part_id: it.part_id, quantity: n, location: '', reorder_threshold: 1 }]; }
+        done.push(n + ' x ' + (it.key_no || '') + ' to stock');
+      } else { problems.push((it.key_no || it.description || 'a line') + ' has no part on file - not added to stock'); }
     }
+    if (!done.length && !problems.length) { showToast('Nothing to receive - tick a line and enter a quantity', 'error'); return; }
+    var items = po._items || [];
+    var allIn = items.length && items.every(function(i) { return (i.qty_received || 0) >= (i.qty || 1); });
+    var anyIn = items.some(function(i) { return (i.qty_received || 0) > 0; });
+    await db('PATCH', 'purchase_orders?id=eq.' + po.id, { status: allIn ? 'Received' : anyIn ? 'Partially Received' : po.status, receipt_ref: document.getElementById('prReceipt').value.trim() || null, updated_at: new Date().toISOString() });
     await loadPurchaseOrders();
-    var upd = purchaseOrders.find(function(p){ return p.id===poId; });
-    if (upd) {
-      var allArrived  = upd._items.every(function(i){ return i.status==='Arrived'; });
-      var someArrived = upd._items.some(function(i){ return i.status==='Arrived'; });
-      var ns = allArrived?'Received':(someArrived?'Partially Received':'Sent');
-      await db('PATCH','purchase_orders?id=eq.'+poId,{status:ns,updated_at:new Date().toISOString()});
-      await loadPurchaseOrders();
-      showToast(allArrived?'All items arrived - PO complete!':'Item marked arrived');
-      openPODetail(poId);
-      renderPurchaseOrders();
-    }
-  } catch(e){ showToast('Failed: '+e.message,'error'); }
+    showToast((allIn ? 'Received in full - ' : 'Received - ') + done.length + ' line' + (done.length === 1 ? '' : 's') + (problems.length ? '. Note: ' + problems.join('; ') : ''), problems.length ? 'error' : undefined);
+    closeReceive(); openPODetail(po.id); renderPurchaseOrders();
+  } catch(e) {
+    showToast('Receiving stopped part-way: ' + e.message + ' - check the request before trying again', 'error');
+    await loadPurchaseOrders(); closeReceive(); openPODetail(po.id);
+  }
 }
 
 async function deletePOItem(itemId, poId) {
@@ -7493,10 +7676,8 @@ async function openNewPOModal() {
   // Build datalist from suppliers table + existing PO suppliers
   var names = [];
   try {
-    if (!window._supplierCache) {
-      window._supplierCache = await db('GET', 'suppliers?select=name&order=name');
-    }
-    _supplierCache.forEach(function(s){ if (s.name && names.indexOf(s.name)===-1) names.push(s.name); });
+    var sn = await supplierNameList('');
+    sn.forEach(function(n){ if (names.indexOf(n)===-1) names.push(n); });
   } catch(e) { console.error('supplier cache load failed', e); }
   purchaseOrders.forEach(function(po){ if (po.supplier && names.indexOf(po.supplier)===-1) names.push(po.supplier); });
   names.sort();
