@@ -215,6 +215,7 @@
 <div class="loan-section" id="poSection" style="display:none"><div id="poList"></div></div>
 <div id="poStockOrderSection" style="display:none;padding:0 14px 20px">
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+    <input id="stockOrderSearch" type="search" placeholder="Search part no. or description..." oninput="renderStockOrderBuilder()" autocomplete="off" style="padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none;flex:1;min-width:200px;max-width:300px">
     <select id="stockOrderMachine" onchange="renderStockOrderBuilder()" style="padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none;flex:1;max-width:280px">
       <option value="">All Machines</option>
     </select>
@@ -1386,9 +1387,14 @@ function renderStockOrderBuilder() {
     uSel.innerHTML = '<option value="">All Units</option>' + units.map(function(u) { return '<option value="' + u.replace(/"/g, '&quot;') + '"' + (u === curUnit ? ' selected' : '') + '>' + u + '</option>'; }).join('');
   }
 
+  var terms = ((document.getElementById('stockOrderSearch') || {}).value || '').toLowerCase().split(/\s+/).filter(Boolean);
   var pool = allParts.filter(function(p) {
     if (_stockOrderMachine && (p.machineIds||[]).indexOf(_stockOrderMachine) === -1) return false;
     if (curUnit && p.assembly_section !== curUnit) return false;
+    if (terms.length) {
+      var hay = ((p.key_no || '') + ' ' + (p.description || '') + ' ' + (p.assembly_section || '') + ' ' + (p.alt_part_no || '')).toLowerCase();
+      if (!terms.every(function(t) { return hay.indexOf(t) !== -1; })) return false;
+    }
     var s = p.stock && p.stock[0];
     var qty = s ? s.quantity : null;
     if (_stockOrderFilter === 'low')  return qty !== null && qty <= (s.reorder_threshold || 1);
