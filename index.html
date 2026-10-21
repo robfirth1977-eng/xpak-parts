@@ -298,7 +298,9 @@
       <button class="btn-clear" onclick="closeSendRequest()">Cancel</button>
       <button class="btn-clear" onclick="copyRequestText()">Copy text</button>
       <button class="btn-clear" onclick="exportPOExcel()">Download Excel</button>
-      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="sendRequestEmail()">Open email</button>
+      <button class="btn-clear" onclick="sendRequestEmail('web')" title="Opens a new message in Outlook on the web (browser)">Outlook (web)</button>
+      <button class="btn-clear" onclick="sendRequestEmail('mailto')" title="Opens the program Windows uses for email links (short requests only)">Mail link</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="sendRequestEmail('eml')" title="Saves a draft message file. Open it and Outlook shows an addressed, unsent email - works for any length.">Outlook draft file</button>
     </div>
   </div>
 </div>
@@ -3781,7 +3783,7 @@ function populateMachineDropdown(selId) {
 var ORDER_REQUEST_TO = 'Purchasing@xpak.com.au';
 var ORDER_REQUEST_CC = ['brent.reardon@xpak.com.au', 'trent.firth@xpak.com.au'];
 var ORDER_APPROVAL_BRENT = 2000, ORDER_APPROVAL_TRENT = 5000;   // ex GST: over $2,000 Brent approves; over $5,000 Brent and Trent
-var ORDER_DELIVERY = 'X-Pak Global, C/- Storeplan, 3 Curtiss Cl, Tamworth NSW 2340, attention Rob Firth';
+var ORDER_DELIVERY = 'X-Pak Global, 3 Curtiss Cl, Tamworth NSW 2340, attention Rob Firth';
 var _orderReq = null;
 
 function _orEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -7529,6 +7531,16 @@ async function openSendRequest() {
   document.getElementById('psMarkRow').style.display = po.status === 'Draft' ? 'flex' : 'none';
   document.getElementById('poSendOverlay').classList.add('show');
 }
+// A draft message file: opening it in Outlook gives an addressed, unsent email with no length limit
+function downloadRequestDraft(po, subject, body) {
+  var CRLF = '\r\n';
+  var eml = 'To: ' + ORDER_REQUEST_TO + CRLF + 'Cc: ' + ORDER_REQUEST_CC.join('; ') + CRLF + 'Subject: ' + subject.replace(/[\r\n]+/g, ' ') + CRLF +
+    'X-Unsent: 1' + CRLF + 'MIME-Version: 1.0' + CRLF + 'Content-Type: text/plain; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + body.replace(/\r?\n/g, CRLF);
+  var blob = new Blob([eml], { type: 'message/rfc822' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = po.po_number + ' - Order request.eml';
+  document.body.appendChild(a); a.click(); setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  showToast('Long request - saved as ' + a.download + '. Open it (bottom of the browser) to send from Outlook.');
+}
 function closeSendRequest() { document.getElementById('poSendOverlay').classList.remove('show'); }
 function copyRequestText() {
   var t = 'To: ' + document.getElementById('psTo').value + '\nCc: ' + document.getElementById('psCc').value + '\nSubject: ' + document.getElementById('psSubject').value + '\n\n' + document.getElementById('psText').value;
@@ -7536,12 +7548,22 @@ function copyRequestText() {
     var ta = document.getElementById('psText'); ta.focus(); ta.select(); showToast('Select and copy the text above', 'error');
   });
 }
-async function sendRequestEmail() {
+async function sendRequestEmail(mode) {
   var po = purchaseOrders.find(function(p){ return p.id===editingPOId; }); if (!po) return;
   var subject = document.getElementById('psSubject').value, body = document.getElementById('psText').value;
-  var href = 'mailto:' + ORDER_REQUEST_TO + '?cc=' + ORDER_REQUEST_CC.map(encodeURIComponent).join(',') + '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
-  if (href.length > 1900) { copyRequestText(); showToast('Long request - copied to the clipboard; paste it into a new email', 'error'); }
-  else { window.location.href = href; }
+  if (mode === 'web') {
+    // Outlook on the web: opens a new message in a new tab, addressed and filled in
+    var web = 'https://outlook.office.com/mail/deeplink/compose?to=' + encodeURIComponent(ORDER_REQUEST_TO) + '&cc=' + encodeURIComponent(ORDER_REQUEST_CC.join(';')) +
+      '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    if (web.length > 7000) { copyRequestText(); showToast('Long request - copied to the clipboard; paste it into a new Outlook message', 'error'); }
+    else { window.open(web, '_blank'); }
+  } else if (mode === 'eml') {
+    downloadRequestDraft(po, subject, body);
+  } else {
+    var href = 'mailto:' + ORDER_REQUEST_TO + '?cc=' + ORDER_REQUEST_CC.map(encodeURIComponent).join(',') + '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
+    if (href.length > 1900) { downloadRequestDraft(po, subject, body); }
+    else { window.location.href = href; }
+  }
   if (document.getElementById('psMark').checked && po.status === 'Draft') {
     var ts = new Date().toISOString(), total = poItemsTotal(po);
     try {
