@@ -333,11 +333,11 @@
 <div class="overlay" id="poOverlay" onclick="if(event.target===this)closePOModal()">
   <div class="modal" style="border-top:3px solid #60a5fa;max-width:920px;width:96%">
     <div class="modal-header">
-      <div class="modal-title" id="poDetailTitle">Purchase Order</div>
+      <datalist id="poSupplierList"></datalist><div class="modal-title" id="poDetailTitle">Purchase Order</div>
       <button class="modal-close" onclick="closePOModal()">x</button>
     </div>
     <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px">
-      <div style="flex:1;min-width:160px"><div style="font-size:10px;color:#5a8090;margin-bottom:3px">SUPPLIER</div><input id="poDetailSupplier" style="font-size:15px;font-weight:700;color:#e2e8f0;background:transparent;border:none;border-bottom:1px solid #2a4060;outline:none;width:100%;padding:2px 0" onblur="savePOSupplier()"></div>
+      <div style="flex:1;min-width:160px"><div style="font-size:10px;color:#5a8090;margin-bottom:3px">SUPPLIER</div><input id="poDetailSupplier" list="poSupplierList" style="font-size:15px;font-weight:700;color:#e2e8f0;background:transparent;border:none;border-bottom:1px solid #2a4060;outline:none;width:100%;padding:2px 0" onblur="savePOSupplier()"></div>
       <div class="field" style="width:140px"><label>Requested</label><input type="date" id="poDetailSentDate" readonly></div>
       <div class="field" style="width:140px"><label>Expected</label><input type="date" id="poDetailExpDate"></div>
       <div class="field" style="flex:1;min-width:180px"><label>Notes</label><input id="poDetailNotes" placeholder="e.g. Ref number, special instructions..."></div>
@@ -358,6 +358,10 @@
       </tr></thead>
       <tbody id="poItemsBody"></tbody>
     </table>
+    <div id="poAddRow" style="display:none;margin-top:8px">
+      <input id="poAddSearch" placeholder="+ Add a part: type a part number or description..." oninput="poAddSearchRender()" autocomplete="off" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #2a4060;background:#141f2d;color:#e2e8f0;font-size:13px;outline:none">
+      <div id="poAddResults" style="background:#141f2d;border-radius:8px;margin-top:4px"></div>
+    </div>
     <div style="text-align:right;padding:10px 4px 0;font-size:12px;color:#8aa8c0;line-height:1.9">
       Subtotal (ex-GST): <strong id="poSubtotal" style="color:#e2e8f0;display:inline-block;width:90px;text-align:right">-</strong><br>
       GST (10%): <strong id="poGST" style="color:#e2e8f0;display:inline-block;width:90px;text-align:right">-</strong><br>
@@ -1389,14 +1393,15 @@ async function initStockOrderBuilder() {
   // Populate supplier filter
   var sSel = document.getElementById('stockOrderSupplier');
   if (sSel && sSel.options.length <= 1) {
-    var suppNames = [];
+    var suppNames = await supplierNameList('');
+    // any supplier that only exists on parts (not in the register yet), under its cleaned-up name
     allParts.forEach(function(p) {
       if (!p.suppliers) return;
       var sups = Array.isArray(p.suppliers) ? p.suppliers : [];
       try { sups = typeof p.suppliers === 'string' ? JSON.parse(p.suppliers) : p.suppliers; } catch(e){}
-      sups.forEach(function(s){ if (s.name && !suppNames.includes(s.name)) suppNames.push(s.name); });
+      sups.forEach(function(s){ var n = supplierCanon(s.name); if (n && !suppNames.includes(n)) suppNames.push(n); });
     });
-    suppNames.sort().forEach(function(n) {
+    suppNames.sort(function(a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }).forEach(function(n) {
       var o = document.createElement('option'); o.value = n; o.textContent = n; sSel.appendChild(o);
     });
   }
@@ -1459,7 +1464,7 @@ function renderStockOrderBuilder() {
     pool = pool.filter(function(p) {
       var sups = [];
       try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e){}
-      return sups.some(function(s){ return s.name === _stockOrderSupplier; });
+      return sups.some(function(s){ return supplierCanon(s.name) === _stockOrderSupplier; });
     });
   }
 
@@ -1510,7 +1515,7 @@ function renderStockOrderBuilder() {
         '<span class="so-unit" style="font-size:10px;color:#8aa8c0;min-width:120px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="Unit">' + (p.assembly_section || '') + '</span>' +
         '<span class="so-stock" style="color:' + stCol + '">' + (qty !== null ? qty : '—') + '</span>' +
         '<input type="number" min="1" value="' + orderQty + '" class="so-qty-input" onchange="setStockSelQty(\'' + p.id + '\',this.value)" ' + (isSelected?'':'style="opacity:0.4"') + '>' +
-        (pref ? '<span style="font-size:10px;color:#5a8090;min-width:70px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + pref.name + '">' + pref.name + '</span>' : '<span style="min-width:70px;flex-shrink:0"></span>') +
+        (pref ? '<span style="font-size:10px;color:#5a8090;min-width:70px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + supplierCanon(pref.name) + '">' + supplierCanon(pref.name) + '</span>' : '<span style="min-width:70px;flex-shrink:0"></span>') +
         '<span class="so-star' + (isStar?' active':'') + '" onclick="toggleStockItem(\'' + p.id + '\')" title="' + (isStar?'Remove from stock items':'Mark as stock item') + '">\u2605</span>' +
       '</div>';
     });
@@ -1570,7 +1575,7 @@ async function exportStockOrder() {
     var sups = [];
     try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e){}
     var pref = sups.find(function(s){ return s.preferred; }) || sups[0];
-    var suppName = pref ? pref.name : 'No Supplier';
+    var suppName = pref ? supplierCanon(pref.name) : 'No Supplier';
     if (!bySupplier[suppName]) bySupplier[suppName] = [];
     bySupplier[suppName].push({ part: p, qty: _stockOrderSelections[pid], suppPartNo: pref ? pref.part_no : '' });
   });
@@ -1610,7 +1615,7 @@ async function exportStockOrder() {
     var sups = [];
     try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e){}
     var pref = sups.find(function(s){ return s.preferred; }) || sups[0];
-    summaryRows.push([pref?pref.name:'', p.key_no, p.description, p.machineName||'', _stockOrderSelections[pid]]);
+    summaryRows.push([pref?supplierCanon(pref.name):'', p.key_no, p.description, p.machineName||'', _stockOrderSelections[pid]]);
   });
   var wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
   wsSummary['!cols'] = [{wch:20},{wch:14},{wch:38},{wch:18},{wch:5}];
@@ -3786,6 +3791,22 @@ var ORDER_APPROVAL_BRENT = 2000, ORDER_APPROVAL_TRENT = 5000;   // ex GST: over 
 var ORDER_DELIVERY = 'X-Pak Global, 3 Curtiss Cl, Tamworth NSW 2340, attention Rob Firth';
 var _orderReq = null;
 
+// Parts and old orders carry several spellings of the same supplier (Transpak / Transpak Equipment Corp / ...).
+// supplierCanon() gives the one name used in the supplier register, so lists, filters and orders agree.
+var SUPPLIER_ALIASES = {
+  'transpak': 'Transpak Equipment Corp.', 'transpak equipment corp': 'Transpak Equipment Corp.',
+  'cyklop': 'Cyklop Packaging Systems Pty Ltd',
+  'titan strapping systems asia pacific': 'Titan Asia Pacific', 'titan strapping systems asia pacific pty ltd': 'Titan Asia Pacific',
+  'atlas copco': 'Atlas Copco Tools Australia'
+};
+function supplierCanon(name) {
+  var raw = String(name == null ? '' : name).trim(); if (!raw) return '';
+  var k = raw.toLowerCase().replace(/\.+$/, '');
+  if (SUPPLIER_ALIASES[k]) return SUPPLIER_ALIASES[k];
+  var hit = (_supplierCache || []).find(function(x) { return (x.company_name || x.name || '').trim().toLowerCase().replace(/\.+$/, '') === k; });
+  return hit ? (hit.company_name || hit.name) : raw;
+}
+
 function _orEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function _orStore(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch(e) {} return null; }
 function _money(n) { return '$' + (parseFloat(n) || 0).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -3873,7 +3894,7 @@ async function openOrderRequest(jobId, fromModal) {
         var sups = Array.isArray(p.suppliers) ? p.suppliers : [];
         try { if (!Array.isArray(sups)) sups = JSON.parse(p.suppliers); } catch(e) {}
         var pref = sups.find(function(s){ return s.is_preferred || s.preferred; }) || sups[0];
-        if (pref && pref.name) counts[pref.name] = (counts[pref.name] || 0) + 1;
+        if (pref && pref.name) { var cn = supplierCanon(pref.name); counts[cn] = (counts[cn] || 0) + 1; }
       }
     });
     var detected = Object.keys(counts).sort(function(a,b){ return counts[b] - counts[a]; })[0] || _orStore('xpak_or_supplier') || '';
@@ -3957,7 +3978,7 @@ async function addSelectedToOrderRequest() {
     var p = allParts.find(function(x){ return x.id === pid; }); if (!p) return;
     var sups = []; try { sups = p.suppliers ? (Array.isArray(p.suppliers) ? p.suppliers : JSON.parse(p.suppliers)) : []; } catch(e) {}
     var pref = sups.find(function(s){ return s.preferred || s.is_preferred; }) || sups[0];
-    var name = pref && pref.name ? pref.name : '';
+    var name = pref && pref.name ? supplierCanon(pref.name) : '';
     (groups[name] = groups[name] || []).push({ part_id: p.id, key_no: p.key_no, description: p.description, qty: _stockOrderSelections[pid], unit_cost: p.cost_price != null ? parseFloat(p.cost_price) : null, job_id: null, job_number: null });
   });
   try {
@@ -7445,8 +7466,10 @@ function openPODetail(id) {
       +'<td style="color:#60a5fa;font-size:11px">'+(it.job_number||'<span style="color:#5a8090">Stock</span>')+'</td>'
       +'<td style="font-family:monospace;font-size:11px">'+(it.key_no||'-')+'</td>'
       +'<td>'+(it.description||'-')+'</td>'
-      +'<td style="text-align:center">'+(it.qty||1)+'</td>'
-      +'<td style="text-align:right">'+(it.unit_cost?'$'+parseFloat(it.unit_cost).toFixed(2):'-')+'</td>'
+      +(isDraft ? '<td style="text-align:center"><input type="number" min="1" value="'+(it.qty||1)+'" onchange="updatePOItem(\x27'+it.id+'\x27,\x27qty\x27,this.value)" style="width:58px;padding:3px 5px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;text-align:center"></td>'
+                  +'<td style="text-align:right"><input type="number" min="0" step="0.01" value="'+(it.unit_cost!=null?parseFloat(it.unit_cost).toFixed(2):'')+'" placeholder="0.00" onchange="updatePOItem(\x27'+it.id+'\x27,\x27unit_cost\x27,this.value)" style="width:82px;padding:3px 5px;background:#0f1923;border:1px solid #2a4060;border-radius:6px;color:#e2e8f0;text-align:right"></td>'
+                : '<td style="text-align:center">'+(it.qty||1)+'</td>'
+                  +'<td style="text-align:right">'+(it.unit_cost?'$'+parseFloat(it.unit_cost).toFixed(2):'-')+'</td>')
       +'<td style="text-align:right;font-weight:700">'+(lineTotal>0?'$'+lineTotal.toFixed(2):'-')+'</td>'
       +'<td style="text-align:center"><span class="po-status-badge" style="background:'+itCol+'20;color:'+itCol+';border:1px solid '+itCol+'40">'+stTxt+'</span></td>'
       +'<td style="text-align:center">'
@@ -7457,7 +7480,46 @@ function openPODetail(id) {
   document.getElementById('poSubtotal').textContent = totalVal>0?'$'+totalVal.toFixed(2):'-';
   document.getElementById('poGST').textContent      = totalVal>0?'$'+(totalVal*0.1).toFixed(2):'-';
   document.getElementById('poTotal').textContent    = totalVal>0?'$'+(totalVal*1.1).toFixed(2):'-';
+  document.getElementById('poAddRow').style.display = isDraft ? 'block' : 'none';
+  document.getElementById('poAddSearch').value = ''; document.getElementById('poAddResults').innerHTML = '';
+  supplierNameList('').then(function(names) { document.getElementById('poSupplierList').innerHTML = names.map(function(n) { return '<option value="' + _orEsc(n) + '">'; }).join(''); });
   var ov = document.getElementById('poOverlay'); ov.style.zIndex = '250'; ov.style.display = 'flex';
+}
+
+// ── Edit a Draft request: change a line's quantity or cost, or add another part ──
+async function updatePOItem(itemId, field, val) {
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; }); if (!po || po.status !== 'Draft') return;
+  var it = (po._items || []).find(function(i){ return i.id === itemId; }); if (!it) return;
+  var patch = { updated_at: new Date().toISOString() };
+  if (field === 'qty') patch.qty = Math.max(1, parseInt(val, 10) || 1);
+  else patch.unit_cost = val === '' ? null : Math.max(0, parseFloat(val) || 0);
+  try {
+    await db('PATCH', 'purchase_order_items?id=eq.' + itemId, patch);
+    Object.assign(it, patch);
+    openPODetail(editingPOId); renderPurchaseOrders();
+  } catch(e) { showToast('Could not update the line: ' + e.message, 'error'); }
+}
+function poAddSearchRender() {
+  var terms = (document.getElementById('poAddSearch').value || '').toLowerCase().split(/\s+/).filter(Boolean);
+  var box = document.getElementById('poAddResults');
+  if (!terms.length) { box.innerHTML = ''; return; }
+  var hits = allParts.filter(function(p) {
+    var hay = ((p.key_no || '') + ' ' + (p.description || '') + ' ' + (p.assembly_section || '') + ' ' + (p.alt_part_no || '')).toLowerCase();
+    return terms.every(function(t) { return hay.indexOf(t) !== -1; });
+  }).slice(0, 8);
+  box.innerHTML = hits.length ? hits.map(function(p) {
+    return '<div onclick="addPartToPO(\x27' + p.id + '\x27)" style="display:flex;gap:10px;padding:6px 10px;border-bottom:1px solid #1e2f45;cursor:pointer;font-size:12px">' +
+      '<span style="font-family:monospace;color:#60a5fa;min-width:110px">' + _orEsc(p.key_no) + '</span><span style="flex:1">' + _orEsc(p.description) + '</span>' +
+      '<span style="color:#8aa8c0">' + _orEsc(p.machineName || '') + '</span><span style="min-width:70px;text-align:right">' + (p.cost_price != null ? '$' + parseFloat(p.cost_price).toFixed(2) : 'no cost') + '</span></div>';
+  }).join('') : '<div style="padding:8px 10px;color:#5a8090;font-size:12px">No parts match</div>';
+}
+async function addPartToPO(partId) {
+  var po = purchaseOrders.find(function(p){ return p.id===editingPOId; }); if (!po || po.status !== 'Draft') return;
+  var p = allParts.find(function(x){ return x.id === partId; }); if (!p) return;
+  try {
+    await addLinesToPO(po, [{ part_id: p.id, key_no: p.key_no, description: p.description, qty: 1, unit_cost: p.cost_price != null ? parseFloat(p.cost_price) : null, job_id: null, job_number: null }]);
+    await loadPurchaseOrders(); showToast(p.key_no + ' added'); openPODetail(po.id); renderPurchaseOrders();
+  } catch(e) { showToast('Could not add the part: ' + e.message, 'error'); }
 }
 
 function closePOModal() { document.getElementById('poOverlay').style.display='none'; editingPOId=null; }
