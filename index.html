@@ -305,7 +305,26 @@
   </div>
 </div>
 
-<div class="overlay" id="poReceiveOverlay" style="z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeReceive()">
+<div class="overlay" id="wcOverlay" style="z-index:400;align-items:center;justify-content:center" onclick="if(event.target===this)closeWarrantyClaim()">
+  <div class="modal" style="border-top:3px solid #f59e0b;max-width:760px;width:96%;border-radius:12px">
+    <div class="modal-header"><div class="modal-title">Warranty claim email</div><button class="modal-close" onclick="closeWarrantyClaim()">x</button></div>
+    <div class="g2">
+      <div class="field"><label>To</label><input id="wcTo" placeholder="supplier warranty email"></div>
+      <div class="field"><label>Cc</label><input id="wcCc" placeholder="optional"></div>
+      <div class="field full"><label>Subject</label><input id="wcSubject"></div>
+      <div class="field full"><label>Email text (you can edit it before sending)</label><textarea id="wcText" style="min-height:300px;font-family:monospace;font-size:12px"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-clear" onclick="closeWarrantyClaim()">Cancel</button>
+      <button class="btn-clear" onclick="copyWarrantyClaim()">Copy text</button>
+      <button class="btn-clear" onclick="sendWarrantyClaim('web')" title="Opens a new message in Outlook on the web (browser)">Outlook (web)</button>
+      <button class="btn-clear" onclick="sendWarrantyClaim('mailto')" title="Opens the program Windows uses for email links (short messages only)">Mail link</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="sendWarrantyClaim('eml')" title="Saves a draft message file. Open it and Outlook shows an addressed, unsent email.">Outlook draft file</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="poReceiveOverlay"style="z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeReceive()">
   <div class="modal" style="border-top:3px solid #10b981;max-width:760px;width:96%;border-radius:12px">
     <div class="modal-header"><div class="modal-title">Receive goods <span id="prTitle" style="font-size:12px;font-weight:400;color:#8aa8c0"></span></div><button class="modal-close" onclick="closeReceive()">x</button></div>
     <div style="font-size:11px;color:#8aa8c0;margin-bottom:8px">Tick what has arrived and set the quantity. Parts for a job arrive on that job; other parts add to stock. Receiving the same line again only counts what is still outstanding.</div>
@@ -4071,7 +4090,7 @@ async function saveJob() {
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      var jtRes = await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: normSerial(jt.serial_number) || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
+      var jtRes = await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: normSerial(jt.serial_number) || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, warranty_claim: !!jt.warranty_claim, warranty_reason: jt.warranty_reason || null, customer_environment: jt.customer_environment || null, tension_setting: jt.tension_setting || null, strap_size: jt.strap_size || null, weld_time: jt.weld_time || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
       // Every save deletes+recreates this row with a fresh id - keep _existingId in sync so
       // anything referencing it later in the same session (e.g. Split Job) targets the row
       // that actually exists, not the one that was just deleted.
@@ -4948,6 +4967,80 @@ function setToolField(tempId, field, val) {
   }
 }
 
+// ── Warranty claim: flag on the tool, the details the supplier asks for, and a claim email ──
+var WARRANTY_CLAIM_TO = '';
+var WARRANTY_CLAIM_CC = '';
+function _wcEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+function warrantyClaimBlock(t) {
+  var on = !!t.warranty_claim, id = t._tempId;
+  var inp = 'width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none';
+  function f(field, label, ph) {
+    return '<div class="field"><label>' + label + '</label><input value="' + _wcEsc(t[field]) + '" placeholder="' + ph + '" oninput="setToolField(\'' + id + '\',\'' + field + '\',this.value)" style="' + inp + '"></div>';
+  }
+  return '<div class="field full" style="border:1px solid ' + (on ? '#f59e0b' : '#2a4060') + ';border-radius:8px;padding:8px 10px;' + (on ? 'background:rgba(245,158,11,0.06)' : '') + '">' +
+    '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;color:' + (on ? '#f59e0b' : '#8aa8c0') + ';font-weight:700;margin:0"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="setToolField(\'' + id + '\',\'warranty_claim\',this.checked);renderToolsList()" style="accent-color:#f59e0b;cursor:pointer"> Warranty claim</label>' +
+    (on ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">' +
+      '<div class="field" style="grid-column:1/-1"><label>Reason for claim / what failed</label><textarea oninput="setToolField(\'' + id + '\',\'warranty_reason\',this.value)" placeholder="e.g. Tension wheel cover cracked, machine gunning" style="' + inp + ';font-family:inherit;resize:vertical;min-height:45px">' + _wcEsc(t.warranty_reason) + '</textarea></div>' +
+      f('customer_environment', 'Customer type / environment', 'e.g. Truss and frame manufacturer') +
+      f('strap_size', 'Strap size', 'e.g. 15.5 mm PET') +
+      f('tension_setting', 'Tension setting', 'e.g. 6') +
+      f('weld_time', 'Weld time', 'e.g. 1.2 s') +
+      '<div style="grid-column:1/-1"><button type="button" class="btn-clear" onclick="openWarrantyClaim(\'' + id + '\')">Email claim to supplier</button> <span style="font-size:11px;color:#8aa8c0">Uses the model, serial, cycle count, diagnosis and this tool\'s parts. Save the job first so the details are kept.</span></div>' +
+    '</div>' : '') +
+  '</div>';
+}
+var _wcTool = null;
+function buildWarrantyClaimText(t) {
+  var m = (machines.find(function(x) { return x.id === t.machine_id; }) || {}).name || 'not recorded';
+  var parts = jobPartsLocal.filter(function(p) { return p._toolTempId === t._tempId; });
+  var v = function(x) { return (x == null || String(x).trim() === '') ? 'not recorded' : String(x).trim(); };
+  var rows = parts.length ? parts.map(function(p) { return '- ' + (p.part_key_no || '') + ' | ' + (p.part_description || '') + ' | Qty ' + (p.quantity || 1); }).join('\n') : '- none entered';
+  return 'Hi,\n\nWe would like to submit a warranty claim for the tool below.\n\n' +
+    'Model: ' + m + '\nSerial number: ' + v(t.serial_number) + '\nDate of manufacture: ' + v(t.date_of_manufacture) + '\nCycle count: ' + (t.cycle_count ? parseInt(t.cycle_count).toLocaleString('en-AU') : 'not recorded') + '\n' +
+    'Customer type / environment: ' + v(t.customer_environment) + '\nStrap size: ' + v(t.strap_size) + '\nTension setting: ' + v(t.tension_setting) + '\nWeld time: ' + v(t.weld_time) + '\n\n' +
+    'Fault: ' + v(t.fault_type) + (t.error_code ? ' (error code ' + t.error_code + ')' : '') + '\nReason for claim: ' + v(t.warranty_reason) + '\nFindings: ' + v(t.diagnosis) + '\n\n' +
+    'Parts used:\n' + rows + '\n\nOur reference: ' + (editingJob ? xpsNum(editingJob.job_number) : 'new job') + '\n\nPlease let us know if you need photos or the failed parts.\n\nThanks,\nRob';
+}
+function openWarrantyClaim(tempId) {
+  var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; }); if (!t) return;
+  _wcTool = t;
+  var m = (machines.find(function(x) { return x.id === t.machine_id; }) || {}).name || 'tool';
+  document.getElementById('wcTo').value = WARRANTY_CLAIM_TO;
+  document.getElementById('wcCc').value = WARRANTY_CLAIM_CC;
+  document.getElementById('wcSubject').value = 'Warranty claim - ' + m + (t.serial_number ? ' S/N ' + t.serial_number : '') + (editingJob ? ' - ' + xpsNum(editingJob.job_number) : '');
+  document.getElementById('wcText').value = buildWarrantyClaimText(t);
+  document.getElementById('wcOverlay').classList.add('show');
+}
+function closeWarrantyClaim() { document.getElementById('wcOverlay').classList.remove('show'); }
+function copyWarrantyClaim() {
+  var t = 'To: ' + document.getElementById('wcTo').value + '\nCc: ' + document.getElementById('wcCc').value + '\nSubject: ' + document.getElementById('wcSubject').value + '\n\n' + document.getElementById('wcText').value;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function() { showToast('Claim copied'); }).catch(function() {
+    var ta = document.getElementById('wcText'); ta.focus(); ta.select(); showToast('Select and copy the text above', 'error');
+  });
+}
+function sendWarrantyClaim(mode) {
+  var to = document.getElementById('wcTo').value.trim(), cc = document.getElementById('wcCc').value.trim();
+  var subject = document.getElementById('wcSubject').value, body = document.getElementById('wcText').value;
+  if (!to) { showToast('Enter the supplier email address first', 'error'); document.getElementById('wcTo').focus(); return; }
+  if (mode === 'web') {
+    var web = 'https://outlook.office.com/mail/deeplink/compose?to=' + encodeURIComponent(to) + (cc ? '&cc=' + encodeURIComponent(cc) : '') + '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    if (web.length > 7000) { copyWarrantyClaim(); showToast('Long message - copied to the clipboard; paste it into a new Outlook message', 'error'); }
+    else { window.open(web, '_blank'); }
+  } else if (mode === 'eml') {
+    var CRLF = '\r\n';
+    var eml = 'To: ' + to + CRLF + (cc ? 'Cc: ' + cc + CRLF : '') + 'Subject: ' + subject.replace(/[\r\n]+/g, ' ') + CRLF +
+      'X-Unsent: 1' + CRLF + 'MIME-Version: 1.0' + CRLF + 'Content-Type: text/plain; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + body.replace(/\r?\n/g, CRLF);
+    var blob = new Blob([eml], { type: 'message/rfc822' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (editingJob ? xpsNum(editingJob.job_number) + ' - ' : '') + 'Warranty claim.eml';
+    document.body.appendChild(a); a.click(); setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    showToast('Saved as ' + a.download + '. Open it (bottom of the browser) to send from Outlook.');
+  } else {
+    var href = 'mailto:' + to + '?' + (cc ? 'cc=' + encodeURIComponent(cc) + '&' : '') + 'subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
+    if (href.length > 1900) { showToast('Long message - use Outlook draft file or Copy text instead', 'error'); return; }
+    window.location.href = href;
+  }
+}
+
 function renderToolsList() {
   var el = document.getElementById('jobToolsList'); if (!el) return;
   var machineOpts = '<option value="">-- Select --</option>' +
@@ -4983,6 +5076,7 @@ function renderToolsList() {
         '<div class="field"><label>Fault Type</label><input value="' + (t.fault_type||'') + '" list="fltOpts_' + t._tempId + '" placeholder="Select or type..." oninput="setToolField(\'' + t._tempId + '\',\'fault_type\',this.value)" autocomplete="off" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><datalist id="fltOpts_' + t._tempId + '">' + FAULT_OPTIONS.map(function(f){return'<option value="'+f+'">';}).join('') + '</datalist></div>' +
         '<div class="field"><label>Error Code</label><input value="' + (t.error_code||'') + '" placeholder="e.g. E.2" oninput="setToolField(\'' + t._tempId + '\',\'error_code\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field"><label>Cycle Count</label><input type="number" value="' + (t.cycle_count||'') + '" placeholder="e.g. 16835" min="0" oninput="setToolField(\'' + t._tempId + '\',\'cycle_count\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
+        warrantyClaimBlock(t) +
         '<div class="field full"><label>Customer Reported Issue</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'customer_issue\',this.value)" placeholder="What the customer reported..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.customer_issue||'') + '</textarea></div>' +
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
         '<div class="field full"><label>Recommendation</label>' +
