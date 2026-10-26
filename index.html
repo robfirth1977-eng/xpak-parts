@@ -7425,12 +7425,18 @@ function switchToPurchasing() {
 
 // ── Bin Labels: reusable status labels for the workshop bins, 36 x 89 mm (large address label), black on white ──
 var BIN_LABELS = [
+  { pre: 'WAITING FOR', main: 'ASSESSMENT' },
   { pre: 'WAITING FOR', main: 'PARTS' },
   { pre: 'WAITING FOR', main: 'REP APPROVAL' },
   { pre: 'WAITING FOR', main: 'CUSTOMER APPROVAL' },
   { pre: '', main: 'READY TO REPAIR' },
   { pre: '', main: 'REPAIRED' },
-  { pre: 'WAITING FOR', main: 'INVOICE COSTING' }
+  { pre: 'WAITING FOR', main: 'INVOICE COSTING' },
+  { pre: 'WAITING FOR', main: 'SUPPLIER QUOTE' },
+  { pre: '', main: 'WARRANTY CLAIM' },
+  { pre: '', main: 'READY TO RETURN' },
+  { pre: '', main: 'REPAIR DECLINED' },
+  { pre: '', main: 'WRITTEN OFF' }
 ];
 function binLabelCss() {
   return '.bl{width:87mm;height:34mm;border:0.5mm solid #000;border-radius:1mm;display:flex;flex-direction:column;padding:2mm 3mm;background:#fff;color:#000;font-family:Arial,sans-serif;box-sizing:border-box;overflow:hidden}' +
@@ -7457,7 +7463,7 @@ function renderBinLabels() {
     '<div style="padding:0 14px 20px">' +
     '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><div style="font-size:15px;font-weight:700;color:#e2e8f0">Reusable bin labels</div>' +
     '<button class="btn-add" style="margin-left:auto;background:#60a5fa;color:#0f1923;font-weight:700" onclick="printBinLabels(-1)">Print all</button></div>' +
-    '<div style="font-size:12px;color:#8aa8c0;margin-bottom:14px">Print each label once (or a few spares) and stick it on its bin. Size is 36 x 89 mm, the large address label. The wording matches the job statuses: Waiting on Parts, Awaiting Rep Approval, Quoted - Awaiting Approval, In Workshop, Waiting to be Invoiced. Choose the 36 x 89 mm paper size in the print window.</div>' +
+    '<div style="font-size:12px;color:#8aa8c0;margin-bottom:14px">Print each label once (or a few spares) and stick it on its bin. Size is 36 x 89 mm, the large address label. The wording follows the job statuses (Awaiting Assessment, Awaiting Supplier Quote, Awaiting Rep Approval, Quoted - Awaiting Approval, Waiting on Parts, In Workshop, Waiting to be Invoiced), plus Warranty Claim, Ready to Return, Repair Declined and Written Off. Choose the 36 x 89 mm paper size in the print window.</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px">' +
     BIN_LABELS.map(function(l, i) {
       return '<div class="bl-card">' + binLabelHtml(l) + '<div style="display:flex;gap:8px;align-items:center;font-size:12px;color:#8aa8c0">Copies <input type="number" id="binCopies_' + i + '" min="0" max="20" value="1" style="width:60px;padding:5px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px">' +
