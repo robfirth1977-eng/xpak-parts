@@ -829,6 +829,15 @@
         <span>Activity History</span>
         <button class="add-contact-btn" style="width:auto;padding:3px 10px;border-color:#00c8e060;color:#00c8e0" onclick="openActModal(editingJob?editingJob.id:null,null)">+ Log Activity</button>
       </div>
+      <div id="jobEmailDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:9px 12px;margin-bottom:8px;font-size:12px;color:#8aa8c0;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center"
+        ondragover="event.preventDefault();this.style.borderColor='#00c8e0';this.style.background='rgba(0,200,224,0.08)'"
+        ondragleave="this.style.borderColor='#2a4060';this.style.background=''"
+        ondrop="event.preventDefault();this.style.borderColor='#2a4060';this.style.background='';logEmailFiles(event.dataTransfer.files)">
+        <span>&#9993; Drag emails here to log them on this job (.msg or .eml)</span>
+        <button type="button" class="btn-clear" style="padding:3px 10px;font-size:11px" onclick="document.getElementById('jobEmailPick').click()">or choose files</button>
+        <label style="cursor:pointer;display:flex;gap:5px;align-items:center"><input type="checkbox" id="emailTrimQuoted" checked> leave out the earlier messages in a thread</label>
+        <input type="file" id="jobEmailPick" multiple accept=".msg,.eml" style="display:none" onchange="logEmailFiles(this.files);this.value=''">
+      </div>
       <div id="jobActivityList" style="max-height:220px;overflow-y:auto"></div>
     </div>
 
@@ -7688,10 +7697,40 @@ async function openSendRequest() {
   document.getElementById('poSendOverlay').classList.add('show');
 }
 // A draft message file: opening it in Outlook gives an addressed, unsent email with no length limit
+// The same request text, with the part lines ("- key | description | Qty n | ...") laid out as a table
+function requestTextToHtml(body) {
+  var esc = function(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var td = 'padding:4px 10px;border:1px solid #bbb;vertical-align:top;';
+  var out = '', rows = [];
+  var flush = function() {
+    if (!rows.length) return;
+    out += '<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:6px 0"><tr style="background:#e8e8e8;font-weight:bold">' +
+      ['Part no.', 'Description', 'Qty', 'Each', 'Line total', 'For'].map(function(h, i) { return '<td style="' + td + (i >= 2 && i <= 4 ? 'text-align:right;' : '') + '">' + h + '</td>'; }).join('') + '</tr>' +
+      rows.map(function(c) {
+        var tbc = c.length < 6 && /TBC/i.test(c[3] || '');
+        var cells = [c[0], c[1], String(c[2] || '').replace(/^Qty\s*/i, ''), tbc ? 'TBC' : String(c[3] || '').replace(/\s*ea$/i, ''), tbc ? '' : (c[4] || ''), c[c.length - 1]];
+        return '<tr>' + cells.map(function(v, i) { return '<td style="' + td + (i >= 2 && i <= 4 ? 'text-align:right;white-space:nowrap;' : '') + '">' + esc(v || '') + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</table>';
+    rows = [];
+  };
+  body.replace(/\r\n?/g, '\n').split('\n').forEach(function(line) {
+    var parts = line.indexOf('- ') === 0 ? line.slice(2).split(' | ') : [];
+    if (parts.length >= 5 && /^Qty\s/i.test(parts[2])) { rows.push(parts.map(function(p) { return p.trim(); })); return; }
+    flush();
+    if (!line.trim()) { out += '<p style="margin:0;line-height:8px">&nbsp;</p>'; return; }
+    var bold = /^(Total|Approval|Request):/.test(line);
+    out += '<p style="margin:0;font-family:Calibri,Arial,sans-serif;font-size:11pt">' + (bold ? '<b>' + esc(line) + '</b>' : esc(line)) + '</p>';
+  });
+  flush();
+  return '<html><body>' + out + '</body></html>';
+}
 function downloadRequestDraft(po, subject, body) {
-  var CRLF = '\r\n';
+  var CRLF = '\r\n', B = '=_xpak_' + Date.now().toString(36);
   var eml = 'To: ' + ORDER_REQUEST_TO + CRLF + 'Cc: ' + ORDER_REQUEST_CC.join('; ') + CRLF + 'Subject: ' + subject.replace(/[\r\n]+/g, ' ') + CRLF +
-    'X-Unsent: 1' + CRLF + 'MIME-Version: 1.0' + CRLF + 'Content-Type: text/plain; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + body.replace(/\r?\n/g, CRLF);
+    'X-Unsent: 1' + CRLF + 'MIME-Version: 1.0' + CRLF + 'Content-Type: multipart/alternative; boundary="' + B + '"' + CRLF + CRLF +
+    '--' + B + CRLF + 'Content-Type: text/plain; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + body.replace(/\r?\n/g, CRLF) + CRLF + CRLF +
+    '--' + B + CRLF + 'Content-Type: text/html; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + requestTextToHtml(body).replace(/\r?\n/g, CRLF) + CRLF + CRLF +
+    '--' + B + '--' + CRLF;
   var blob = new Blob([eml], { type: 'message/rfc822' });
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = po.po_number + ' - Order request.eml';
   document.body.appendChild(a); a.click(); setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -8924,14 +8963,161 @@ async function saveActivity() {
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
 }
 
+// ── Drag emails onto a job: each one is saved as an Email entry in the job's activity log ──
+function _emBytesToStr(b) { var s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return s; }
+function _emStrToBytes(s) { var b = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) & 255; return b; }
+function _emDecode(bytes, charset) {
+  try { return new TextDecoder((charset || 'utf-8').toLowerCase()).decode(bytes); } catch (e) { return new TextDecoder('utf-8').decode(bytes); }
+}
+function _emQP(s) {
+  s = s.replace(/=\r?\n/g, ''); var out = [];
+  for (var i = 0; i < s.length; i++) {
+    if (s[i] === '=' && /^[0-9A-Fa-f]{2}$/.test(s.substr(i + 1, 2))) { out.push(parseInt(s.substr(i + 1, 2), 16)); i += 2; }
+    else out.push(s.charCodeAt(i) & 255);
+  }
+  return new Uint8Array(out);
+}
+function _emB64(s) { try { return _emStrToBytes(atob(s.replace(/[^A-Za-z0-9+\/=]/g, ''))); } catch (e) { return new Uint8Array(0); } }
+function _emWords(s) {
+  return String(s || '').replace(/(\?=)\s+(=\?)/g, '$1$2').replace(/=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g, function(m, cs, enc, txt) {
+    return _emDecode(enc.toLowerCase() === 'b' ? _emB64(txt) : _emQP(txt.replace(/_/g, ' ')), cs);
+  });
+}
+function _emHtmlToText(h) {
+  var t = h.replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr|li|h\d)>/gi, '\n').replace(/<[^>]+>/g, '');
+  var ta = document.createElement('textarea'); ta.innerHTML = t; return ta.value;
+}
+function _emPart(str) {
+  var m = str.match(/\r?\n\r?\n/), hEnd = m ? m.index : str.length, bStart = m ? m.index + m[0].length : str.length;
+  var headers = {};
+  str.slice(0, hEnd).replace(/\r?\n[ \t]+/g, ' ').split(/\r?\n/).forEach(function(l) {
+    var k = l.indexOf(':'); if (k > 0) { var n = l.slice(0, k).trim().toLowerCase(); if (!(n in headers)) headers[n] = l.slice(k + 1).trim(); }
+  });
+  return { headers: headers, body: str.slice(bStart) };
+}
+function _emParam(v, name) {
+  var m = new RegExp(name + '\\*?\\s*=\\s*(?:"([^"]*)"|([^;\\s]+))', 'i').exec(v || ''); return m ? (m[1] != null ? m[1] : m[2]) : '';
+}
+function _emWalk(str, out) {
+  var p = _emPart(str), ct = (p.headers['content-type'] || 'text/plain').toLowerCase(), cte = (p.headers['content-transfer-encoding'] || '').toLowerCase().trim();
+  var disp = p.headers['content-disposition'] || '', fname = _emWords(_emParam(disp, 'filename') || _emParam(p.headers['content-type'], 'name'));
+  if (/^multipart\//.test(ct)) {
+    var b = _emParam(p.headers['content-type'], 'boundary'); if (!b) return;
+    var segs = p.body.split('--' + b); segs.shift();
+    segs.forEach(function(seg) { if (/^--/.test(seg)) return; seg = seg.replace(/^\r?\n/, ''); if (seg.trim()) _emWalk(seg, out); });
+    return;
+  }
+  var isText = /^text\/(plain|html)/.test(ct);
+  if (fname && (!isText || /^attachment/i.test(disp))) { if (!/^inline/i.test(disp) || !/^image\//.test(ct)) out.attachments.push(fname); return; }
+  if (!isText) return;
+  var bytes = cte === 'base64' ? _emB64(p.body) : cte === 'quoted-printable' ? _emQP(p.body) : _emStrToBytes(p.body);
+  var text = _emDecode(bytes, _emParam(p.headers['content-type'], 'charset'));
+  if (/^text\/plain/.test(ct)) out.plain += (out.plain ? '\n' : '') + text; else out.html += text;
+}
+function _emParseEml(buf) {
+  var str = _emBytesToStr(new Uint8Array(buf)), top = _emPart(str), out = { plain: '', html: '', attachments: [] };
+  _emWalk(str, out);
+  var h = top.headers, d = h.date ? new Date(h.date) : null;
+  return { subject: _emWords(h.subject), from: _emWords(h.from), to: _emWords(h.to), cc: _emWords(h.cc), date: d && !isNaN(d) ? d : null,
+    body: out.plain || _emHtmlToText(out.html), attachments: out.attachments };
+}
+function _emParseMsg(buf) {
+  var cfb = XLSX.CFB.read(new Uint8Array(buf), { type: 'array' });
+  function get(p) { var e = XLSX.CFB.find(cfb, '/' + p); return e && e.content ? Uint8Array.from(e.content) : null; }
+  function str(base, tag) {
+    var c = get(base + '__substg1.0_' + tag + '001F'); if (c) return new TextDecoder('utf-16le').decode(c).replace(/\0+$/, '');
+    c = get(base + '__substg1.0_' + tag + '001E'); if (c) return _emDecode(c, 'windows-1252').replace(/\0+$/, '');
+    return '';
+  }
+  function props(base, hdr) {
+    var c = get(base + '__properties_version1.0'), out = {}; if (!c) return out;
+    var dv = new DataView(c.buffer, c.byteOffset, c.byteLength);
+    for (var o = hdr; o + 16 <= c.length; o += 16) out[dv.getUint32(o, true)] = { lo: dv.getUint32(o + 8, true), hi: dv.getUint32(o + 12, true) };
+    return out;
+  }
+  var pr = props('', 32), date = null, ft = pr[0x00390040] || pr[0x0E060040];
+  if (ft) { var ms = (ft.hi * 4294967296 + ft.lo) / 10000 - 11644473600000; if (ms > 0) date = new Date(ms); }
+  var body = str('', '1000');
+  if (!body) { var hb = get('__substg1.0_10130102'); if (hb) body = _emHtmlToText(_emDecode(hb, 'utf-8')); }
+  var sender = str('', '0C1A'), smtp = str('', '5D01') || (str('', '0C1F').indexOf('@') > -1 ? str('', '0C1F') : '');
+  var to = [], cc = [];
+  for (var i = 0; i < 200; i++) {
+    var rb = '__recip_version1.0_#' + ('00000000' + i.toString(16).toUpperCase()).slice(-8) + '/';
+    if (!get(rb + '__properties_version1.0')) break;
+    var rn = str(rb, '3001'), ra = str(rb, '39FE') || str(rb, '3003'), rt = props(rb, 8)[0x0C150003];
+    var who = rn && ra && ra.indexOf('@') > -1 && rn !== ra ? rn + ' <' + ra + '>' : (rn || ra);
+    if (who) (rt && rt.lo === 2 ? cc : to).push(who);
+  }
+  var atts = [];
+  for (var k = 0; k < 200; k++) {
+    var ab = '__attach_version1.0_#' + ('00000000' + k.toString(16).toUpperCase()).slice(-8) + '/';
+    if (!get(ab + '__properties_version1.0')) break;
+    var an = str(ab, '3707') || str(ab, '3704') || str(ab, '3001');
+    if (an && !/^image\d+\.(png|jpe?g|gif)$/i.test(an)) atts.push(an);
+  }
+  return { subject: str('', '0037'), from: sender && smtp && sender !== smtp ? sender + ' <' + smtp + '>' : (sender || smtp),
+    to: to.length ? to.join('; ') : str('', '0E04'), cc: cc.length ? cc.join('; ') : str('', '0E03'), date: date, body: body, attachments: atts };
+}
+function _emTrimQuoted(t) {
+  var cuts = [/^-{2,}\s*Original Message\s*-{2,}\s*$/im, /^_{10,}\s*$/m, /^On .{6,200}wrote:\s*$/m, /^From:[^\n]*\n(?:Sent|Date):/m, /^>/m], at = -1;
+  cuts.forEach(function(re) { var m = re.exec(t); if (m && (at < 0 || m.index < at)) at = m.index; });
+  return at > 0 && t.slice(0, at).trim() ? t.slice(0, at).replace(/\s+$/, '') + '\n\n[earlier messages in the thread not copied]' : t;
+}
+function _emFmtDate(d) { return d.toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }); }
+function _emLocalIso(d) { var p = function(n) { return String(n).padStart(2, '0'); }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+
+async function refreshJobActivityList() {
+  if (!editingJob) return;
+  var acts = await db('GET', 'activities?job_id=eq.' + editingJob.id + '&order=activity_date.desc,created_at.desc');
+  acts.forEach(function(a) { _cachedActs[a.id] = a; });
+  var sec = document.getElementById('jobActivitySection'); if (sec) sec.style.display = 'block';
+  document.getElementById('jobActivityList').innerHTML = acts.map(renderActivityItem).join('');
+}
+async function logEmailFiles(fileList) {
+  var files = Array.prototype.slice.call(fileList || []);
+  if (!files.length) return;
+  if (!editingJob) { showToast('Save the job first, then drop the emails onto it', 'error'); return; }
+  var trim = document.getElementById('emailTrimQuoted') ? document.getElementById('emailTrimQuoted').checked : true;
+  var custId = null, logged = 0, dupes = 0, failed = [];
+  try {
+    var hit = (_custCache || []).find(function(x) { return x.company_name === editingJob.customer; });
+    if (hit) custId = hit.id;
+    else if (editingJob.customer) { var cr = await db('GET', 'customers?company_name=eq.' + encodeURIComponent(editingJob.customer) + '&select=id&limit=1'); if (cr.length) custId = cr[0].id; }
+  } catch (e) { /* customer link is optional */ }
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    try {
+      if (!/\.(msg|eml)$/i.test(f.name)) throw new Error('not an email file (.msg or .eml)');
+      var buf = await f.arrayBuffer();
+      var em = /\.msg$/i.test(f.name) ? _emParseMsg(buf) : _emParseEml(buf);
+      if (!em.subject && !em.body) throw new Error('could not read this email');
+      var when = em.date || new Date(f.lastModified || Date.now());
+      var head = 'From: ' + (em.from || 'unknown') + '\nTo: ' + (em.to || 'unknown') + (em.cc ? '\nCc: ' + em.cc : '') + '\nDate: ' + _emFmtDate(when) + (em.attachments.length ? '\nAttachments: ' + em.attachments.join(', ') : '');
+      var body = (em.body || '').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+      if (trim) body = _emTrimQuoted(body);
+      if (body.length > 15000) body = body.slice(0, 15000) + '\n\n[cut - email longer than 15,000 characters]';
+      var subject = (em.subject || '(no subject)').trim(), day = _emLocalIso(when);
+      var same = await db('GET', 'activities?job_id=eq.' + editingJob.id + '&type=eq.Email&activity_date=eq.' + day + '&select=id,notes');
+      if (same.some(function(a) { return (a.notes || '').indexOf(head) === 0; })) { dupes++; continue; }
+      await db('POST', 'activities', { type: 'Email', subject: subject, notes: head + '\n\n' + body, activity_date: day, customer_id: custId, job_id: editingJob.id, created_by: 'Rob Firth' });
+      logged++;
+    } catch (e) { failed.push(f.name + ' - ' + e.message); }
+  }
+  _custCache = null;
+  try { await refreshJobActivityList(); } catch (e) { /* list refresh is cosmetic */ }
+  var msg = (logged ? logged + ' email' + (logged > 1 ? 's' : '') + ' logged' : 'No new emails logged') + (dupes ? ', ' + dupes + ' already logged' : '') + (failed.length ? '. Failed: ' + failed.join('; ') : '');
+  showToast(msg, failed.length ? 'error' : undefined);
+}
+
 function renderActivityItem(a) {
   var cls = a.type === 'Phone Call' ? 'phone' : a.type === 'Email' ? 'email' : a.type === 'Site Visit' ? 'visit' : 'note';
   var dateStr = a.activity_date ? new Date(a.activity_date).toLocaleDateString('en-AU',{day:'2-digit',month:'short',year:'numeric'}) : '';
   var jobRef = a.job_id ? (function(){ var j=jobs.find(function(x){return x.id===a.job_id;}); return j?'<div class="act-job">🔗 '+xpsNum(j.job_number)+'</div>':''; })() : '';
   return '<div class="activity-item ' + cls + '" data-act-id="' + a.id + '">' +
     '<div class="act-top"><span class="act-type ' + cls + '">' + a.type + '</span><span class="act-date">' + dateStr + '</span></div>' +
-    '<div class="act-subject">' + a.subject + '</div>' +
-    (a.notes ? '<div class="act-notes">' + a.notes + '</div>' : '') +
+    '<div class="act-subject">' + _wcEsc(a.subject) + '</div>' +
+    (a.notes ? '<div class="act-notes"' + (a.notes.length > 450 ? ' style="max-height:84px;overflow:hidden"' : '') + '>' + _wcEsc(a.notes) + '</div>' +
+      (a.notes.length > 450 ? '<a href="#" style="font-size:11px;color:#00c8e0" onclick="var n=this.previousSibling;var o=n.style.maxHeight===\'none\';n.style.maxHeight=o?\'84px\':\'none\';this.textContent=o?\'Show more\':\'Show less\';return false">Show more</a>' : '') : '') +
     jobRef +
     '<div class="act-actions">' +
       '<button class="act-btn edit" onclick="openEditAct(\'' + a.id + '\',this)">✏️ Edit</button>' +
