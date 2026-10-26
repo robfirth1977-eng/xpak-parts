@@ -2427,8 +2427,19 @@ function setJobView(mode) {
   renderJobs();
 }
 
+// Refreshing the browser reopens the page you were on (kept for this browser tab only)
+var _savedView = '', _viewRestoreDone = false;
+try { _savedView = sessionStorage.getItem('mf_view') || ''; } catch(e) {}
+function restoreSavedView() {
+  var map = { jobs: switchToJobs, loan: switchToLoans, agr: switchToAgreements, weekly: switchToWeekly, sitevisits: switchToSiteVisits, customers: switchToCustomers,
+    stock: switchToStock, tools: switchToTools, suppliers: switchToSuppliers, purchasing: switchToPurchasing, binlabels: switchToBinLabels };
+  try { if (map[_savedView]) map[_savedView](); else switchToHome(); }
+  catch(e) { console.error('restore view failed', e); switchToHome(); }
+  _viewRestoreDone = true;
+}
 function renderTabs() {
   var v = currentView;
+  if (_viewRestoreDone) { try { sessionStorage.setItem('mf_view', v); } catch(e) {} }
   var html2 = '';
   html2 += '<button class="tab home-tab' + (v==='home'?' active':'') + '" onclick="' + (v==='home'?'':'switchToHome()') + '">🏠</button>';
   html2 += '<div class="tab-divider"></div>';
@@ -8067,13 +8078,14 @@ async function onAuthSuccess(user) {
   // Initialise app AFTER role is known
   await init();
   renderTabs();
-  switchToHome();
+  restoreSavedView();
 }
 
 async function doSignOut() {
   await _supabase.auth.signOut();
   _currentUser = null;
   window._adminMode = false;
+  _savedView = ''; _viewRestoreDone = false; try { sessionStorage.removeItem('mf_view'); } catch(e) {}
   document.getElementById('authOverlay').style.display = 'flex';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPass').value = '';
