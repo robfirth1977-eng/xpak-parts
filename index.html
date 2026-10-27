@@ -306,6 +306,28 @@
   </div>
 </div>
 
+<div class="overlay" id="rpOverlay" style="z-index:400;align-items:center;justify-content:center" onclick="if(event.target===this)closeReportEmail()">
+  <div class="modal" style="border-top:3px solid #3b82f6;max-width:760px;width:96%;border-radius:12px">
+    <div class="modal-header"><div class="modal-title">Email report for approval</div><button class="modal-close" onclick="closeReportEmail()">x</button></div>
+    <div class="g2">
+      <div class="field"><label>Report</label><select id="rpType" onchange="rebuildReportEmail()"><option value="report">Assessment / Service Report</option><option value="parts">Parts Quote</option></select></div>
+      <div class="field"><label>After sending, set status to</label><select id="rpStatus"><option value="">Leave as is</option><option value="QUOTED - AWAITING APPROVAL">QUOTED - AWAITING APPROVAL</option><option value="AWAITING REP APPROVAL">AWAITING REP APPROVAL</option></select></div>
+      <div class="field"><label>To (job contact)</label><input id="rpTo" placeholder="customer email"></div>
+      <div class="field"><label>Cc (the team is copied every time)</label><input id="rpCc"></div>
+      <div class="field full"><label>Subject</label><input id="rpSubject"></div>
+      <div class="field full"><label>Email text (you can edit it before sending). Save the report as a PDF from its print window and attach it.</label><textarea id="rpText" style="min-height:300px;font-family:monospace;font-size:12px"></textarea></div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin:8px 0;cursor:pointer"><input type="checkbox" id="rpLog" checked> Log this email in the job's Activity History</label>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-clear" onclick="closeReportEmail()">Cancel</button>
+      <button class="btn-clear" onclick="copyReportEmail()">Copy text</button>
+      <button class="btn-clear" onclick="sendReportEmail('web')" title="Opens a new message in Outlook on the web (browser)">Outlook (web)</button>
+      <button class="btn-clear" onclick="sendReportEmail('mailto')" title="Opens the program Windows uses for email links (short messages only)">Mail link</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="sendReportEmail('eml')" title="Saves a draft message file. Open it and Outlook shows an addressed, unsent email.">Outlook draft file</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="wcOverlay" style="z-index:400;align-items:center;justify-content:center" onclick="if(event.target===this)closeWarrantyClaim()">
   <div class="modal" style="border-top:3px solid #f59e0b;max-width:760px;width:96%;border-radius:12px">
     <div class="modal-header"><div class="modal-title">Warranty claim email</div><button class="modal-close" onclick="closeWarrantyClaim()">x</button></div>
@@ -3335,6 +3357,7 @@ function renderList() {
         '<button class="job-link-tile" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')" style="cursor:pointer;background:#0a1a2a;border-color:#f59e0b;color:#f59e0b">Job Card</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Assessment Report</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\',{partsOnly:true})" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Parts Quote</button>' +
+        '<button class="job-link-tile" onclick="event.stopPropagation();openReportEmail(\'' + j.id + '\')" style="cursor:pointer;background:#1a2433;border-color:#3b82f6;color:#60a5fa">Email Report</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Order Request</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')" style="cursor:pointer;background:#1a0a2a;border-color:#e879f9;color:#e879f9">Invoice Notice</button>' +
         '<button class="job-link-tile" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Export Quote</button>' +
@@ -3475,6 +3498,7 @@ function renderBoard() {
           '<button class="bca-btn" style="background:#0a1a2a;color:#f59e0b" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')">📋 Job Card</button>' +
           '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')">📄 Report</button>' +
           '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\',{partsOnly:true})">💲 Parts Quote</button>' +
+          '<button class="bca-btn report" onclick="event.stopPropagation();openReportEmail(\'' + j.id + '\')">✉️ Email Report</button>' +
           '<button class="bca-btn report" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')">＋ Order Request</button>' +
           '<button class="bca-btn" style="background:#1a0a2a;color:#e879f9" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')">🧾 Invoice</button>' +
           '<button class="bca-btn quote" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')">📦 Quote</button>' +
@@ -5355,6 +5379,129 @@ async function generateAssessmentReport(jobId, opts) {
     var fakeTool = [{ tool_number:1, machine_id: j.machine_id, serial_number: j.serial_number, fault_type: j.fault_type, error_code: j.error_code, customer_issue: j.customer_issue, workshop_notes: j.workshop_notes, diagnosis: '', recommendation: '' }];
     renderAssessmentReport(j, fakeTool, [], opts);
   });
+}
+
+// ── Email a report for approval: Assessment Report / Service Report, or the Parts Quote ──
+// You save the report as a PDF from the print window and attach it; the email names the file to attach.
+var REPORT_EMAIL_CC = 'brent.reardon@xpak.com.au; Gareth.sanderson@xpak.com.au; trent.firth@xpak.com.au; tom.mchugh@xpak.com.au';
+var _rpJob = null, _rpTools = [], _rpParts = [];
+function _rpNoRepair(t) {
+  var rec = (t.recommendation || '').toLowerCase();
+  return rec.indexOf('not required') !== -1 || rec.indexOf('declined') !== -1 || rec.indexOf('written off') !== -1;
+}
+// Same arithmetic as the Totals block in renderAssessmentReport - keep the two in step
+function reportEmailTotal(j, tools, jparts, partsOnly) {
+  var billable = tools.filter(function(t) { return !_rpNoRepair(t); }).map(function(t) { return t.tool_number; });
+  var parts = partsOnly ? jparts : jparts.filter(function(p) { return billable.indexOf(p.tool_number || 1) !== -1; });
+  var partsTotal = parts.reduce(function(sum, p) {
+    var pd = p.part_id ? allParts.find(function(x) { return x.id === p.part_id; }) : null;
+    var sell = p.unit_price != null ? parseFloat(p.unit_price) : (pd && pd.sell_price ? parseFloat(pd.sell_price) : 0);
+    return sum + sell * (p.quantity || 1);
+  }, 0);
+  var fee = partsOnly ? 0 : tools.filter(function(t) { return !_rpNoRepair(t); }).reduce(function(s, t) { return s + (parseFloat(t.service_fee) || 0); }, 0);
+  var lab = partsOnly ? 0 : Math.max(0, (parseFloat(j.hours_spent) || 0) * (parseFloat(j.labour_rate) || 120) - (parseFloat(j.labour_discount) || 0));
+  return fee + Math.max(0, partsTotal - (parseFloat(j.parts_discount) || 0)) + lab + (parseFloat(j.freight_cost) || 0);
+}
+function reportEmailKind() { return document.getElementById('rpType').value; }
+function buildReportEmail(j, tools, jparts, kind) {
+  var partsOnly = kind === 'parts';
+  var done = !partsOnly && tools.some(function(t) { return (t.work_completed || '').trim().length > 0; });
+  var docType = partsOnly ? 'Parts Quote' : (done ? 'Service Report' : 'Assessment Report');
+  var title = partsOnly ? 'Parts Quotation' : (done ? 'Service Report' : 'Service Assessment Report');
+  var total = reportEmailTotal(j, tools, jparts, partsOnly);
+  var first = (j.contact_name || '').trim().split(/\s+/)[0] || 'there';
+  var mName = function(id) { var m = machines.find(function(x) { return x.id === id; }); return m ? m.name : 'tool'; };
+  var lines = partsOnly ? [] : tools.map(function(t) {
+    var what = (_rpNoRepair(t) ? t.recommendation : (t.recommendation || t.diagnosis || t.customer_issue || '')).replace(/\s+/g, ' ').trim();
+    if (what.length > 220) what = what.slice(0, 217) + '...';
+    return '- ' + mName(t.machine_id) + (t.serial_number ? ' S/N ' + t.serial_number : '') + (what ? ': ' + what : '');
+  });
+  var file = docTitle(xpsNum(j.job_number), docType, j.customer) + '.pdf';
+  var t = 'Hi ' + first + ',\n\nPlease find attached the ' + title + ' for ' + xpsNum(j.job_number) + '.\n\n';
+  if (lines.length) t += lines.join('\n') + '\n\n';
+  if (total > 0) t += 'Total: ' + _money(total) + ' ex GST (' + _money(total * 1.1) + ' inc GST)\n\n';
+  if (done) t += 'The work is complete. Please let us know if you have any questions.\n\n';
+  else t += 'To go ahead, please reply to this email confirming your approval and include a Purchase Order / Order Number' + (j.order_number ? ' (we have ' + j.order_number + ' on file)' : '') + '.\n\n';
+  t += 'Attached: ' + file + '\n\nThanks,\nRob';
+  return { text: t, subject: xpsNum(j.job_number) + ' - ' + title + ' - ' + (j.customer || ''), done: done };
+}
+async function openReportEmail(jobId, kind) {
+  var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
+  if (!allParts.length) await loadAllParts();
+  try {
+    _rpTools = await db('GET', 'job_tools?job_id=eq.' + jobId + '&select=*&order=tool_number.asc');
+    _rpParts = await db('GET', 'job_parts?job_id=eq.' + jobId + '&status=in.(use_stock,to_order,ordered,arrived)&select=*');
+  } catch(e) { showToast('Could not load the job: ' + e.message, 'error'); return; }
+  _rpJob = j;
+  document.getElementById('rpType').value = kind || 'report';
+  document.getElementById('rpTo').value = j.email || '';
+  document.getElementById('rpCc').value = REPORT_EMAIL_CC;
+  document.getElementById('rpLog').checked = true;
+  rebuildReportEmail();
+  document.getElementById('rpOverlay').classList.add('show');
+}
+function rebuildReportEmail() {
+  if (!_rpJob) return;
+  var e = buildReportEmail(_rpJob, _rpTools, _rpParts, reportEmailKind());
+  document.getElementById('rpSubject').value = e.subject;
+  document.getElementById('rpText').value = e.text;
+  // after sending: customers move to Quoted, rep jobs stay with the rep, completed reports leave the status alone
+  var keep = e.done || _rpJob.status === 'AWAITING REP APPROVAL' || _rpJob.status === 'QUOTED - AWAITING APPROVAL';
+  document.getElementById('rpStatus').value = keep ? '' : 'QUOTED - AWAITING APPROVAL';
+}
+function closeReportEmail() { document.getElementById('rpOverlay').classList.remove('show'); }
+function copyReportEmail() {
+  var t = 'To: ' + document.getElementById('rpTo').value + '\nCc: ' + document.getElementById('rpCc').value + '\nSubject: ' + document.getElementById('rpSubject').value + '\n\n' + document.getElementById('rpText').value;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function() { showToast('Email copied'); }).catch(function() {
+    var ta = document.getElementById('rpText'); ta.focus(); ta.select(); showToast('Select and copy the text above', 'error');
+  });
+}
+async function sendReportEmail(mode) {
+  var j = _rpJob; if (!j) return;
+  var to = document.getElementById('rpTo').value.trim(), cc = document.getElementById('rpCc').value.trim();
+  var subject = document.getElementById('rpSubject').value, body = document.getElementById('rpText').value;
+  if (!to) { showToast('Enter the email address first', 'error'); document.getElementById('rpTo').focus(); return; }
+  if (mode === 'web') {
+    var web = 'https://outlook.office.com/mail/deeplink/compose?to=' + encodeURIComponent(to) + (cc ? '&cc=' + encodeURIComponent(cc) : '') + '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    if (web.length > 7000) { copyReportEmail(); showToast('Long message - copied to the clipboard; paste it into a new Outlook message', 'error'); }
+    else { window.open(web, '_blank'); }
+  } else if (mode === 'eml') {
+    var CRLF = '\r\n';
+    var eml = 'To: ' + to + CRLF + (cc ? 'Cc: ' + cc + CRLF : '') + 'Subject: ' + subject.replace(/[\r\n]+/g, ' ') + CRLF +
+      'X-Unsent: 1' + CRLF + 'MIME-Version: 1.0' + CRLF + 'Content-Type: text/plain; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + body.replace(/\r?\n/g, CRLF);
+    var blob = new Blob([eml], { type: 'message/rfc822' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = xpsNum(j.job_number) + ' - Report email.eml';
+    document.body.appendChild(a); a.click(); setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    showToast('Saved as ' + a.download + '. Open it (bottom of the browser), attach the report PDF and send.');
+  } else {
+    var href = 'mailto:' + to + '?' + (cc ? 'cc=' + encodeURIComponent(cc) + '&' : '') + 'subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
+    if (href.length > 1900) { showToast('Long message - use Outlook draft file or Copy text instead', 'error'); return; }
+    window.location.href = href;
+  }
+  // Record it: status moves on, and the email is logged in the job's Activity History
+  var ns = document.getElementById('rpStatus').value, notes = [];
+  try {
+    if (ns && ns !== j.status) {
+      var ms = computeJobMilestones(j, ns);
+      await db('PATCH', 'jobs?id=eq.' + j.id, { status: ns, quoted_at: ms.quoted_at, quote_accepted_at: ms.quote_accepted_at, completed_at: ms.completed_at });
+      j.status = ns; j.quoted_at = ms.quoted_at; j.quote_accepted_at = ms.quote_accepted_at; j.completed_at = ms.completed_at;
+      notes.push('status set to ' + ns);
+      if (currentView === 'jobs') { try { (jobViewMode === 'board' ? renderBoard : renderJobs)(); } catch(e) {} }
+    }
+  } catch(e) { showToast('Email opened, but the status did not update: ' + e.message, 'error'); }
+  try {
+    if (document.getElementById('rpLog').checked) {
+      var custId = null, hit = (_custCache || []).find(function(x) { return x.company_name === j.customer; });
+      if (hit) custId = hit.id;
+      else if (j.customer) { var cr = await db('GET', 'customers?company_name=eq.' + encodeURIComponent(j.customer) + '&select=id&limit=1'); if (cr.length) custId = cr[0].id; }
+      var now = new Date();
+      await db('POST', 'activities', { type: 'Email', subject: subject, notes: 'From: Rob Firth\nTo: ' + to + (cc ? '\nCc: ' + cc : '') + '\nDate: ' + _emFmtDate(now) + '\n\n' + body,
+        activity_date: _emLocalIso(now), customer_id: custId, job_id: j.id, created_by: 'Rob Firth' });
+      _custCache = null; notes.push('logged in Activity History');
+    }
+  } catch(e) { showToast('Email opened, but it was not logged: ' + e.message, 'error'); }
+  if (notes.length) showToast('Report email: ' + notes.join(', '));
+  closeReportEmail();
 }
 
 function renderAssessmentReport(j, tools, jparts, opts) {
