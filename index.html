@@ -643,6 +643,7 @@
   <div class="label-panel-header">
     <div><div class="label-panel-title">Label Queue - DYMO 99012</div><div class="label-count" id="labelCount"></div></div>
     <div class="label-actions">
+      <button class="btn-clear" onclick="sortQueue()" title="Puts the queued labels in part number order. You can also drag a label to move it.">Sort by Part No.</button>
       <button class="btn-clear" onclick="clearQueue()">Clear All</button>
       <button class="btn-clear" onclick="printCombinedLabel()" title="Prints all the queued parts as one list on a single small label (89 x 36 mm), for a bag holding several parts">One Label</button>
       <button class="btn-clear" onclick="printCombinedLabel(true)" title="Prints all the queued parts as one list on a large front-of-bin label (101 x 54 mm)">One Large Label</button>
@@ -4788,6 +4789,19 @@ function queueAllVisible() {
   updateLabelPanel(); renderParts(); showToast(added + ' labels queued');
 }
 
+// Drag a preview card onto another to move it there; the printed labels follow the queue order.
+var _lqDrag = null;
+function lqDragStart(e, i) { _lqDrag = i; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(i)); } catch(x) {} }
+function lqDrop(e, i) {
+  e.preventDefault();
+  if (_lqDrag === null || _lqDrag === i) { _lqDrag = null; return; }
+  labelQueue.splice(i, 0, labelQueue.splice(_lqDrag, 1)[0]);
+  _lqDrag = null; updateLabelPanel();
+}
+function sortQueue() {
+  labelQueue.sort(function(a, b) { return String(a.keyno).localeCompare(String(b.keyno), undefined, { numeric: true }); });
+  updateLabelPanel();
+}
 function removeFromQueue(partId) { labelQueue = labelQueue.filter(function(x) { return x.id !== partId; }); updateLabelPanel(); renderParts(); }
 function clearQueue() { labelQueue = []; updateLabelPanel(); renderParts(); }
 
@@ -4799,8 +4813,8 @@ function updateLabelPanel() {
   }
   panel.classList.add('show');
   document.getElementById('labelCount').textContent = labelQueue.length + ' label' + (labelQueue.length > 1 ? 's' : '') + ' ready';
-  document.getElementById('labelPreviews').innerHTML = labelQueue.map(function(d) {
-    return '<div class="label-preview-card"><button class="lp-remove" onclick="removeFromQueue(\'' + d.id + '\')">x</button>' + makeLabelInner(d, 'lp') + '</div>';
+  document.getElementById('labelPreviews').innerHTML = labelQueue.map(function(d, i) {
+    return '<div class="label-preview-card" draggable="true" style="cursor:grab" ondragstart="lqDragStart(event,' + i + ')" ondragover="event.preventDefault()" ondrop="lqDrop(event,' + i + ')"><button class="lp-remove" onclick="removeFromQueue(\'' + d.id + '\')">x</button>' + makeLabelInner(d, 'lp') + '</div>';
   }).join('');
   labelQueue.forEach(function(d) {
     var cards = document.querySelectorAll('.label-preview-card');
