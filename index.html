@@ -4805,7 +4805,16 @@ function sortQueue() {
 function removeFromQueue(partId) { labelQueue = labelQueue.filter(function(x) { return x.id !== partId; }); updateLabelPanel(); renderParts(); }
 function clearQueue() { labelQueue = []; updateLabelPanel(); renderParts(); }
 
+// The queue is kept in this browser so a refresh (or closing the tab) doesn't lose it.
+function restoreLabelQueue() {
+  try {
+    var saved = JSON.parse(localStorage.getItem('mf_label_queue') || '[]');
+    if (Array.isArray(saved) && saved.length) { labelQueue = saved; updateLabelPanel(); if (selectedMachine) renderParts(); }
+  } catch(e) {}
+}
+
 function updateLabelPanel() {
+  try { localStorage.setItem('mf_label_queue', JSON.stringify(labelQueue)); } catch(e) {}
   var panel = document.getElementById('labelPanel');
   if (!labelQueue.length) {
     panel.classList.remove('show');
@@ -8392,6 +8401,7 @@ async function onAuthSuccess(user) {
   await init();
   renderTabs();
   restoreSavedView();
+  restoreLabelQueue();
 }
 
 async function doSignOut() {
