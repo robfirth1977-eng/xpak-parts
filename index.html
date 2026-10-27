@@ -644,7 +644,8 @@
     <div><div class="label-panel-title">Label Queue - DYMO 99012</div><div class="label-count" id="labelCount"></div></div>
     <div class="label-actions">
       <button class="btn-clear" onclick="clearQueue()">Clear All</button>
-      <button class="btn-clear" onclick="printCombinedLabel()" title="Prints all the queued parts as one list on a single label, for a bag or bin holding several parts">Print as One Label</button>
+      <button class="btn-clear" onclick="printCombinedLabel()" title="Prints all the queued parts as one list on a single small label (89 x 36 mm), for a bag holding several parts">One Label</button>
+      <button class="btn-clear" onclick="printCombinedLabel(true)" title="Prints all the queued parts as one list on a large front-of-bin label (101 x 54 mm)">One Large Label</button>
       <button class="btn-do-print" onclick="doPrint()">Print Now</button>
     </div>
   </div>
@@ -4816,26 +4817,28 @@ function doPrint() {
     requestAnimationFrame(function() { requestAnimationFrame(function() { window.print(); }); });
 }
 
-// Prints everything in the label queue as ONE list label (89 x 36 mm) for a bag or bin holding several parts.
-// More than 5 parts spill onto a second label, marked 1/2, 2/2.
-function printCombinedLabel() {
+// Prints everything in the label queue as ONE list label for a bag or bin holding several parts.
+// Small = 89 x 36 mm (5 parts per label). Large = 101 x 54 mm front-of-bin label (8 parts per label, no machine names).
+// Longer lists spill onto further labels, marked 1/2, 2/2.
+function printCombinedLabel(large) {
   if (!labelQueue.length) { showToast('No labels in queue', 'error'); return; }
-  var PER = 5, chunks = [];
+  var PER = large ? 8 : 5, chunks = [];
   for (var i = 0; i < labelQueue.length; i += PER) chunks.push(labelQueue.slice(i, i + PER));
   var locs = labelQueue.map(function(d) { return d.location; }).filter(function(x, i, a) { return x && a.indexOf(x) === i; });
   var mNames = labelQueue.map(function(d) { return d.machine; }).filter(function(x, i, a) { return x && a.indexOf(x) === i; });
-  var foot = (mNames.length === 1 ? mNames[0] : '') + (locs.length === 1 ? (mNames.length === 1 ? '  ·  ' : '') + 'S/L ' + locs[0] : '');
+  var foot = (!large && mNames.length === 1 ? mNames[0] : '') + (locs.length === 1 ? (!large && mNames.length === 1 ? '  ·  ' : '') + 'S/L ' + locs[0] : '');
   var pages = chunks.map(function(c, ci) {
     return '<div class="pg">' + c.map(function(d) {
-      return '<div class="cl"><span class="cn">' + _wcEsc(d.keyno) + '</span><span class="cd">' + _wcEsc(d.description) + '</span></div>';
+      return '<div class="cl"><span class="cn">' + _wcEsc(d.keyno) + '</span><span class="cd">' + _wcEsc(d.description) + '</span>' + '</div>';
     }).join('') + '<div class="cf">' + _wcEsc(foot) + (chunks.length > 1 ? '<b style="float:right">' + (ci + 1) + '/' + chunks.length + '</b>' : '') + '</div></div>';
   });
   var w = window.open('', '_blank');
   if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Combined label</title><style>*{box-sizing:border-box;margin:0;padding:0}@page{size:89mm 36mm;margin:1mm}' +
-    '@media print{button{display:none}}body{background:#fff;font-family:Arial,sans-serif;color:#000}.pg{width:87mm;height:34mm;padding:1mm 2mm;overflow:hidden}.pg:not(:last-child){page-break-after:always}' +
-    '.cl{display:flex;align-items:baseline;gap:3mm;height:6.3mm;border-bottom:.2mm solid #000;white-space:nowrap;overflow:hidden}' +
-    '.cn{font:900 12.5pt "Courier New",monospace;flex:none}.cd{font:700 9.5pt Arial,sans-serif;overflow:hidden;text-overflow:ellipsis}' +
+  var pageW = large ? '101mm' : '89mm', pageH = large ? '54mm' : '36mm', boxW = large ? '99mm' : '87mm', boxH = large ? '52mm' : '34mm';
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Combined label</title><style>*{box-sizing:border-box;margin:0;padding:0}@page{size:' + pageW + ' ' + pageH + ';margin:1mm}' +
+    '@media print{button{display:none}}body{background:#fff;font-family:Arial,sans-serif;color:#000}.pg{width:' + boxW + ';height:' + boxH + ';padding:1mm 2mm;overflow:hidden}.pg:not(:last-child){page-break-after:always}' +
+    '.cl{display:flex;align-items:baseline;gap:3mm;height:' + (large ? '5.9mm' : '6.3mm') + ';border-bottom:.2mm solid #000;white-space:nowrap;overflow:hidden}' +
+    '.cn{font:900 ' + (large ? '13.5pt' : '12.5pt') + ' "Courier New",monospace;flex:none}.cd{font:700 ' + (large ? '10.5pt' : '9.5pt') + ' Arial,sans-serif;overflow:hidden;text-overflow:ellipsis;flex:1}' +
     '.cf{font-size:8pt;margin-top:.8mm;height:3mm;overflow:hidden}</style></head><body>' + pages.join('') + '</body></html>');
   w.document.close();
   setTimeout(function() { w.print(); }, 300);
