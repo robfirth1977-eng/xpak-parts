@@ -4864,7 +4864,7 @@ function doPrint() {
 // Longer lists spill onto further labels, marked 1/2, 2/2.
 function printCombinedLabel(large) {
   if (!labelQueue.length) { showToast('No labels in queue', 'error'); return; }
-  var PER = large ? 8 : 5, chunks = [];
+  var PER = large ? 10 : 5, chunks = [];
   for (var i = 0; i < labelQueue.length; i += PER) chunks.push(labelQueue.slice(i, i + PER));
   var locs = labelQueue.map(function(d) { return d.location; }).filter(function(x, i, a) { return x && a.indexOf(x) === i; });
   var mNames = labelQueue.map(function(d) { return d.machine; }).filter(function(x, i, a) { return x && a.indexOf(x) === i; });
@@ -4877,10 +4877,13 @@ function printCombinedLabel(large) {
   var w = window.open('', '_blank');
   if (!w) { showToast('Allow pop-ups to print labels', 'error'); return; }
   var pageW = large ? '101mm' : '89mm', pageH = large ? '54mm' : '36mm', boxW = large ? '99mm' : '87mm', boxH = large ? '52mm' : '34mm';
+  // Large label: rows and text shrink a little as the list grows (up to 10 parts per label)
+  var rowMm = large ? Math.min(5.9, (50 - (foot || chunks.length > 1 ? 4 : 0)) / chunks[0].length) : 6.3;
+  var numPt = large ? Math.min(13.5, rowMm * 2.3) : 12.5, descPt = large ? Math.min(10.5, rowMm * 1.75) : 9.5;
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Combined label</title><style>*{box-sizing:border-box;margin:0;padding:0}@page{size:' + pageW + ' ' + pageH + ';margin:1mm}' +
     '@media print{button{display:none}}body{background:#fff;font-family:Arial,sans-serif;color:#000}.pg{width:' + boxW + ';height:' + boxH + ';padding:1mm 2mm;overflow:hidden}.pg:not(:last-child){page-break-after:always}' +
-    '.cl{display:flex;align-items:baseline;gap:3mm;height:' + (large ? '5.9mm' : '6.3mm') + ';border-bottom:.2mm solid #000;white-space:nowrap;overflow:hidden}' +
-    '.cn{font:900 ' + (large ? '13.5pt' : '12.5pt') + ' "Courier New",monospace;flex:none}.cd{font:700 ' + (large ? '10.5pt' : '9.5pt') + ' Arial,sans-serif;overflow:hidden;text-overflow:ellipsis;flex:1}' +
+    '.cl{display:flex;align-items:baseline;gap:3mm;height:' + rowMm.toFixed(2) + 'mm;border-bottom:.2mm solid #000;white-space:nowrap;overflow:hidden}' +
+    '.cn{font:900 ' + numPt.toFixed(1) + 'pt "Courier New",monospace;flex:none}.cd{font:700 ' + descPt.toFixed(1) + 'pt Arial,sans-serif;overflow:hidden;text-overflow:ellipsis;flex:1}' +
     '.cf{font-size:8pt;margin-top:.8mm;height:3mm;overflow:hidden}</style></head><body>' + pages.join('') + '</body></html>');
   w.document.close();
   setTimeout(function() { w.print(); }, 300);
