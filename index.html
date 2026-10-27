@@ -328,6 +328,26 @@
   </div>
 </div>
 
+<div class="overlay" id="drOverlay" style="z-index:400;align-items:center;justify-content:center" onclick="if(event.target===this)closeDailyReport()">
+  <div class="modal" style="border-top:3px solid #10b981;max-width:760px;width:96%;border-radius:12px">
+    <div class="modal-header"><div class="modal-title">Daily report to management</div><button class="modal-close" onclick="closeDailyReport()">x</button></div>
+    <div class="g2">
+      <div class="field"><label>To</label><input id="drTo"></div>
+      <div class="field"><label>Cc</label><input id="drCc" placeholder="optional"></div>
+      <div class="field"><label>Report date</label><input type="date" id="drDate" onchange="rebuildDailyReport()"></div>
+      <div class="field"><label>Subject</label><input id="drSubject"></div>
+      <div class="field full"><label>Report (you can edit it before sending)</label><textarea id="drText" style="min-height:340px;font-family:monospace;font-size:12px"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-clear" onclick="closeDailyReport()">Cancel</button>
+      <button class="btn-clear" onclick="copyDailyReport()">Copy text</button>
+      <button class="btn-clear" onclick="sendDailyReport('web')" title="Opens a new message in Outlook on the web (browser)">Outlook (web)</button>
+      <button class="btn-clear" onclick="sendDailyReport('mailto')" title="Opens the program Windows uses for email links (short messages only)">Mail link</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="sendDailyReport('eml')" title="Saves a draft message file. Open it and Outlook shows an addressed, unsent email.">Outlook draft file</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="wcOverlay" style="z-index:400;align-items:center;justify-content:center" onclick="if(event.target===this)closeWarrantyClaim()">
   <div class="modal" style="border-top:3px solid #f59e0b;max-width:760px;width:96%;border-radius:12px">
     <div class="modal-header"><div class="modal-title">Warranty claim email</div><button class="modal-close" onclick="closeWarrantyClaim()">x</button></div>
@@ -2471,6 +2491,7 @@ function renderTabs() {
   html2 += '<button class="tab agr-tab'   + (v==='agr'  ?' active':'') + '" onclick="' + (v==='agr'  ?'':'switchToAgreements()') + '">Agreements</button>';
   html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
   html2 += '<button class="tab weekly-tab' + (v==='weekly'?' active':'') + '" onclick="' + (v==='weekly'?'':'switchToWeekly()') + '">📋 Weekly</button>';
+  html2 += '<button class="tab" onclick="openDailyReport()" title="Email the daily report to management">✉️ Daily</button>';
   html2 += '<button class="tab cust-tab'  + (v==='customers'?' active':'') + '" onclick="' + (v==='customers'?'':'switchToCustomers()') + '">Accounts</button>';
   html2 += '<button class="tab stock-tab' + (v==='stock'?' active':'') + '" onclick="' + (v==='stock'?'':'switchToStock()') + '">Stock</button>';
   if (!window._adminMode) {
@@ -5402,6 +5423,28 @@ function reportEmailTotal(j, tools, jparts, partsOnly) {
   var lab = partsOnly ? 0 : Math.max(0, (parseFloat(j.hours_spent) || 0) * (parseFloat(j.labour_rate) || 120) - (parseFloat(j.labour_discount) || 0));
   return fee + Math.max(0, partsTotal - (parseFloat(j.parts_discount) || 0)) + lab + (parseFloat(j.freight_cost) || 0);
 }
+// Opens a finished email in Outlook: mode 'web' (Outlook on the web), 'eml' (draft file) or anything else (mailto link).
+// Returns false if nothing was opened. copyFn is used when the text is too long for a web link.
+function openComposedEmail(mode, to, cc, subject, body, emlName, copyFn) {
+  if (mode === 'web') {
+    var web = 'https://outlook.office.com/mail/deeplink/compose?to=' + encodeURIComponent(to) + (cc ? '&cc=' + encodeURIComponent(cc) : '') + '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    if (web.length > 7000) { copyFn(); showToast('Long message - copied to the clipboard; paste it into a new Outlook message', 'error'); }
+    else { window.open(web, '_blank'); }
+  } else if (mode === 'eml') {
+    var CRLF = '\r\n';
+    var eml = 'To: ' + to + CRLF + (cc ? 'Cc: ' + cc + CRLF : '') + 'Subject: ' + subject.replace(/[\r\n]+/g, ' ') + CRLF +
+      'X-Unsent: 1' + CRLF + 'MIME-Version: 1.0' + CRLF + 'Content-Type: text/plain; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + body.replace(/\r?\n/g, CRLF);
+    var blob = new Blob([eml], { type: 'message/rfc822' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = emlName;
+    document.body.appendChild(a); a.click(); setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    showToast('Saved as ' + a.download + '. Open it (bottom of the browser), check it and send.');
+  } else {
+    var href = 'mailto:' + to + '?' + (cc ? 'cc=' + encodeURIComponent(cc) + '&' : '') + 'subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
+    if (href.length > 1900) { showToast('Long message - use Outlook draft file or Copy text instead', 'error'); return false; }
+    window.location.href = href;
+  }
+  return true;
+}
 function reportEmailKind() { return document.getElementById('rpType').value; }
 function buildReportEmail(j, tools, jparts, kind) {
   var partsOnly = kind === 'parts';
@@ -5461,23 +5504,7 @@ async function sendReportEmail(mode) {
   var to = document.getElementById('rpTo').value.trim(), cc = document.getElementById('rpCc').value.trim();
   var subject = document.getElementById('rpSubject').value, body = document.getElementById('rpText').value;
   if (!to) { showToast('Enter the email address first', 'error'); document.getElementById('rpTo').focus(); return; }
-  if (mode === 'web') {
-    var web = 'https://outlook.office.com/mail/deeplink/compose?to=' + encodeURIComponent(to) + (cc ? '&cc=' + encodeURIComponent(cc) : '') + '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-    if (web.length > 7000) { copyReportEmail(); showToast('Long message - copied to the clipboard; paste it into a new Outlook message', 'error'); }
-    else { window.open(web, '_blank'); }
-  } else if (mode === 'eml') {
-    var CRLF = '\r\n';
-    var eml = 'To: ' + to + CRLF + (cc ? 'Cc: ' + cc + CRLF : '') + 'Subject: ' + subject.replace(/[\r\n]+/g, ' ') + CRLF +
-      'X-Unsent: 1' + CRLF + 'MIME-Version: 1.0' + CRLF + 'Content-Type: text/plain; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + body.replace(/\r?\n/g, CRLF);
-    var blob = new Blob([eml], { type: 'message/rfc822' });
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = xpsNum(j.job_number) + ' - Report email.eml';
-    document.body.appendChild(a); a.click(); setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-    showToast('Saved as ' + a.download + '. Open it (bottom of the browser), attach the report PDF and send.');
-  } else {
-    var href = 'mailto:' + to + '?' + (cc ? 'cc=' + encodeURIComponent(cc) + '&' : '') + 'subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
-    if (href.length > 1900) { showToast('Long message - use Outlook draft file or Copy text instead', 'error'); return; }
-    window.location.href = href;
-  }
+  if (!openComposedEmail(mode, to, cc, subject, body, xpsNum(j.job_number) + ' - Report email.eml', copyReportEmail)) return;
   // Record it: status moves on, and the email is logged in the job's Activity History
   var ns = document.getElementById('rpStatus').value, notes = [];
   try {
@@ -5502,6 +5529,102 @@ async function sendReportEmail(mode) {
   } catch(e) { showToast('Email opened, but it was not logged: ' + e.message, 'error'); }
   if (notes.length) showToast('Report email: ' + notes.join(', '));
   closeReportEmail();
+}
+
+// ── Daily report to management (goes to Trent) ──
+var DAILY_REPORT_TO = 'trent.firth@xpak.com.au';
+// Job value ex GST the way the report prices it. tba = at least one part has no sell price yet, so the value is a minimum.
+function jobValueTba(j) {
+  var tools = j.job_tools || [], tba = false;
+  var live = tools.filter(function(t) { return !_rpNoRepair(t); }).map(function(t) { return t.tool_number; });
+  var parts = (j.job_parts || []).filter(function(p) {
+    return ['use_stock', 'to_order', 'ordered', 'arrived'].indexOf(p.status) !== -1 && (!tools.length || live.indexOf(p.tool_number || 1) !== -1);
+  });
+  var partsTotal = parts.reduce(function(sum, p) {
+    var pd = p.part_id ? allParts.find(function(x) { return x.id === p.part_id; }) : null;
+    var sell = p.unit_price != null ? parseFloat(p.unit_price) : (pd && pd.sell_price ? parseFloat(pd.sell_price) : 0);
+    if (!(sell > 0)) tba = true;
+    return sum + sell * (p.quantity || 1);
+  }, 0);
+  var fee = tools.filter(function(t) { return !_rpNoRepair(t); }).reduce(function(s, t) { return s + (parseFloat(t.service_fee) || 0); }, 0);
+  var lab = Math.max(0, (parseFloat(j.hours_spent) || 0) * (parseFloat(j.labour_rate) || 120) - (parseFloat(j.labour_discount) || 0));
+  var total = fee + Math.max(0, partsTotal - (parseFloat(j.parts_discount) || 0)) + lab + (parseFloat(j.freight_cost) || 0);
+  if (j.invoice_amount && parseFloat(j.invoice_amount) > 0) { total = parseFloat(j.invoice_amount); tba = false; }
+  return { total: total, tba: tba };
+}
+function _drVal(v) { return v.tba ? (v.total > 0 ? _money(v.total) + '+ (parts TBA)' : 'TBA') : _money(v.total); }
+function _drSameDay(ts, day) {
+  if (!ts) return false;
+  var s = String(ts);
+  return (s.length === 10 ? s : _emLocalIso(new Date(s))) === day;
+}
+function _drLine(j) {
+  var t0 = (j.job_tools || [])[0], m = t0 && t0.machine_id ? machines.find(function(x) { return x.id === t0.machine_id; }) : null;
+  var more = (j.job_tools || []).length > 1 ? ' +' + (j.job_tools.length - 1) + ' more' : '';
+  return '- ' + xpsNum(j.job_number) + ' ' + (j.customer || '') + (m ? ' - ' + m.name + more : '') + ' - ' + _drVal(jobValueTba(j));
+}
+function buildDailyReport(day) {
+  var d = new Date(day + 'T12:00:00');
+  var section = function(title, list) {
+    return title + ' (' + list.length + ')\n' + (list.length ? list.map(_drLine).join('\n') : '- none') + '\n\n';
+  };
+  var received = jobs.filter(function(j) { return _drSameDay(j.received_at || j.created_at, day); });
+  var quoted = jobs.filter(function(j) { return _drSameDay(j.quoted_at, day); });
+  var approved = jobs.filter(function(j) { return _drSameDay(j.quote_accepted_at, day); });
+  var completed = jobs.filter(function(j) { return _drSameDay(j.completed_at, day); });
+  var t = 'Service Daily Report - ' + d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + '\n\n';
+  t += section('RECEIVED TODAY', received) + section('QUOTED TODAY', quoted) + section('APPROVED TODAY', approved) + section('COMPLETED TODAY', completed);
+  var open = jobs.filter(function(j) { return j.status !== 'COMPLETED'; });
+  t += 'OPEN JOBS (' + open.length + ') - values ex GST\n';
+  var grand = 0, grandTba = false;
+  ALL_ST.filter(function(s) { return s !== 'COMPLETED'; }).forEach(function(s) {
+    var list = open.filter(function(j) { return j.status === s; });
+    if (!list.length) return;
+    var sum = 0, tba = false;
+    list.forEach(function(j) { var v = jobValueTba(j); sum += v.total; if (v.tba) tba = true; });
+    grand += sum; if (tba) grandTba = true;
+    t += '- ' + s + ': ' + list.length + ' job' + (list.length === 1 ? '' : 's') + ' - ' + _drVal({ total: sum, tba: tba }) + '\n';
+  });
+  t += 'Total open: ' + _drVal({ total: grand, tba: grandTba }) + '\n\n';
+  var toOrder = [];
+  open.forEach(function(j) { (j.job_parts || []).forEach(function(p) { if (p.status === 'to_order') toOrder.push(p); }); });
+  var toOrderVal = 0, toOrderTba = false;
+  toOrder.forEach(function(p) {
+    var pd = p.part_id ? allParts.find(function(x) { return x.id === p.part_id; }) : null;
+    var sell = p.unit_price != null ? parseFloat(p.unit_price) : (pd && pd.sell_price ? parseFloat(pd.sell_price) : 0);
+    if (!(sell > 0)) toOrderTba = true;
+    toOrderVal += sell * (p.quantity || 1);
+  });
+  t += 'PARTS STILL TO ORDER: ' + toOrder.length + ' line' + (toOrder.length === 1 ? '' : 's') + ' - ' + _drVal({ total: toOrderVal, tba: toOrderTba }) + '\n\nThanks,\nRob';
+  return t;
+}
+async function openDailyReport() {
+  if (!allParts.length) await loadAllParts();
+  try { await loadJobs(); } catch(e) {}
+  document.getElementById('drDate').value = _emLocalIso(new Date());
+  document.getElementById('drTo').value = DAILY_REPORT_TO;
+  document.getElementById('drCc').value = '';
+  rebuildDailyReport();
+  document.getElementById('drOverlay').classList.add('show');
+}
+function rebuildDailyReport() {
+  var day = document.getElementById('drDate').value || _emLocalIso(new Date());
+  var d = new Date(day + 'T12:00:00');
+  document.getElementById('drSubject').value = 'Service Daily Report - ' + d.toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  document.getElementById('drText').value = buildDailyReport(day);
+}
+function closeDailyReport() { document.getElementById('drOverlay').classList.remove('show'); }
+function copyDailyReport() {
+  var t = 'To: ' + document.getElementById('drTo').value + '\nSubject: ' + document.getElementById('drSubject').value + '\n\n' + document.getElementById('drText').value;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function() { showToast('Report copied'); }).catch(function() {
+    var ta = document.getElementById('drText'); ta.focus(); ta.select(); showToast('Select and copy the text above', 'error');
+  });
+}
+function sendDailyReport(mode) {
+  var to = document.getElementById('drTo').value.trim();
+  if (!to) { showToast('Enter the email address first', 'error'); return; }
+  var day = document.getElementById('drDate').value || _emLocalIso(new Date());
+  if (openComposedEmail(mode, to, document.getElementById('drCc').value.trim(), document.getElementById('drSubject').value, document.getElementById('drText').value, 'Service Daily Report ' + day + '.eml', copyDailyReport)) closeDailyReport();
 }
 
 function renderAssessmentReport(j, tools, jparts, opts) {
