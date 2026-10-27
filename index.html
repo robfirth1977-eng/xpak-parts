@@ -32,6 +32,7 @@
 <div class="toolbar" id="mainToolbar">
   <input class="search-input" id="searchBox" placeholder="Search part number, description, location..." oninput="renderParts()">
   <button class="btn-print-all" onclick="queueAllVisible()">Print All</button>
+  <button class="btn-print-all" onclick="queueByPartNumbers()" title="Paste a list of part numbers to add them all to the label queue">📋 Queue List</button>
   <button class="btn-add" onclick="openAddModal()">+ Add Part</button>
   <button class="btn-add" style="background:transparent;border:1px solid #00c8e070;color:#00c8e0" onclick="openLinkPartModal()">🔗 Link Existing</button>
 </div>
@@ -4801,6 +4802,24 @@ function lqDrop(e, i) {
 function sortQueue() {
   labelQueue.sort(function(a, b) { return String(a.keyno).localeCompare(String(b.keyno), undefined, { numeric: true }); });
   updateLabelPanel();
+}
+// Paste a list of part numbers (spaces, commas or new lines between them) and they are queued in that order.
+async function queueByPartNumbers() {
+  var txt = prompt('Paste the part numbers to add to the label queue (separate with spaces or commas):');
+  if (!txt || !txt.trim()) return;
+  if (!allParts.length) await loadAllParts();
+  var added = 0, missing = [];
+  txt.trim().split(/[\s,;]+/).forEach(function(k) {
+    if (!k) return;
+    var p = allParts.find(function(x) { return (x.key_no || '').toLowerCase() === k.toLowerCase(); });
+    if (!p) { missing.push(k); return; }
+    if (labelQueue.some(function(x) { return x.id === p.id; })) return;
+    var d = makeLabelData(p.id); if (!d) { missing.push(k); return; }
+    d.machine = (p.machineNames && p.machineNames[0]) || p.machineName || d.machine;
+    labelQueue.push(d); added++;
+  });
+  updateLabelPanel(); if (selectedMachine) renderParts();
+  showToast(added + ' added to the label queue' + (missing.length ? '. Not found: ' + missing.join(', ') : ''), missing.length ? 'error' : undefined);
 }
 function removeFromQueue(partId) { labelQueue = labelQueue.filter(function(x) { return x.id !== partId; }); updateLabelPanel(); renderParts(); }
 function clearQueue() { labelQueue = []; updateLabelPanel(); renderParts(); }
