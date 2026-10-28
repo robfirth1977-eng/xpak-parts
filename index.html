@@ -349,6 +349,22 @@
   </div>
 </div>
 
+<div class="overlay" id="sfOverlay" style="z-index:400;align-items:center;justify-content:center" onclick="if(event.target===this)closeSalesforceExport()">
+  <div class="modal" style="border-top:3px solid #0ea5e9;max-width:820px;width:96%;border-radius:12px">
+    <div class="modal-header"><div class="modal-title">Salesforce export</div><button class="modal-close" onclick="closeSalesforceExport()">x</button></div>
+    <div class="g2">
+      <div class="field"><label>Summary date</label><input type="date" id="sfDate" onchange="rebuildSalesforceExport()"></div>
+      <div class="field"><label>Accounts in the file</label><div id="sfCount" style="padding:8px 0;font-weight:600"></div></div>
+      <div class="field full" id="sfSkipWrap" style="display:none"><label>Not in the file (no Salesforce ID saved)</label><div id="sfSkip" style="font-size:12px;color:#b45309"></div></div>
+      <div class="field full"><label>Preview of what each account's Task will say</label><textarea id="sfText" readonly style="min-height:340px;font-family:monospace;font-size:12px"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-clear" onclick="closeSalesforceExport()">Cancel</button>
+      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="downloadSalesforceCsv()" title="Saves a CSV of Tasks to load into Salesforce with Data Loader">Download CSV for Salesforce</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="wcOverlay" style="z-index:400;align-items:center;justify-content:center" onclick="if(event.target===this)closeWarrantyClaim()">
   <div class="modal" style="border-top:3px solid #f59e0b;max-width:760px;width:96%;border-radius:12px">
     <div class="modal-header"><div class="modal-title">Warranty claim email</div><button class="modal-close" onclick="closeWarrantyClaim()">x</button></div>
@@ -2496,6 +2512,7 @@ function renderTabs() {
   html2 += '<button class="tab sv-tab'    + (v==='sitevisits'?' active':'') + '" onclick="' + (v==='sitevisits'?'':'switchToSiteVisits()') + '">Site Visits</button>';
   html2 += '<button class="tab weekly-tab' + (v==='weekly'?' active':'') + '" onclick="' + (v==='weekly'?'':'switchToWeekly()') + '">📋 Weekly</button>';
   html2 += '<button class="tab" onclick="openDailyReport()" title="Email the daily report to management">✉️ Daily</button>';
+  html2 += '<button class="tab" onclick="openSalesforceExport()" title="Build the daily CSV of account summaries for Salesforce">☁️ Salesforce</button>';
   html2 += '<button class="tab cust-tab'  + (v==='customers'?' active':'') + '" onclick="' + (v==='customers'?'':'switchToCustomers()') + '">Accounts</button>';
   html2 += '<button class="tab stock-tab' + (v==='stock'?' active':'') + '" onclick="' + (v==='stock'?'':'switchToStock()') + '">Stock</button>';
   if (!window._adminMode) {
@@ -5699,6 +5716,109 @@ function sendDailyReport(mode) {
   if (!to) { showToast('Enter the email address first', 'error'); return; }
   var day = document.getElementById('drDate').value || _emLocalIso(new Date());
   if (openComposedEmail(mode, to, document.getElementById('drCc').value.trim(), document.getElementById('drSubject').value, document.getElementById('drText').value, 'Service Daily Report ' + day + '.eml', copyDailyReport)) closeDailyReport();
+}
+
+// ── Salesforce export: one Task per Salesforce account, loaded each morning with Data Loader ──
+// Each MainFlow account carries its Salesforce Account ID (customers.salesforce_id). Accounts that share an ID
+// (e.g. Peuker & Alexander Campbellfield + Dandenong) are merged into one Task.
+var _sfRows = [], _sfSkipped = [];
+function _sfCsv(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+function _sfDate(ts) { return ts ? new Date(String(ts).length === 10 ? ts + 'T12:00:00' : ts).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
+function sfJobBlock(j) {
+  var tools = j.job_tools || [], v = jobValueTba(j);
+  var live = tools.filter(function(t) { return !_rpNoRepair(t); }).map(function(t) { return t.tool_number; });
+  var parts = (j.job_parts || []).filter(function(p) {
+    return ['use_stock', 'to_order', 'ordered', 'arrived'].indexOf(p.status) !== -1 && (!tools.length || live.indexOf(p.tool_number || 1) !== -1);
+  });
+  var mName = function(id) { var m = id ? machines.find(function(x) { return x.id === id; }) : null; return m ? m.name : ''; };
+  var fault = function(o) { var f = o.fault_type || '', c = o.error_code || ''; return f + (c && f.indexOf(c) === -1 ? (f ? ' ' : '') + '(error ' + c + ')' : ''); };
+  var t = xpsNum(j.job_number) + ' - ' + j.status + ' - received ' + _sfDate(j.received_at || j.created_at) + '\n';
+  if (tools.length) {
+    tools.forEach(function(tl) {
+      var line = '  Tool ' + tl.tool_number + ': ' + (mName(tl.machine_id) || 'model not set') + (tl.serial_number ? ', S/N ' + tl.serial_number : '') + (fault(tl) ? ', fault: ' + fault(tl) : '');
+      if (_rpNoRepair(tl)) line += ' (not proceeding)';
+      t += line + '\n';
+      var tp = parts.filter(function(p) { return (p.tool_number || 1) === tl.tool_number; });
+      if (tp.length) t += '    Parts: ' + tp.map(function(p) { return (p.quantity || 1) + 'x ' + (p.part_key_no || '') + ' ' + (p.part_description || ''); }).join('; ') + '\n';
+    });
+  } else {
+    t += '  Tool: ' + (mName(j.machine_id) || 'model not set') + (j.serial_number ? ', S/N ' + j.serial_number : '') + (fault(j) ? ', fault: ' + fault(j) : '') + '\n';
+    if (parts.length) t += '    Parts: ' + parts.map(function(p) { return (p.quantity || 1) + 'x ' + (p.part_key_no || '') + ' ' + (p.part_description || ''); }).join('; ') + '\n';
+  }
+  t += '  Total cost to customer (ex GST): ' + _drVal(v) + '\n';
+  if ((j.customer_notes || '').trim()) t += '  Notes: ' + j.customer_notes.trim().replace(/\s*\n\s*/g, ' / ') + '\n';
+  return t;
+}
+function sfAccountSummary(names, day) {
+  var multi = names.length > 1, text = '';
+  names.forEach(function(name) {
+    var mine = jobs.filter(function(j) { return j.customer === name; });
+    var open = mine.filter(function(j) { return j.status !== 'COMPLETED'; }).sort(function(a, b) { return a.job_number - b.job_number; });
+    var done = mine.filter(function(j) { return j.status === 'COMPLETED'; }).sort(function(a, b) { return String(b.completed_at || '').localeCompare(String(a.completed_at || '')); })[0];
+    if (multi) text += '== ' + name + ' ==\n';
+    if (open.length) {
+      var sum = 0, tba = false;
+      open.forEach(function(j) { var v = jobValueTba(j); sum += v.total; if (v.tba) tba = true; });
+      text += 'OPEN JOBS: ' + open.length + ' (total ' + _drVal({ total: sum, tba: tba }) + ' ex GST)\n\n' + open.map(sfJobBlock).join('\n');
+    } else text += 'No open jobs.\n';
+    if (done) {
+      var dv = jobValueTba(done), dd = _sfDate(done.completed_at || done.updated_at);
+      text += '\nLAST COMPLETED: ' + xpsNum(done.job_number) + (dd ? ' on ' + dd : '') + (dv.total > 0 ? ' - ' + _drVal(dv) + ' ex GST' : '') + '\n';
+    }
+    if (multi) text += '\n';
+  });
+  return text.trim();
+}
+function buildSalesforceRows(custs, day) {
+  var groups = {}, order = [], skipped = [];
+  custs.forEach(function(c) {
+    if (!c.salesforce_id) { skipped.push(c.company_name); return; }
+    if (!groups[c.salesforce_id]) { groups[c.salesforce_id] = []; order.push(c.salesforce_id); }
+    groups[c.salesforce_id].push(c.company_name);
+  });
+  var d = new Date(day + 'T12:00:00');
+  var head = 'MainFlow service summary - ' + d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) + '\n\n';
+  var rows = order.map(function(id) {
+    var body = head + sfAccountSummary(groups[id].sort(), day);
+    if (body.length > 31000) body = body.slice(0, 31000) + '\n[cut short - see MainFlow]';
+    return { id: id, names: groups[id], subject: 'MainFlow service summary ' + day, date: day, description: body };
+  });
+  return { rows: rows, skipped: skipped };
+}
+function sfRowsToCsv(rows) {
+  var out = ['Subject,WhatId,ActivityDate,Status,Priority,Description'];
+  rows.forEach(function(r) { out.push([r.subject, r.id, r.date, 'Completed', 'Normal', r.description].map(_sfCsv).join(',')); });
+  return out.join('\r\n') + '\r\n';
+}
+async function openSalesforceExport() {
+  if (!allParts.length) await loadAllParts();
+  try { await loadJobs(); } catch(e) {}
+  try { _sfCusts = await db('GET', 'customers?select=id,company_name,salesforce_id&order=company_name'); }
+  catch(e) { showToast('Could not load accounts: ' + e.message, 'error'); return; }
+  document.getElementById('sfDate').value = _emLocalIso(new Date());
+  rebuildSalesforceExport();
+  document.getElementById('sfOverlay').classList.add('show');
+}
+var _sfCusts = [];
+function rebuildSalesforceExport() {
+  var day = document.getElementById('sfDate').value || _emLocalIso(new Date());
+  var r = buildSalesforceRows(_sfCusts, day);
+  _sfRows = r.rows; _sfSkipped = r.skipped;
+  document.getElementById('sfCount').textContent = r.rows.length + ' (from ' + (_sfCusts.length - r.skipped.length) + ' MainFlow accounts)';
+  document.getElementById('sfSkipWrap').style.display = r.skipped.length ? '' : 'none';
+  document.getElementById('sfSkip').textContent = r.skipped.join(', ');
+  document.getElementById('sfText').value = r.rows.map(function(x) { return '########  ' + x.names.join(' + ') + '  (' + x.id + ')\n' + x.description; }).join('\n\n');
+}
+function closeSalesforceExport() { document.getElementById('sfOverlay').classList.remove('show'); }
+function downloadSalesforceCsv() {
+  if (!_sfRows.length) { showToast('Nothing to export', 'error'); return; }
+  var day = document.getElementById('sfDate').value || _emLocalIso(new Date());
+  var blob = new Blob([sfRowsToCsv(_sfRows)], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'MainFlow to Salesforce ' + day + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+  showToast('Salesforce file saved - ' + _sfRows.length + ' accounts');
 }
 
 function renderAssessmentReport(j, tools, jparts, opts) {
