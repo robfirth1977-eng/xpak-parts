@@ -5110,8 +5110,8 @@ function setToolField(tempId, field, val) {
 }
 
 // ── Warranty claim: flag on the tool, the details the supplier asks for, and a claim email ──
-var WARRANTY_CLAIM_TO = '';
-var WARRANTY_CLAIM_CC = '';
+var WARRANTY_CLAIM_TO = 'brenton.emery@cyklop.com.au';
+var WARRANTY_CLAIM_CC = 'tony.ash@cyklop.com.au';
 function _wcEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 function warrantyClaimBlock(t) {
   var on = !!t.warranty_claim, id = t._tempId;
