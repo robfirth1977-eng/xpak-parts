@@ -5765,35 +5765,47 @@ function sfAccountSummary(names, day) {
       var dv = jobValueTba(done), dd = _sfDate(done.completed_at || done.updated_at);
       text += '\nLAST COMPLETED: ' + xpsNum(done.job_number) + (dd ? ' on ' + dd : '') + (dv.total > 0 ? ' - ' + _drVal(dv) + ' ex GST' : '') + '\n';
     }
+    // History: tools repaired on completed jobs, counted by model (no job detail)
+    var tally = {}, repaired = 0;
+    mine.filter(function(j) { return j.status === 'COMPLETED'; }).forEach(function(j) {
+      var tl = (j.job_tools || []).length ? j.job_tools : [{ machine_id: j.machine_id, recommendation: '' }];
+      tl.forEach(function(t) {
+        if (_rpNoRepair(t)) return;
+        var m = t.machine_id ? machines.find(function(x) { return x.id === t.machine_id; }) : null, k = m ? m.name : 'model not set';
+        tally[k] = (tally[k] || 0) + 1; repaired++;
+      });
+    });
+    if (repaired) text += 'TOOLS REPAIRED TO DATE: ' + repaired + ' - ' + Object.keys(tally).sort(function(a, b) { return tally[b] - tally[a] || a.localeCompare(b); }).map(function(k) { return tally[k] + ' x ' + k; }).join(', ') + '\n';
     if (multi) text += '\n';
   });
   return text.trim();
 }
 function buildSalesforceRows(custs, day) {
-  var groups = {}, order = [], skipped = [];
+  var groups = {}, order = [], skipped = [], owners = {};
   custs.forEach(function(c) {
     if (!c.salesforce_id) { skipped.push(c.company_name); return; }
     if (!groups[c.salesforce_id]) { groups[c.salesforce_id] = []; order.push(c.salesforce_id); }
     groups[c.salesforce_id].push(c.company_name);
+    if (c.salesforce_owner_id) owners[c.salesforce_id] = c.salesforce_owner_id;
   });
   var d = new Date(day + 'T12:00:00');
   var head = 'MainFlow service summary - ' + d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) + '\n\n';
   var rows = order.map(function(id) {
     var body = head + sfAccountSummary(groups[id].sort(), day);
     if (body.length > 31000) body = body.slice(0, 31000) + '\n[cut short - see MainFlow]';
-    return { id: id, names: groups[id], subject: 'MainFlow service summary ' + day, date: day, description: body };
+    return { id: id, owner: owners[id] || '', names: groups[id], subject:'MainFlow service summary ' + day, date: day, description: body };
   });
   return { rows: rows, skipped: skipped };
 }
 function sfRowsToCsv(rows) {
-  var out = ['Subject,WhatId,ActivityDate,Status,Priority,Description'];
-  rows.forEach(function(r) { out.push([r.subject, r.id, r.date, 'Completed', 'Normal', r.description].map(_sfCsv).join(',')); });
+  var out = ['Subject,WhatId,OwnerId,ActivityDate,Status,Priority,Description'];
+  rows.forEach(function(r) { out.push([r.subject, r.id, r.owner, r.date, 'Completed', 'Normal', r.description].map(_sfCsv).join(',')); });
   return out.join('\r\n') + '\r\n';
 }
 async function openSalesforceExport() {
   if (!allParts.length) await loadAllParts();
   try { await loadJobs(); } catch(e) {}
-  try { _sfCusts = await db('GET', 'customers?select=id,company_name,salesforce_id&order=company_name'); }
+  try { _sfCusts = await db('GET', 'customers?select=id,company_name,salesforce_id,salesforce_owner_id&order=company_name'); }
   catch(e) { showToast('Could not load accounts: ' + e.message, 'error'); return; }
   document.getElementById('sfDate').value = _emLocalIso(new Date());
   rebuildSalesforceExport();
