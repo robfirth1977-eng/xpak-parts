@@ -355,12 +355,14 @@
     <div class="g2">
       <div class="field"><label>Summary date</label><input type="date" id="sfDate" onchange="rebuildSalesforceExport()"></div>
       <div class="field"><label>Accounts in the file</label><div id="sfCount" style="padding:8px 0;font-weight:600"></div></div>
+      <div class="field full"><label style="display:flex;gap:6px;align-items:center;text-transform:none;font-size:13px"><input type="checkbox" id="sfAll" onchange="rebuildSalesforceExport()" style="width:auto"> Include every account, even with nothing new (full refresh)</label></div>
       <div class="field full" id="sfSkipWrap" style="display:none"><label>Not in the file (no Salesforce ID saved)</label><div id="sfSkip" style="font-size:12px;color:#b45309"></div></div>
       <div class="field full"><label>Preview of what each account's Task will say</label><textarea id="sfText" readonly style="min-height:340px;font-family:monospace;font-size:12px"></textarea></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
       <button class="btn-clear" onclick="closeSalesforceExport()">Cancel</button>
-      <button class="btn-save green" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="downloadSalesforceCsv()" title="Saves a CSV of Tasks to load into Salesforce with Data Loader">Download CSV for Salesforce</button>
+      <button class="btn-save green" id="sfDownBtn" style="width:auto;margin:0;padding:9px 20px;font-size:13px" onclick="downloadSalesforceCsv()" title="Saves a CSV of Tasks to load into Salesforce with Data Loader">Download CSV for Salesforce</button>
+      <button class="btn-clear" id="sfMarkBtn" disabled onclick="markSalesforceLoaded()" title="Click once the file has loaded into Salesforce. The next file then only includes accounts with something new after this.">Mark as loaded</button>
     </div>
   </div>
 </div>
@@ -824,7 +826,7 @@
     <div class="g2">
       <div class="field full"><label>Account / Company *</label>
         <div class="cust-ta-wrap">
-          <input id="jCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour" autocomplete="off" oninput="custTypeahead(this.value)" onfocus="custTypeahead(this.value)" onblur="setTimeout(hideCustDropdown,200)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <input id="jCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour" autocomplete="off" oninput="custTypeahead(this.value)" onfocus="custTypeahead(this.value)" onblur="setTimeout(hideCustDropdown,200);applyDefaultFees()" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
           <div class="cust-dropdown" id="custDropdown"></div>
         </div>
       </div>
@@ -3497,6 +3499,7 @@ function convertIntakeRequest(id) {
       return { _tempId: 'tool_' + Date.now() + '_' + i, tool_number: i + 1, machine_id: '', serial_number: normSerial(t.serial_number || ''), fault_type: '', error_code: '', cycle_count: '', customer_issue: desc, workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' };
     });
 
+    applyDefaultFees();
     if (r.loan_tool_needed === 'no') { jobLoanState.noLoanNeeded = true; renderJobLoanSection(); }
 
     var extraNotes = [];
@@ -3772,6 +3775,7 @@ function openNewJobForAccount(custId, machineName, machineSerial) {
       if (c.phone) document.getElementById('jPhone').value = c.phone;
     }
     if (c.address) document.getElementById('jShipping').value = c.address;
+    applyDefaultFees();
     if (machineName) {
       var m = (window.machines||[]).find(function(x) { return x.name === machineName; });
       if (m && jobToolsLocal[0]) {
@@ -4964,11 +4968,30 @@ function printCaseLabel(jobId) {
 
 var FAULT_OPTIONS = ['Feeding Issue','Tensioning Issue','Welding Issue','Cutting Issue','Battery / Power Issue','Electrical Fault','Machine Gunning','Error Code Showing','Jammed / Seized','Motor / Gearbox Issue','Physical Damage','Misuse','Routine Service'];
 
+// Default service fee: the account's default_service_fee, or $400. New tools get it until someone types a fee.
+var DEFAULT_SERVICE_FEE = 400, _feeMap = null;
+async function applyDefaultFees() {
+  var el = document.getElementById('jCustomer'), name = el ? el.value.trim().toLowerCase() : '';
+  if (!name || !jobToolsLocal.length) return;
+  if (!_feeMap) {
+    try {
+      var rows = await db('GET', 'customers?select=company_name,default_service_fee'); _feeMap = {};
+      rows.forEach(function(c) { if (c.company_name && c.default_service_fee != null) _feeMap[c.company_name.toLowerCase()] = parseFloat(c.default_service_fee); });
+    } catch(e) { _feeMap = null; return; }
+  }
+  var fee = _feeMap[name] != null ? _feeMap[name] : DEFAULT_SERVICE_FEE, changed = false;
+  jobToolsLocal.forEach(function(t) {
+    if (t._existingId || t._feeTouched) return;
+    if (t.service_fee === '' || t.service_fee == null || t._feeAuto) { if (t.service_fee !== fee) changed = true; t.service_fee = fee; t._feeAuto = true; }
+  });
+  if (changed) { renderToolsList(); recalcJobCostSummary(); }
+}
 function addTool() {
   var num = jobToolsLocal.length + 1;
   jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: getDefaultWorkCompleted(''), service_fee: '' });
   renderToolsList();
   recalcJobCostSummary();
+  applyDefaultFees();
 }
 
 function removeTool(tempId) {
@@ -5115,7 +5138,7 @@ function setToolField(tempId, field, val) {
   var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; });
   if (!t) return;
   t[field] = val;
-  if (field === 'service_fee') recalcJobCostSummary();
+  if (field === 'service_fee') { t._feeTouched = true; t._feeAuto = false; recalcJobCostSummary(); }
   // When machine changes, update work_completed if still a default value
   if (field === 'machine_id') {
     var powered = getDefaultWorkCompleted('');
@@ -5780,20 +5803,59 @@ function sfAccountSummary(names, day) {
   });
   return text.trim();
 }
+// A Task goes out for an account only when one of its jobs reaches a new stage:
+// booked, tool arrived, quote sent, quote approved, invoiced. Stages come from the job status.
+var SF_BASELINE = new Date('2026-10-29T11:43:00+11:00'); // when the first full file was loaded into Salesforce
+var SF_STAGE = { 'NEW JOB': 1, 'WAITING FOR TOOLS': 1, 'AWAITING ASSESSMENT': 2, 'AWAITING SUPPLIER QUOTE': 2, 'AWAITING REP APPROVAL': 2,
+  'QUOTED - AWAITING APPROVAL': 3, 'WAITING ON PARTS': 4, 'IN WORKSHOP': 4, 'WAITING TO BE INVOICED': 4, 'INVOICED AND SENT': 5, 'COMPLETED': 5 };
+var SF_STAGE_TEXT = { 2: 'tool arrived', 3: 'quote sent', 4: 'quote approved', 5: 'invoiced' };
+function sfStage(j) { return SF_STAGE[j.status] || 1; }
+// Until an account has had "Mark as loaded" once, treat what the first full file said as already sent:
+// anything that happened after SF_BASELINE counts as new.
+function sfBaselineStage(j) {
+  var after = function(ts) { return ts && new Date(ts) > SF_BASELINE; };
+  if (after(j.received_at || j.created_at)) return 0;
+  var r = sfStage(j);
+  if (r >= 5 && after(j.invoiced_at || j.completed_at)) r = 4;
+  if (r >= 4 && after(j.quote_accepted_at)) r = 3;
+  if (r >= 3 && after(j.quoted_at)) r = 2;
+  return r;
+}
+function sfJobsOf(name) { return jobs.filter(function(j) { return j.customer === name; }).sort(function(a, b) { return a.job_number - b.job_number; }); }
+function sfSnapshot(name) { var s = {}; sfJobsOf(name).forEach(function(j) { s[j.id] = sfStage(j); }); return JSON.stringify(s); }
+function sfEvents(name, lastJson) {
+  var snap = null;
+  try { snap = lastJson ? JSON.parse(lastJson) : null; } catch(e) {}
+  var ev = [];
+  sfJobsOf(name).forEach(function(j) {
+    var cur = sfStage(j), last = snap ? (snap[j.id] || 0) : sfBaselineStage(j);
+    if (cur <= last) return;
+    ev.push(xpsNum(j.job_number) + ' ' + (last === 0 ? 'booked' + (cur > 1 ? ', ' + SF_STAGE_TEXT[cur] : '') : SF_STAGE_TEXT[cur]));
+  });
+  return ev;
+}
 function buildSalesforceRows(custs, day) {
-  var groups = {}, order = [], skipped = [], owners = {};
+  var groups = {}, members = {}, order = [], skipped = [], owners = {};
   custs.forEach(function(c) {
     if (!c.salesforce_id) { skipped.push(c.company_name); return; }
-    if (!groups[c.salesforce_id]) { groups[c.salesforce_id] = []; order.push(c.salesforce_id); }
+    if (!groups[c.salesforce_id]) { groups[c.salesforce_id] = []; members[c.salesforce_id] = []; order.push(c.salesforce_id); }
     groups[c.salesforce_id].push(c.company_name);
+    members[c.salesforce_id].push(c);
     if (c.salesforce_owner_id) owners[c.salesforce_id] = c.salesforce_owner_id;
   });
   var d = new Date(day + 'T12:00:00');
   var head = 'MainFlow service summary - ' + d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) + '\n\n';
   var rows = order.map(function(id) {
-    var body = head + sfAccountSummary(groups[id].sort(), day);
+    var events = [], snaps = [];
+    members[id].forEach(function(c) {
+      events = events.concat(sfEvents(c.company_name, c.salesforce_last_sent));
+      snaps.push({ id: c.id, json: sfSnapshot(c.company_name) });
+    });
+    var core = sfAccountSummary(groups[id].sort(), day);
+    var body = head + (events.length ? 'UPDATE: ' + events.join('; ') + '\n\n' : '') + core;
     if (body.length > 31000) body = body.slice(0, 31000) + '\n[cut short - see MainFlow]';
-    return { id: id, owner: owners[id] || '', names: groups[id], subject:'MainFlow service summary ' + day, date: day, description: body };
+    var subject = events.length ? ('MainFlow update ' + day + ' - ' + events.join('; ')).slice(0, 250) : 'MainFlow service summary ' + day;
+    return { id: id, owner: owners[id] || '', names: groups[id], events: events, changed: events.length > 0, snaps: snaps, subject: subject, date: day, description: body };
   });
   return { rows: rows, skipped: skipped };
 }
@@ -5805,21 +5867,43 @@ function sfRowsToCsv(rows) {
 async function openSalesforceExport() {
   if (!allParts.length) await loadAllParts();
   try { await loadJobs(); } catch(e) {}
-  try { _sfCusts = await db('GET', 'customers?select=id,company_name,salesforce_id,salesforce_owner_id&order=company_name'); }
+  try { _sfCusts = await db('GET', 'customers?select=id,company_name,salesforce_id,salesforce_owner_id,salesforce_last_sent&order=company_name'); }
   catch(e) { showToast('Could not load accounts: ' + e.message, 'error'); return; }
   document.getElementById('sfDate').value = _emLocalIso(new Date());
+  document.getElementById('sfAll').checked = false;
   rebuildSalesforceExport();
   document.getElementById('sfOverlay').classList.add('show');
 }
 var _sfCusts = [];
 function rebuildSalesforceExport() {
   var day = document.getElementById('sfDate').value || _emLocalIso(new Date());
-  var r = buildSalesforceRows(_sfCusts, day);
-  _sfRows = r.rows; _sfSkipped = r.skipped;
-  document.getElementById('sfCount').textContent = r.rows.length + ' (from ' + (_sfCusts.length - r.skipped.length) + ' MainFlow accounts)';
+  var r = buildSalesforceRows(_sfCusts, day), all = document.getElementById('sfAll').checked;
+  _sfRows = all ? r.rows : r.rows.filter(function(x) { return x.changed; });
+  _sfSkipped = r.skipped;
+  var left = r.rows.length - r.rows.filter(function(x) { return x.changed; }).length;
+  document.getElementById('sfCount').textContent = _sfRows.length + ' to send' + (all ? '' : ' (' + left + ' with nothing new, left out)');
   document.getElementById('sfSkipWrap').style.display = r.skipped.length ? '' : 'none';
   document.getElementById('sfSkip').textContent = r.skipped.join(', ');
-  document.getElementById('sfText').value = r.rows.map(function(x) { return '########  ' + x.names.join(' + ') + '  (' + x.id + ')\n' + x.description; }).join('\n\n');
+  document.getElementById('sfText').value = _sfRows.length
+    ? _sfRows.map(function(x) { return '########  ' + x.names.join(' + ') + '  (' + x.id + ')\n' + x.description; }).join('\n\n')
+    : 'Nothing new since the last load.';
+  document.getElementById('sfDownBtn').disabled = !_sfRows.length;
+  document.getElementById('sfMarkBtn').disabled = true;
+}
+async function markSalesforceLoaded() {
+  if (!_sfRows.length) return;
+  var now = new Date().toISOString();
+  try {
+    for (var i = 0; i < _sfRows.length; i++) {
+      for (var k = 0; k < _sfRows[i].snaps.length; k++) {
+        var s = _sfRows[i].snaps[k];
+        await db('PATCH', 'customers?id=eq.' + s.id, { salesforce_last_sent: s.json, salesforce_last_sent_at: now });
+        _sfCusts.forEach(function(c) { if (c.id === s.id) c.salesforce_last_sent = s.json; });
+      }
+    }
+  } catch(e) { showToast('Could not save: ' + e.message, 'error'); return; }
+  showToast('Marked as loaded - ' + _sfRows.length + ' accounts');
+  rebuildSalesforceExport();
 }
 function closeSalesforceExport() { document.getElementById('sfOverlay').classList.remove('show'); }
 function downloadSalesforceCsv() {
@@ -5830,7 +5914,8 @@ function downloadSalesforceCsv() {
   a.href = URL.createObjectURL(blob); a.download = 'MainFlow to Salesforce ' + day + '.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
-  showToast('Salesforce file saved - ' + _sfRows.length + ' accounts');
+  document.getElementById('sfMarkBtn').disabled = false;
+  showToast('Salesforce file saved - ' + _sfRows.length + ' accounts. Click Mark as loaded after it has loaded.');
 }
 
 function renderAssessmentReport(j, tools, jparts, opts) {
@@ -8898,6 +8983,7 @@ function selectCustFromDropdown(custId, ctx) {
     if (c.phone) document.getElementById(cfg.phone).value = c.phone;
   }
   if (cfg.shipping && c.address) document.getElementById(cfg.shipping).value = c.address;
+  if ((ctx || 'j') === 'j') applyDefaultFees();
 }
 
 // ── CUSTOMER ACCOUNT VIEW ─────────────────────────────────────────────────────
