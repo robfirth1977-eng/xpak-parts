@@ -5788,17 +5788,26 @@ function sfAccountSummary(names, day) {
       var dv = jobValueTba(done), dd = _sfDate(done.completed_at || done.updated_at);
       text += '\nLAST COMPLETED: ' + xpsNum(done.job_number) + (dd ? ' on ' + dd : '') + (dv.total > 0 ? ' - ' + _drVal(dv) + ' ex GST' : '') + '\n';
     }
-    // History: tools repaired on completed jobs, counted by model (no job detail)
+    // History: tools repaired on completed jobs, by model with their serial numbers (no job detail)
     var tally = {}, repaired = 0;
     mine.filter(function(j) { return j.status === 'COMPLETED'; }).forEach(function(j) {
-      var tl = (j.job_tools || []).length ? j.job_tools : [{ machine_id: j.machine_id, recommendation: '' }];
+      var tl = (j.job_tools || []).length ? j.job_tools : [{ machine_id: j.machine_id, serial_number: j.serial_number, recommendation: '' }];
       tl.forEach(function(t) {
         if (_rpNoRepair(t)) return;
         var m = t.machine_id ? machines.find(function(x) { return x.id === t.machine_id; }) : null, k = m ? m.name : 'model not set';
-        tally[k] = (tally[k] || 0) + 1; repaired++;
+        var sn = String(t.serial_number || '').trim().toUpperCase(), g = tally[k] = tally[k] || { n: 0, sn: {}, order: [], none: 0 };
+        g.n++; repaired++;
+        if (sn) { if (!g.sn[sn]) { g.sn[sn] = 0; g.order.push(sn); } g.sn[sn]++; } else g.none++;
       });
     });
-    if (repaired) text += 'TOOLS REPAIRED TO DATE: ' + repaired + ' - ' + Object.keys(tally).sort(function(a, b) { return tally[b] - tally[a] || a.localeCompare(b); }).map(function(k) { return tally[k] + ' x ' + k; }).join(', ') + '\n';
+    if (repaired) {
+      text += 'TOOLS REPAIRED TO DATE: ' + repaired + '\n';
+      Object.keys(tally).sort(function(a, b) { return tally[b].n - tally[a].n || a.localeCompare(b); }).forEach(function(k) {
+        var g = tally[k], bits = g.order.map(function(x) { return x + (g.sn[x] > 1 ? ' (x' + g.sn[x] + ')' : ''); });
+        if (g.none) bits.push(g.none + ' without S/N');
+        text += '  ' + k + ' x ' + g.n + ': ' + bits.join(', ') + '\n';
+      });
+    }
     if (multi) text += '\n';
   });
   return text.trim();
