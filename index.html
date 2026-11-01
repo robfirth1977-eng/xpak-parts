@@ -3559,6 +3559,15 @@ function renderBoard() {
   initBoardDrag();
 }
 
+// Completing a job with parts still marked "To Order" means they were never marked as received - ask first
+function toOrderPartsOk(parts, newStatus) {
+  if (newStatus !== 'COMPLETED') return true;
+  var left = (parts || []).filter(function(p) { return p.status === 'to_order'; });
+  if (!left.length) return true;
+  var list = left.slice(0, 6).map(function(p) { return '  ' + (p.quantity || 1) + 'x ' + (p.part_key_no || '') + ' ' + (p.part_description || ''); }).join('\n') + (left.length > 6 ? '\n  ...and ' + (left.length - 6) + ' more' : '');
+  return confirm(left.length + ' part' + (left.length === 1 ? ' is' : 's are') + ' still marked "To Order" on this job:\n\n' + list + '\n\nMark them Arrived or Use Stock first so the records are right.\n\nOK = complete the job anyway\nCancel = go back');
+}
+
 function initBoardDrag() {
   var dragId = null;
   document.querySelectorAll('.board-card').forEach(function(card) {
@@ -3595,6 +3604,7 @@ function initBoardDrag() {
           return;
         }
       }
+      if (!toOrderPartsOk(j.job_parts, newStatus)) { dragId = null; return; }
       if (newStatus === 'INVOICED AND SENT') {
         var capturedDragId = dragId;
         var capturedJob = j;
@@ -4123,8 +4133,9 @@ async function saveJob() {
     alert('Before saving: either link a loan tool (with a serial number) or tick "No loan tool needed" in the Loan Tool section.');
     return false;
   }
-  var btn = document.getElementById('btnSaveJob'); btn.disabled = true; btn.textContent = 'Saving...';
   var newStatus = document.getElementById('jStatus').value;
+  if (!toOrderPartsOk(jobPartsLocal, newStatus)) return false;
+  var btn = document.getElementById('btnSaveJob'); btn.disabled = true; btn.textContent = 'Saving...';
   var milestones = computeJobMilestones(editingJob, newStatus);
   var payload = {
     status: newStatus,
