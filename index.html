@@ -5814,6 +5814,8 @@ function sfAccountSummary(names, day) {
 }
 // A Task goes out for an account only when one of its jobs reaches a new stage:
 // booked, tool arrived, quote sent, quote approved, invoiced. Stages come from the job status.
+// Every Task is assigned to Rob (account owners' details in Salesforce are not kept up to date)
+var SF_TASK_OWNER = '005Ob000000Wnf7IAC';
 var SF_BASELINE = new Date('2026-10-29T11:43:00+11:00'); // when the first full file was loaded into Salesforce
 var SF_STAGE = { 'NEW JOB': 1, 'WAITING FOR TOOLS': 1, 'AWAITING ASSESSMENT': 2, 'AWAITING SUPPLIER QUOTE': 2, 'AWAITING REP APPROVAL': 2,
   'QUOTED - AWAITING APPROVAL': 3, 'WAITING ON PARTS': 4, 'IN WORKSHOP': 4, 'WAITING TO BE INVOICED': 4, 'INVOICED AND SENT': 5, 'COMPLETED': 5 };
@@ -5844,13 +5846,12 @@ function sfEvents(name, lastJson) {
   return ev;
 }
 function buildSalesforceRows(custs, day) {
-  var groups = {}, members = {}, order = [], skipped = [], owners = {};
+  var groups = {}, members = {}, order = [], skipped = [];
   custs.forEach(function(c) {
     if (!c.salesforce_id) { skipped.push(c.company_name); return; }
     if (!groups[c.salesforce_id]) { groups[c.salesforce_id] = []; members[c.salesforce_id] = []; order.push(c.salesforce_id); }
     groups[c.salesforce_id].push(c.company_name);
     members[c.salesforce_id].push(c);
-    if (c.salesforce_owner_id) owners[c.salesforce_id] = c.salesforce_owner_id;
   });
   var d = new Date(day + 'T12:00:00');
   var head = 'MainFlow service summary - ' + d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) + '\n\n';
@@ -5864,7 +5865,7 @@ function buildSalesforceRows(custs, day) {
     var body = head + (events.length ? 'UPDATE: ' + events.join('; ') + '\n\n' : '') + core;
     if (body.length > 31000) body = body.slice(0, 31000) + '\n[cut short - see MainFlow]';
     var subject = events.length ? ('MainFlow update ' + day + ' - ' + events.join('; ')).slice(0, 250) : 'MainFlow service summary ' + day;
-    return { id: id, owner: owners[id] || '', names: groups[id], events: events, changed: events.length > 0, snaps: snaps, subject: subject, date: day, description: body };
+    return { id: id, owner: SF_TASK_OWNER, names: groups[id], events: events, changed: events.length > 0, snaps: snaps, subject: subject, date: day, description: body };
   });
   return { rows: rows, skipped: skipped };
 }
@@ -5876,7 +5877,7 @@ function sfRowsToCsv(rows) {
 async function openSalesforceExport() {
   if (!allParts.length) await loadAllParts();
   try { await loadJobs(); } catch(e) {}
-  try { _sfCusts = await db('GET', 'customers?select=id,company_name,salesforce_id,salesforce_owner_id,salesforce_last_sent&order=company_name'); }
+  try { _sfCusts = await db('GET', 'customers?select=id,company_name,salesforce_id,salesforce_last_sent&order=company_name'); }
   catch(e) { showToast('Could not load accounts: ' + e.message, 'error'); return; }
   document.getElementById('sfDate').value = _emLocalIso(new Date());
   document.getElementById('sfAll').checked = false;
