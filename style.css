@@ -160,9 +160,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .board-card:hover{background:#1a2a3d}
 .board-card.dragging{opacity:0.4;cursor:grabbing}
 .board-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
-.board-card-num{font-size:10px;font-weight:700;color:#64b5c8;font-family:'Courier New',monospace;margin-bottom:2px}
+.board-card-num{font-size:10px;font-weight:700;color:#64b5c8;font-family:'Courier New',monospace;margin:2px 0 3px}
 .board-card-value{font-size:11px;font-weight:700;color:#10b981;font-family:'Courier New',monospace;flex-shrink:0}
-.board-card-customer{font-size:12px;font-weight:700;color:#e2e8f0;line-height:1.3}
+.board-card-customer{font-size:13px;font-weight:800;color:#e2e8f0;line-height:1.25}
 .board-card-meta{font-size:10px;color:#4a6080;margin-top:3px}
 .board-card-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:8px;padding-top:6px;border-top:1px solid #1e3048}
 .bca-btn{padding:5px 2px;border-radius:5px;font-size:9.5px;font-weight:700;cursor:pointer;border:none;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -590,3 +590,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .jab-btn:hover{filter:brightness(1.25)}
 .jab-btn.print{color:#00c8e0}.jab-btn.report{color:#10b981}.jab-btn.quote{color:#f97316}.jab-btn.other{color:#e879f9}
 .jab-btn.next{border-color:#f59e0b;box-shadow:0 0 0 1px #f59e0b66}
+
+.board-card-tool{font-size:10.5px;font-weight:700;color:#cbd5e1;line-height:1.3}
+.board-card-fault{font-size:10px;color:#8aa8c0;margin-top:1px}
+.board-card-loan{font-size:9.5px;font-weight:700;color:#4a6080;margin-top:4px;text-transform:uppercase;letter-spacing:.3px}
+.board-card-loan.on{color:#f59e0b}

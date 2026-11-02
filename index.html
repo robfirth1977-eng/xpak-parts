@@ -3376,6 +3376,23 @@ function renderJobs() {
   if (jobViewMode === 'board') renderBoard(); else renderList();
 }
 
+// A job card reads like its bin label: customer, XPS number, "model | S/N", fault, loan tool
+function jobToolLine(j) {
+  var tools = j.job_tools || [], t = tools[0] || { machine_id: j.machine_id, serial_number: j.serial_number };
+  if (!tools.length && !j.machine_id && !j.serial_number) return '';
+  var m = t.machine_id ? machines.find(function(x) { return x.id === t.machine_id; }) : null;
+  return (m ? m.name : 'Unknown model') + (t.serial_number ? ' | S/N: ' + t.serial_number : '') + (tools.length > 1 ? ' (+' + (tools.length - 1) + ' more)' : '');
+}
+function jobFaultText(j) { var t = (j.job_tools || [])[0]; return (t && t.fault_type) || j.fault_type || ''; }
+// Loan tool out with the customer for this job: { on: true, text: 'LOAN S/N 12345' }, or 'No loan'. null if loans have not loaded.
+function jobLoanInfo(j) {
+  if (!loans || !loans.length) return null;
+  var ln = loans.find(function(l) { return l.status !== 'RETURNED' && (l.job_id === j.id || l.linked_job === xpsNum(j.job_number)); });
+  if (!ln) return { on: false, text: 'No loan' };
+  var lt = loanTools.find(function(x) { return x.id === ln.loan_tool_id; });
+  return { on: true, text: 'LOAN S/N ' + ((lt && lt.serial_number) || xplNum(ln.loan_number)) };
+}
+
 function renderList() {
   var filtered = filterJobs();
   if (!filtered.length) {
@@ -3383,8 +3400,7 @@ function renderList() {
     return;
   }
   document.getElementById('jobsList').innerHTML = filtered.map(function(j) {
-    var col = SC[j.status] || '#4a6080', mName = '';
-    if (j.machine_id) { var m = machines.find(function(x) { return x.id === j.machine_id; }); if (m) mName = m.name; }
+    var col = SC[j.status] || '#4a6080', mName = jobToolLine(j), loanInfo = jobLoanInfo(j);
     var total = (parseFloat(j.labour_cost) || 0) + (parseFloat(j.parts_cost) || 0);
     var notes = j.workshop_notes ? j.workshop_notes.substring(0, 90) + (j.workshop_notes.length > 90 ? '...' : '') : '';
     var jl = []; try { jl = j.links ? JSON.parse(j.links) : []; } catch(e) {}
@@ -3393,7 +3409,7 @@ function renderList() {
     }).join('');
     return '<div class="job-card" style="border-left-color:' + col + '" onclick="openEditJobModal(\'' + j.id + '\')">' +
       '<div class="job-card-top">' +
-        '<div><div class="job-number">' + xpsNum(j.job_number) + '</div><div class="job-customer">' + (j.customer || 'No customer') + '</div></div>' +
+        '<div><div class="job-customer">' + (j.customer || 'No customer') + '</div><div class="job-number">' + xpsNum(j.job_number) + '</div></div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
         '<span class="job-status-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + j.status + '</span>' +
         (jobHasWrittenOffTool(j) ? writtenOffBadge('') : '') +
@@ -3401,26 +3417,15 @@ function renderList() {
       '</div>' +
       '<div class="job-meta">' +
         (mName ? '<span>' + mName + '</span>' : '') +
-        (j.serial_number ? '<span>S/N: ' + j.serial_number + '</span>' : '') +
+        (loanInfo ? '<span style="' + (loanInfo.on ? 'color:#f59e0b;font-weight:700' : 'color:#5a7a99') + '">' + loanInfo.text + '</span>' : '') +
         (j.contact_name ? '<span>' + j.contact_name + (j.mobile ? ' ' + j.mobile : '') + '</span>' : '') +
         (total > 0 ? '<span>$' + total.toFixed(2) + '</span>' : '') +
         '<span>' + fmtDate(j.created_at) + '</span>' +
         (j.followup_required ? '<span style="color:#f97316">Follow-up</span>' : '') +
       '</div>' +
-      (j.fault_type ? '<div class="job-fault">Fault: ' + j.fault_type + '</div>' : '') +
+      (jobFaultText(j) ? '<div class="job-fault">Fault: ' + jobFaultText(j) + '</div>' : '') +
       (notes ? '<div class="job-notes-preview">' + notes + '</div>' : '') +
       (linkTiles ? '<div class="job-links">' + linkTiles + '</div>' : '') +
-      '<div class="job-links">' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();printCaseLabel(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f4a;border-color:#00c8e0;color:#00c8e0">Print Bin Label</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')" style="cursor:pointer;background:#0a1a2a;border-color:#f59e0b;color:#f59e0b">Job Card</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Assessment Report</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\',{partsOnly:true})" style="cursor:pointer;background:#1a2f1a;border-color:#10b981;color:#10b981">Parts Quote</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();openReportEmail(\'' + j.id + '\')" style="cursor:pointer;background:#1a2433;border-color:#3b82f6;color:#60a5fa">Email Report</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Order Request</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')" style="cursor:pointer;background:#1a0a2a;border-color:#e879f9;color:#e879f9">Invoice Notice</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')" style="cursor:pointer;background:#2a1a0a;border-color:#f97316;color:#f97316">Export Quote</button>' +
-        '<button class="job-link-tile" onclick="event.stopPropagation();openActModal(\'' + j.id + '\',null)" style="cursor:pointer;background:#0a1a2a;border-color:#00c8e0;color:#00c8e0">+ Log Activity</button>' +
-      '</div>' +
       '</div>';
   }).join('');
 }
@@ -3543,25 +3548,15 @@ function renderBoard() {
     var colJobs = searched.filter(function(j) { return j.status === status; });
     var slim = status === 'NEW JOB' && !colJobs.length;
     var cards = colJobs.length ? colJobs.map(function(j) {
-      var mName = '';
-      if (j.machine_id) { var m = machines.find(function(x) { return x.id === j.machine_id; }); if (m) mName = m.name; }
+      var mName = jobToolLine(j), fault = jobFaultText(j), loanInfo = jobLoanInfo(j);
       var val = jobRevenue(j);
       return '<div class="board-card" style="border-left-color:' + col + '" draggable="true" data-job-id="' + j.id + '">' +
         '<div onclick="openEditJobModal(\'' + j.id + '\')">' +
-          '<div class="board-card-top"><span class="board-card-num">' + xpsNum(j.job_number) + '</span>' + (jobHasWrittenOffTool(j) ? writtenOffBadge('margin-left:6px') : '') + (val > 0 ? '<span class="board-card-value">$' + val.toFixed(0) + '</span>' : '') + '</div>' +
-          '<div class="board-card-customer">' + (j.customer || 'No customer') + '</div>' +
-          '<div class="board-card-meta">' + (mName ? mName + ' · ' : '') + fmtDate(j.created_at) + '</div>' +
-        '</div>' +
-        '<div class="board-card-actions">' +
-          '<button class="bca-btn" style="background:#1a2f4a;color:#00c8e0" onclick="event.stopPropagation();printCaseLabel(\'' + j.id + '\')">🏷 Bin Label</button>' +
-          '<button class="bca-btn" style="background:#0a1a2a;color:#f59e0b" onclick="event.stopPropagation();printJobCard(\'' + j.id + '\')">📋 Job Card</button>' +
-          '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\')">📄 Report</button>' +
-          '<button class="bca-btn report" onclick="event.stopPropagation();generateAssessmentReport(\'' + j.id + '\',{partsOnly:true})">💲 Parts Quote</button>' +
-          '<button class="bca-btn report" onclick="event.stopPropagation();openReportEmail(\'' + j.id + '\')">✉️ Email Report</button>' +
-          '<button class="bca-btn report" onclick="event.stopPropagation();openOrderRequest(\'' + j.id + '\')">＋ Order Request</button>' +
-          '<button class="bca-btn" style="background:#1a0a2a;color:#e879f9" onclick="event.stopPropagation();generateInvoiceNotice(\'' + j.id + '\')">🧾 Invoice</button>' +
-          '<button class="bca-btn quote" onclick="event.stopPropagation();exportQuoteExcel(\'' + j.id + '\')">📦 Quote</button>' +
-          '<button class="bca-btn" style="background:#0a1a2a;color:#00c8e0" onclick="event.stopPropagation();openActModal(\'' + j.id + '\',null)">🗒 Log</button>' +
+          '<div class="board-card-top"><span class="board-card-customer">' + (j.customer || 'No customer') + '</span>' + (jobHasWrittenOffTool(j) ? writtenOffBadge('margin-left:6px') : '') + (val > 0 ? '<span class="board-card-value">$' + val.toFixed(0) + '</span>' : '') + '</div>' +
+          '<div class="board-card-num">' + xpsNum(j.job_number) + ' &middot; ' + fmtDate(j.created_at) + '</div>' +
+          (mName ? '<div class="board-card-tool">' + mName + '</div>' : '') +
+          (fault ? '<div class="board-card-fault">' + fault + '</div>' : '') +
+          (loanInfo ? '<div class="board-card-loan' + (loanInfo.on ? ' on' : '') + '">' + loanInfo.text + '</div>' : '') +
         '</div>' +
       '</div>';
     }).join('') : '<div style="font-size:11px;color:#2a4060;padding:6px;text-align:center">-</div>';
