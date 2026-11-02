@@ -609,5 +609,26 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .board.dragging .board-col.slim .board-col-body>div{display:block}
 
 /* Light theme: invert the dark colours and rotate the hues back, then flip pictures back so they look normal */
-html.light{filter:invert(1) hue-rotate(180deg);background:#fff}
-html.light img,html.light video,html.light canvas,html.light iframe{filter:invert(1) hue-rotate(180deg)}
+html.light{filter:invert(1) hue-rotate(180deg) saturate(1.2) contrast(1.02);background:#fff}
+html.light img,html.light video,html.light canvas,html.light iframe{filter:invert(1) hue-rotate(180deg) saturate(.83)}
+
+/* Light theme extras (colours are written in dark-theme terms; the filter above turns them into the light result):
+   warm cream page, sky-to-aqua header, status columns in four calm tones */
+html.light body{background:#0f0700}
+html.light .board-col{background:var(--cb);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+html.light .board-col-header{background:var(--ch);border-bottom:2px solid var(--ce)}
+html.light .board-col-title{color:#000!important}
+html.light .board-card{background:#050a10;box-shadow:0 1px 3px rgba(0,0,0,.4);border-left-width:4px;border-left-color:var(--ce)!important}
+html.light .board-card:hover{background:#0b1522}
+html.light .header{background:linear-gradient(135deg,#0072ad,#007560);border-bottom:3px solid #b64d00}
+html.light .header-title,html.light .header-sub,html.light #themeBtn{color:#000!important}
+html.light .board-col[data-status="NEW JOB"]{--ch:#004b74;--cb:#000e16;--ce:#0091d5}
+html.light .board-col[data-status="WAITING FOR TOOLS"]{--ch:#004b74;--cb:#000e16;--ce:#0091d5}
+html.light .board-col[data-status="AWAITING ASSESSMENT"]{--ch:#004b74;--cb:#000e16;--ce:#0091d5}
+html.light .board-col[data-status="AWAITING SUPPLIER QUOTE"]{--ch:#342800;--cb:#0f0b00;--ce:#563c00}
+html.light .board-col[data-status="AWAITING REP APPROVAL"]{--ch:#342800;--cb:#0f0b00;--ce:#563c00}
+html.light .board-col[data-status="QUOTED - AWAITING APPROVAL"]{--ch:#342800;--cb:#0f0b00;--ce:#563c00}
+html.light .board-col[data-status="WAITING ON PARTS"]{--ch:#763300;--cb:#180a00;--ce:#e66003}
+html.light .board-col[data-status="IN WORKSHOP"]{--ch:#763300;--cb:#180a00;--ce:#e66003}
+html.light .board-col[data-status="WAITING TO BE INVOICED"]{--ch:#004603;--cb:#001003;--ce:#008e27}
+html.light .board-col[data-status="INVOICED AND SENT"]{--ch:#004603;--cb:#001003;--ce:#008e27}
