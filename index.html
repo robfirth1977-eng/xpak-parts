@@ -3546,7 +3546,7 @@ function renderBoard() {
   document.getElementById('boardCols').innerHTML = boardStatuses.map(function(status) {
     var col = SC[status] || '#4a6080';
     var colJobs = searched.filter(function(j) { return j.status === status; });
-    var slim = status === 'NEW JOB' && !colJobs.length;
+    var slim = !colJobs.length;
     var cards = colJobs.length ? colJobs.map(function(j) {
       var mName = jobToolLine(j), fault = jobFaultText(j), loanInfo = jobLoanInfo(j);
       var val = jobRevenue(j);
@@ -3582,11 +3582,11 @@ function initBoardDrag() {
   document.querySelectorAll('.board-card').forEach(function(card) {
     card.addEventListener('dragstart', function(e) {
       dragId = card.dataset.jobId;
-      setTimeout(function(){ card.classList.add('dragging'); }, 0);
+      setTimeout(function(){ card.classList.add('dragging'); document.getElementById('boardCols').classList.add('dragging'); }, 0);
       e.dataTransfer.effectAllowed = 'move';
     });
     card.addEventListener('dragend', function() {
-      card.classList.remove('dragging');
+      card.classList.remove('dragging'); document.getElementById('boardCols').classList.remove('dragging');
       document.querySelectorAll('.board-col-body').forEach(function(c){ c.classList.remove('drag-over'); });
     });
   });

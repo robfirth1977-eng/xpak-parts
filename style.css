@@ -150,7 +150,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .board-wrap{overflow-x:auto;padding:0 14px 20px}
 .board{display:flex;gap:12px;min-width:max-content;align-items:flex-start}
 .board-col{background:#0d1a28;border-radius:10px;width:260px;flex-shrink:0;overflow:hidden;transition:width .15s}
-.board-col.slim{width:90px}
+.board-col.slim{width:44px}
 .board-col-header{padding:9px 11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e3048}
 .board-col-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
 .board-col-count{font-size:11px;font-weight:700;background:#1e3048;border-radius:10px;padding:1px 7px;color:#8aa8c0}
@@ -595,3 +595,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .board-card-fault{font-size:10px;color:#8aa8c0;margin-top:1px}
 .board-card-loan{font-size:9.5px;font-weight:700;color:#4a6080;margin-top:4px;text-transform:uppercase;letter-spacing:.3px}
 .board-card-loan.on{color:#f59e0b}
+
+.board-col.slim .board-col-header{flex-direction:column;padding:10px 0;border-bottom:none}
+.board-col.slim .board-col-title{writing-mode:vertical-rl;white-space:nowrap;letter-spacing:.8px}
+.board-col.slim .board-col-count{display:none}
+.board-col.slim .board-col-body{min-height:40px;padding:0}
+.board-col.slim .board-col-body>div{display:none}
+.board.dragging .board-col.slim{width:260px}
+.board.dragging .board-col.slim .board-col-header{flex-direction:row;padding:9px 11px;border-bottom:1px solid #1e3048}
+.board.dragging .board-col.slim .board-col-title{writing-mode:horizontal-tb;white-space:normal;letter-spacing:.5px}
+.board.dragging .board-col.slim .board-col-count{display:inline}
+.board.dragging .board-col.slim .board-col-body{min-height:50px;padding:7px}
+.board.dragging .board-col.slim .board-col-body>div{display:block}
