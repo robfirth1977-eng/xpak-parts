@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MainFlow</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>(function(){ try { if (localStorage.getItem('mf_theme') === 'light') document.documentElement.classList.add('light'); } catch(e) {} })();</script>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -23,7 +24,7 @@
 
 <div class="header">
   <div><div class="header-title" onclick="showLanding()" style="cursor:pointer" title="Back to menu">MAINFLOW <span style="font-size:9px;color:#3a5070;font-weight:400;letter-spacing:1px">v1.3</span></div><div class="header-sub" id="hSub">Connecting...</div></div>
-  <div id="lowBadge"></div><button class="auth-user" id="intakeBadgeBtn" style="display:none;background:#2a1a0a;border:1px solid #f9731660;color:#f97316;margin-right:6px;font-weight:700" onclick="openIntakeQueue()">📥 <span id="intakeBadgeCount">0</span> New Request<span id="intakeBadgePlural">s</span></button><button class="auth-user" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;margin-right:6px" onclick="openToolSearch()">🔍 Find Tool</button><button class="auth-user" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
+  <div id="lowBadge"></div><button class="auth-user" id="intakeBadgeBtn" style="display:none;background:#2a1a0a;border:1px solid #f9731660;color:#f97316;margin-right:6px;font-weight:700" onclick="openIntakeQueue()">📥 <span id="intakeBadgeCount">0</span> New Request<span id="intakeBadgePlural">s</span></button><button class="auth-user" id="themeBtn" style="margin-right:6px" onclick="toggleTheme()" title="Switch between dark and light colours">&#9728;&#65039; Light</button><button class="auth-user" style="background:#1e3048;border:1px solid #00c8e060;color:#00c8e0;margin-right:6px" onclick="openToolSearch()">🔍 Find Tool</button><button class="auth-user" id="signOutBtn" style="display:none" onclick="doSignOut()">Sign Out</button>
 </div>
 <div class="machine-tabs" id="machineTabs"></div>
 <div class="docs-bar" id="docsBar"></div>
@@ -1245,6 +1246,18 @@ var jobLinks = [], jobPartsLocal = [], jobToolsLocal = [], machineModalFromJob =
 // network failure can never silently overwrite real tool/part data with an empty fallback.
 var _jobDataLoadFailed = false;
 var partsFilter = 'all';
+
+// Light / Dark: light is the dark theme inverted by the browser (see style.css); the choice is remembered on this device
+function updateThemeBtn() {
+  var b = document.getElementById('themeBtn');
+  if (b) b.innerHTML = document.documentElement.classList.contains('light') ? '&#127769; Dark' : '&#9728;&#65039; Light';
+}
+function toggleTheme() {
+  var light = document.documentElement.classList.toggle('light');
+  try { localStorage.setItem('mf_theme', light ? 'light' : 'dark'); } catch(e) {}
+  updateThemeBtn();
+}
+updateThemeBtn();
 
 var SC = {
   'NEW JOB':'#3b82f6','AWAITING ASSESSMENT':'#8b5cf6','WAITING FOR TOOLS':'#f59e0b',

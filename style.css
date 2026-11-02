@@ -607,3 +607,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .board.dragging .board-col.slim .board-col-count{display:inline}
 .board.dragging .board-col.slim .board-col-body{min-height:50px;padding:7px}
 .board.dragging .board-col.slim .board-col-body>div{display:block}
+
+/* Light theme: invert the dark colours and rotate the hues back, then flip pictures back so they look normal */
+html.light{filter:invert(1) hue-rotate(180deg);background:#fff}
+html.light img,html.light video,html.light canvas,html.light iframe{filter:invert(1) hue-rotate(180deg)}
