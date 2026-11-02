@@ -632,3 +632,4 @@ html.light .board-col[data-status="WAITING ON PARTS"]{--ch:#763300;--cb:#180a00;
 html.light .board-col[data-status="IN WORKSHOP"]{--ch:#763300;--cb:#180a00;--ce:#e66003}
 html.light .board-col[data-status="WAITING TO BE INVOICED"]{--ch:#004603;--cb:#001003;--ce:#008e27}
 html.light .board-col[data-status="INVOICED AND SENT"]{--ch:#004603;--cb:#001003;--ce:#008e27}
+html.light .board-col[data-status="COMPLETED"]{--ch:#004603;--cb:#001003;--ce:#008e27}

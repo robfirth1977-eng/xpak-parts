@@ -3555,10 +3555,12 @@ function renderBoard() {
   var searched = q ? jobs.filter(function(j) {
     return ((j.customer || '') + xpsNum(j.job_number) + (j.serial_number || '') + (j.fault_type || '')).toLowerCase().includes(q);
   }) : jobs;
-  var boardStatuses = ALL_ST.filter(function(s) { return s !== 'COMPLETED'; });
+  var boardStatuses = ALL_ST;
   document.getElementById('boardCols').innerHTML = boardStatuses.map(function(status) {
     var col = SC[status] || '#4a6080';
-    var colJobs = searched.filter(function(j) { return j.status === status; });
+    var colAll = searched.filter(function(j) { return j.status === status; }), colJobs = colAll, olderCount = 0;
+    // Completed keeps growing, so the board shows only the latest 12 (newest first); all of them are in the list view under the Completed filter
+    if (status === 'COMPLETED') { colAll = colAll.slice().sort(function(a, b) { return String(b.completed_at || '').localeCompare(String(a.completed_at || '')); }); colJobs = colAll.slice(0, 12); olderCount = colAll.length - colJobs.length; }
     var slim = !colJobs.length;
     var cards = colJobs.length ? colJobs.map(function(j) {
       var mName = jobToolLine(j), fault = jobFaultText(j), loanInfo = jobLoanInfo(j);
@@ -3574,8 +3576,8 @@ function renderBoard() {
       '</div>';
     }).join('') : '<div style="font-size:11px;color:#2a4060;padding:6px;text-align:center">-</div>';
     return '<div class="board-col' + (slim ? ' slim' : '') + '" data-status="' + status + '" style="--sc:' + col + '">' +
-      '<div class="board-col-header"><span class="board-col-title" style="color:' + col + '">' + status + '</span><span class="board-col-count">' + colJobs.length + '</span></div>' +
-      '<div class="board-col-body" data-status="' + status + '">' + cards + '</div>' +
+      '<div class="board-col-header"><span class="board-col-title" style="color:' + col + '">' + status + '</span><span class="board-col-count">' + colAll.length + '</span></div>' +
+      '<div class="board-col-body" data-status="' + status + '">' + cards + (olderCount ? '<div style="font-size:11px;color:#5a7a99;padding:6px;text-align:center">+ ' + olderCount + ' older - see the Completed filter in the list</div>' : '') + '</div>' +
     '</div>';
   }).join('');
   initBoardDrag();
