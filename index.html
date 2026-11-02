@@ -800,6 +800,20 @@
   <div class="modal orange">
     <div class="modal-header"><div class="modal-title" id="jobModalTitle">New Service Case</div><button class="modal-close" onclick="closeJobModal()">x</button></div>
     <div id="jobDatesLine" style="font-size:11px;color:#8aa8c0;margin:-6px 0 10px"></div>
+    <div id="jobActionBar" class="job-action-bar" style="display:none">
+      <span class="jab-label">Print</span>
+      <button class="jab-btn print" data-act="label" onclick="jobAction('label')">&#127991; Bin Label</button>
+      <button class="jab-btn print" data-act="card" onclick="jobAction('card')">&#128203; Job Card</button>
+      <span class="jab-sep"></span><span class="jab-label">Reports</span>
+      <button class="jab-btn report" data-act="report" onclick="jobAction('report')">&#128196; Report</button>
+      <button class="jab-btn report" data-act="partsq" onclick="jobAction('partsq')">&#128178; Parts Quote</button>
+      <button class="jab-btn report" data-act="email" onclick="jobAction('email')">&#9993;&#65039; Email Report</button>
+      <button class="jab-btn quote" data-act="excel" onclick="jobAction('excel')" title="Downloads an Excel quote of the parts marked To Order">&#128230; Excel Quote</button>
+      <span class="jab-sep"></span><span class="jab-label">Other</span>
+      <button class="jab-btn other" data-act="order" onclick="jobAction('order')">&#65291; Order Request</button>
+      <button class="jab-btn other" data-act="invoice" onclick="jobAction('invoice')">&#129534; Invoice</button>
+      <button class="jab-btn other" data-act="log" onclick="jobAction('log')">&#128466; Log</button>
+    </div>
 
     <div class="g2">
       <div class="field"><label>Status</label>
@@ -3741,9 +3755,46 @@ function _fmtDay(ymd) {
   return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 function refreshJobDatesLine() {
+  updateJobActionBar();
   var el = document.getElementById('jobDatesLine'); if (!el) return;
   var act = editingJob && editingJob.updated_at ? new Date(editingJob.updated_at).toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
   el.innerHTML = 'Received <strong style="color:#e2e8f0">' + _fmtDay(document.getElementById('jReceived').value) + '</strong> &nbsp;·&nbsp; Completed <strong style="color:#e2e8f0">' + _fmtDay(document.getElementById('jCompleted').value) + '</strong> &nbsp;·&nbsp; Last activity <strong style="color:#e2e8f0">' + act + '</strong>';
+}
+// Action strip at the top of the open job: shown for saved jobs, highlights the usual next step for the status
+var JOB_NEXT_ACTION = { 'NEW JOB': 'label', 'WAITING FOR TOOLS': 'label', 'AWAITING ASSESSMENT': 'email', 'AWAITING SUPPLIER QUOTE': 'order', 'AWAITING REP APPROVAL': 'email',
+  'QUOTED - AWAITING APPROVAL': 'email', 'WAITING ON PARTS': 'order', 'IN WORKSHOP': 'card', 'WAITING TO BE INVOICED': 'invoice' };
+var _jobSig = '';
+// Fingerprint of everything on the open job form, to tell whether there are unsaved changes
+function jobFormSig() {
+  var vals = [];
+  document.querySelectorAll('#jobOverlay input, #jobOverlay select, #jobOverlay textarea').forEach(function(el) {
+    if (el.id && el.id.charAt(0) === 'j' && el.type !== 'file') vals.push(el.id + '=' + (el.type === 'checkbox' ? el.checked : el.value));
+  });
+  return vals.join('|') + JSON.stringify(jobToolsLocal) + JSON.stringify(jobPartsLocal) + JSON.stringify(jobLinks) + JSON.stringify(jobLoanState);
+}
+function updateJobActionBar() {
+  var bar = document.getElementById('jobActionBar'); if (!bar) return;
+  bar.style.display = editingJob ? 'flex' : 'none';
+  var next = JOB_NEXT_ACTION[document.getElementById('jStatus').value] || '';
+  bar.querySelectorAll('.jab-btn').forEach(function(b) { b.classList.toggle('next', b.dataset.act === next); });
+}
+// Runs one of the strip buttons. If the form has unsaved changes it saves first, so reports match what is on screen.
+async function jobAction(kind) {
+  if (!editingJob) { showToast('Save the job first', 'error'); return; }
+  var id = editingJob.id;
+  if (kind !== 'order' && kind !== 'log' && jobFormSig() !== _jobSig) {
+    var ok = await saveJob(); if (!ok) return;
+    try { await loadJobs(); } catch(e) {}
+  }
+  if (kind === 'label') printCaseLabel(id);
+  else if (kind === 'card') printJobCard(id);
+  else if (kind === 'report') generateAssessmentReport(id);
+  else if (kind === 'partsq') generateAssessmentReport(id, { partsOnly: true });
+  else if (kind === 'email') openReportEmail(id);
+  else if (kind === 'excel') exportQuoteExcel(id);
+  else if (kind === 'invoice') generateInvoiceNotice(id);
+  else if (kind === 'order') openOrderRequest(null, true);
+  else if (kind === 'log') openActModal(id, null);
 }
 function onJobStatusChange() {
   var c = document.getElementById('jCompleted');
@@ -3895,6 +3946,7 @@ async function openEditJobModal(jobId) {
       jobActSec.style.display = 'block';
     }
   }).catch(function(){});
+  _jobSig = jobFormSig();
   document.getElementById('jobOverlay').classList.add('show');
 }
 
@@ -4276,6 +4328,7 @@ async function saveJob() {
     }
     loadJobs();
     if (!editingJob) closeJobModal();
+    _jobSig = jobFormSig();
     return true;
   } catch(e) { showToast('Save failed: ' + e.message, 'error'); return false; }
   finally { btn.disabled = false; btn.textContent = 'Save Service Case'; }
