@@ -841,7 +841,7 @@
     <div class="g2">
       <div class="field full"><label>Account / Company *</label>
         <div class="cust-ta-wrap">
-          <input id="jCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour" autocomplete="off" oninput="custTypeahead(this.value)" onfocus="custTypeahead(this.value)" onblur="setTimeout(hideCustDropdown,200);applyDefaultFees()" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
+          <input id="jCustomer" placeholder="e.g. Bunnings Trade Coffs Harbour" autocomplete="off" oninput="custTypeahead(this.value)" onfocus="custTypeahead(this.value)" onblur="setTimeout(hideCustDropdown,200);applyDefaultFees();renderJobLoanSection()" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none">
           <div class="cust-dropdown" id="custDropdown"></div>
         </div>
       </div>
@@ -941,6 +941,13 @@
         <input type="checkbox" id="lIsTrial" onchange="toggleTrialMode(this.checked)" style="width:15px;height:15px;accent-color:#f59e0b;cursor:pointer">
         <span style="font-weight:700">🏷️ Trial Tool</span>
         <span style="font-size:10px;color:#5a8090">New machine on trial — not regular loan stock</span>
+      </label>
+    </div>
+    <div class="field" style="padding:2px 0 6px">
+      <label style="margin:0;font-size:12px;color:#8aa8c0;cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none">
+        <input type="checkbox" id="lIsPermanent" style="width:15px;height:15px;accent-color:#10b981;cursor:pointer">
+        <span style="font-weight:700">Permanent loan</span>
+        <span style="font-size:10px;color:#5a8090">Stays with the customer - shows on all their jobs</span>
       </label>
     </div>
     <div class="g2">
@@ -1861,7 +1868,7 @@ function clearLoanForm(){
   ['lCycleCountOut','lCycleCountIn'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('lLoanedDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('lExpectedReturn').value=''; document.getElementById('lReturnedDate').value='';
-  document.getElementById('lIsTrial').checked=false; document.getElementById('lTrialOutcome').value=''; document.getElementById('lTrialOutcomeField').style.display='none';
+  document.getElementById('lIsPermanent').checked=false; document.getElementById('lIsTrial').checked=false; document.getElementById('lTrialOutcome').value=''; document.getElementById('lTrialOutcomeField').style.display='none';
   toggleTrialMode(false);
 }
 // Loan <-> job link: typing a job number on the loan finds the job, fills in the customer details,
@@ -1911,6 +1918,7 @@ function openEditLoanModal(loanId){
   editingLoan=l; document.getElementById('loanModalTitle').textContent=xplNum(l.loan_number)+' — '+(l.customer||'');
   var sel=document.getElementById('lToolId');
   sel.innerHTML='<option value="">-- Select tool --</option>'+loanTools.map(function(t){return '<option value="'+t.id+'"'+(t.id===l.loan_tool_id?' selected':'')+'>'+t.name+(t.serial_number?' ('+t.serial_number+')':'')+'</option>';}).join('');
+  document.getElementById('lIsPermanent').checked=!!l.is_permanent;
   var isTrial=!!l.is_trial; document.getElementById('lIsTrial').checked=isTrial; toggleTrialMode(isTrial);
   if(l.trial_outcome){document.getElementById('lTrialOutcome').value=l.trial_outcome;}
   ['lCustomer','lContact','lPhone','lMobile','lEmail','lReason','lPhotoOut','lPhotoIn','lLoanedBy','lLinkedJob','lNotes'].forEach(function(id){
@@ -1936,7 +1944,7 @@ async function saveLoan(){
   var toolId=document.getElementById('lToolId').value, customer=document.getElementById('lCustomer').value.trim();
   if(!toolId){showToast('Select a tool','error');return;} if(!customer){showToast('Customer required','error');return;}
   var btn=document.getElementById('btnSaveLoan'); btn.disabled=true; btn.textContent='Saving...';
-  var payload={loan_tool_id:toolId,customer:customer,contact_name:document.getElementById('lContact').value||null,phone:document.getElementById('lPhone').value||null,mobile:document.getElementById('lMobile').value||null,email:document.getElementById('lEmail').value||null,condition_out:document.getElementById('lConditionOut').value||null,condition_in:document.getElementById('lConditionIn').value||null,cycle_count_out:parseInt(document.getElementById('lCycleCountOut').value)||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_out:document.getElementById('lPhotoOut').value||null,photo_in:document.getElementById('lPhotoIn').value||null,reason_for_loan:document.getElementById('lReason').value||null,loaned_date:document.getElementById('lLoanedDate').value||null,expected_return:document.getElementById('lExpectedReturn').value||null,returned_date:document.getElementById('lReturnedDate').value||null,loaned_by:document.getElementById('lLoanedBy').value||null,linked_job:document.getElementById('lLinkedJob').value||null,notes:document.getElementById('lNotes').value||null,is_trial:document.getElementById('lIsTrial').checked,trial_outcome:document.getElementById('lTrialOutcome').value||null,status:'ACTIVE',updated_at:new Date().toISOString()};
+  var payload={loan_tool_id:toolId,customer:customer,contact_name:document.getElementById('lContact').value||null,phone:document.getElementById('lPhone').value||null,mobile:document.getElementById('lMobile').value||null,email:document.getElementById('lEmail').value||null,condition_out:document.getElementById('lConditionOut').value||null,condition_in:document.getElementById('lConditionIn').value||null,cycle_count_out:parseInt(document.getElementById('lCycleCountOut').value)||null,cycle_count_in:parseInt(document.getElementById('lCycleCountIn').value)||null,photo_out:document.getElementById('lPhotoOut').value||null,photo_in:document.getElementById('lPhotoIn').value||null,reason_for_loan:document.getElementById('lReason').value||null,loaned_date:document.getElementById('lLoanedDate').value||null,expected_return:document.getElementById('lExpectedReturn').value||null,returned_date:document.getElementById('lReturnedDate').value||null,loaned_by:document.getElementById('lLoanedBy').value||null,linked_job:document.getElementById('lLinkedJob').value||null,notes:document.getElementById('lNotes').value||null,is_trial:document.getElementById('lIsTrial').checked,is_permanent:document.getElementById('lIsPermanent').checked,trial_outcome:document.getElementById('lTrialOutcome').value||null,status:'ACTIVE',updated_at:new Date().toISOString()};
   var linkedJobObj=findJobByRef(payload.linked_job);
   if(linkedJobObj){ payload.linked_job=xpsNum(linkedJobObj.job_number); payload.job_id=linkedJobObj.id; }
   else if(!payload.linked_job){ payload.job_id=null; }
@@ -3398,12 +3406,17 @@ function jobToolLine(j) {
 }
 function jobFaultText(j) { var t = (j.job_tools || [])[0]; return (t && t.fault_type) || j.fault_type || ''; }
 // Loan tool out with the customer for this job: { on: true, text: 'LOAN S/N 12345' }, or 'No loan'. null if loans have not loaded.
+// A permanent loan stays with the customer: it shows on every job for that account, not just one
+function permanentLoanFor(customer) {
+  var c = String(customer || '').trim().toLowerCase(); if (!c) return null;
+  return (loans || []).find(function(l) { return l.is_permanent && l.status !== 'RETURNED' && String(l.customer || '').trim().toLowerCase() === c; }) || null;
+}
 function jobLoanInfo(j) {
   if (!loans || !loans.length) return null;
-  var ln = loans.find(function(l) { return l.status !== 'RETURNED' && (l.job_id === j.id || l.linked_job === xpsNum(j.job_number)); });
+  var ln = loans.find(function(l) { return l.status !== 'RETURNED' && (l.job_id === j.id || l.linked_job === xpsNum(j.job_number)); }) || permanentLoanFor(j.customer);
   if (!ln) return { on: false, text: 'No loan' };
   var lt = loanTools.find(function(x) { return x.id === ln.loan_tool_id; });
-  return { on: true, text: 'LOAN S/N ' + ((lt && lt.serial_number) || xplNum(ln.loan_number)) };
+  return { on: true, text: 'LOAN S/N ' + ((lt && lt.serial_number) || xplNum(ln.loan_number)) + (ln.is_permanent ? ' (PERMANENT)' : '') };
 }
 
 function renderList() {
@@ -3687,15 +3700,25 @@ function renderLinksList() {
 // Every job must resolve one way or the other: a loan tool linked (with a
 // serial number on file), or an explicit "no loan needed" - saveJob() blocks
 // until one of those is true. See renderJobLoanSection() / jobLoanSatisfied().
+// The permanent loan (if any) for the customer typed on the open job form
+function jobPermanentLoan() { var el = document.getElementById('jCustomer'); return permanentLoanFor(el && el.value); }
 function renderJobLoanSection() {
   var box = document.getElementById('loanTagBox'); if (!box) return;
+  var perm = !jobLoanState.linkedLoan ? jobPermanentLoan() : null;
+  if (perm) {
+    var pt = loanTools.find(function(x) { return x.id === perm.loan_tool_id; });
+    box.innerHTML = '<div style="background:#132a1e;border:1px solid #10b98160;border-radius:8px;padding:10px 12px">' +
+      '<div style="font-weight:700;color:#10b981">' + (pt ? pt.name : 'Loan tool') + (pt && pt.serial_number ? ' - S/N ' + pt.serial_number : '') + ' <span style="font-size:10px;background:#10b98130;border-radius:4px;padding:1px 6px;margin-left:6px">PERMANENT</span></div>' +
+      '<div style="font-size:11px;color:#8aa8c0">' + xplNum(perm.loan_number) + ' &middot; loaned ' + fmtDate(perm.loaned_date) + ' &middot; stays with this customer, so no loan is needed on each job</div></div>';
+    return;
+  }
   if (jobLoanState.linkedLoan) {
     var l = jobLoanState.linkedLoan;
     var lt = loanTools.find(function(x) { return x.id === l.loan_tool_id; });
     box.innerHTML = '<div style="background:#132a1e;border:1px solid #10b98160;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">' +
       '<div><div style="font-weight:700;color:#10b981">' + (lt ? lt.name : 'Loan tool') + (lt && lt.serial_number ? ' - S/N ' + lt.serial_number : '') + '</div>' +
       '<div style="font-size:11px;color:#8aa8c0">' + xplNum(l.loan_number) + ' &middot; loaned ' + fmtDate(l.loaned_date) + '</div></div>' +
-      '<button onclick="unlinkJobLoan()" style="padding:5px 10px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:6px;cursor:pointer;font-size:11px">Unlink</button></div>';
+      (l.is_permanent ? '' : '<button onclick="unlinkJobLoan()" style="padding:5px 10px;background:transparent;border:1px solid #ef444460;color:#ef4444;border-radius:6px;cursor:pointer;font-size:11px">Unlink</button>') + '</div>';
     return;
   }
   var pickerDisplay = jobLoanState.noLoanNeeded ? 'none' : 'block';
@@ -3724,7 +3747,7 @@ function unlinkJobLoan() {
 
 // True once the loan question has been answered one way or the other.
 function jobLoanSatisfied() {
-  return !!(jobLoanState.linkedLoan || jobLoanState.noLoanNeeded || jobLoanState.selectedToolId);
+  return !!(jobLoanState.linkedLoan || jobLoanState.noLoanNeeded || jobLoanState.selectedToolId || jobPermanentLoan());
 }
 
 function clearJobForm() {
@@ -4994,7 +5017,7 @@ function printCaseLabel(jobId) {
     return db('GET', 'loans?job_id=eq.' + jobId + '&status=neq.RETURNED&select=loan_number,loan_tool_id').then(function(a) {
       return (a && a.length) ? a : db('GET', 'loans?linked_job=eq.' + xpsNum(j.job_number) + '&status=neq.RETURNED&select=loan_number,loan_tool_id');
     }).catch(function() { return []; }).then(function(a) {
-      var ln = (a && a[0]) ? a[0] : null, lt = ln ? loanTools.find(function(x) { return x.id === ln.loan_tool_id; }) : null;
+      var ln = (a && a[0]) ? a[0] : permanentLoanFor(j.customer), lt = ln ? loanTools.find(function(x) { return x.id === ln.loan_tool_id; }) : null;
       return { tools: tools, loanRef: ln ? { num: xplNum(ln.loan_number), serial: (lt && lt.serial_number) || '' } : null };
     });
   }).then(function(res) {
@@ -9067,7 +9090,7 @@ function selectCustFromDropdown(custId, ctx) {
     if (c.phone) document.getElementById(cfg.phone).value = c.phone;
   }
   if (cfg.shipping && c.address) document.getElementById(cfg.shipping).value = c.address;
-  if ((ctx || 'j') === 'j') applyDefaultFees();
+  if ((ctx || 'j') === 'j') { applyDefaultFees(); renderJobLoanSection(); }
 }
 
 // ── CUSTOMER ACCOUNT VIEW ─────────────────────────────────────────────────────
