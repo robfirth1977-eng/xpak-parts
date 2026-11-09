@@ -48,6 +48,7 @@
     <button class="view-btn" id="btnBoardView" onclick="setJobView('board')">Board</button>
   </div>
   <button class="btn-add orange" onclick="openNewJobModal()">+ New Service Case</button>
+  <button class="btn-add" onclick="openPartsOnlyJob()" title="Parts sale only - no tool in for service">+ Parts Only</button>
 </div>
 <div id="jobsListSection" style="display:none;padding:0 14px 20px">
   <div class="jobs-filter-bar">
@@ -3402,6 +3403,7 @@ function jobToolLine(j) {
   var tools = j.job_tools || [], t = tools[0] || { machine_id: j.machine_id, serial_number: j.serial_number };
   if (!tools.length && !j.machine_id && !j.serial_number) return '';
   var m = t.machine_id ? machines.find(function(x) { return x.id === t.machine_id; }) : null;
+  if (!m && !t.serial_number) return 'Parts only' + (tools.length > 1 ? ' (+' + (tools.length - 1) + ' more)' : '');
   return (m ? m.name : 'Unknown model') + (t.serial_number ? ' | S/N: ' + t.serial_number : '') + (tools.length > 1 ? ' (+' + (tools.length - 1) + ' more)' : '');
 }
 function jobFaultText(j) { var t = (j.job_tools || [])[0]; return (t && t.fault_type) || j.fault_type || ''; }
@@ -3846,6 +3848,17 @@ function openNewJobModal(skipFocus) {
   var jas = document.getElementById('jobActivitySection'); if(jas) jas.style.display = 'none';
   document.getElementById('jobOverlay').classList.add('show');
   if (!skipFocus) setTimeout(function() { document.getElementById('jCustomer').focus(); }, 100);
+}
+
+// Parts-only job: a normal new job with no tool coming in - no service fee, no loan needed.
+// The blank tool card stays because parts are added through it; Parts Quote ignores tools and fees anyway.
+function openPartsOnlyJob() {
+  openNewJobModal();
+  document.getElementById('jobModalTitle').textContent = 'New Parts Only Job';
+  document.getElementById('jInternalNotes').value = 'PARTS ONLY - no tool in for service.';
+  jobToolsLocal.forEach(function(t) { t._feeTouched = true; t.service_fee = ''; });
+  jobLoanState.noLoanNeeded = true; renderJobLoanSection();
+  renderToolsList(); recalcJobCostSummary();
 }
 
 // Repeat-service shortcut from the Account view: opens a New Job pre-filled with this
