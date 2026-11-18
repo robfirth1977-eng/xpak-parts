@@ -633,3 +633,16 @@ html.light .board-col[data-status="IN WORKSHOP"]{--ch:#763300;--cb:#180a00;--ce:
 html.light .board-col[data-status="WAITING TO BE INVOICED"]{--ch:#004603;--cb:#001003;--ce:#008e27}
 html.light .board-col[data-status="INVOICED AND SENT"]{--ch:#004603;--cb:#001003;--ce:#008e27}
 html.light .board-col[data-status="COMPLETED"]{--ch:#004603;--cb:#001003;--ce:#008e27}
+
+/* Job photos */
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:6px}
+.photo-card{background:#141f2d;border:1px solid #1e3048;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:5px}
+.photo-card img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;cursor:zoom-in;background:#0f1923}
+.photo-cap{width:100%;padding:4px 6px;border-radius:5px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:11px;outline:none}
+.photo-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#8aa8c0}
+.photo-row label{display:flex;gap:4px;align-items:center;cursor:pointer}
+.photo-row button{background:none;border:none;color:#ef4444;font-size:16px;line-height:1;cursor:pointer;padding:0 4px}
+.photo-lightbox{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:zoom-out}
+.photo-lightbox img{max-width:94vw;max-height:84vh;border-radius:6px}
+.photo-lightbox div{color:#e2e8f0;font-size:13px}
+.photo-kind{font-weight:700;letter-spacing:.5px;color:#a78bfa}

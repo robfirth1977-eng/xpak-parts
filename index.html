@@ -905,6 +905,19 @@
       <div class="field full"><label>Customer Notes <span style="font-weight:400;color:#f97316">(printed on the assessment report, parts quote, invoice and agreement report)</span></label><textarea id="jCustomerNotes" placeholder="Anything the customer should see, e.g. Parts supply only..."></textarea></div>
     </div>
 
+    <div class="contacts-section" id="jobPhotosSection" style="display:none">
+      <div class="contacts-section-hdr"><span>Photos <span id="jobPhotoCount" style="font-weight:400;color:#8aa8c0"></span></span></div>
+      <div id="jobPhotoDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:9px 12px;margin-bottom:8px;font-size:12px;color:#8aa8c0;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center"
+        ondragover="event.preventDefault();this.style.borderColor='#00c8e0';this.style.background='rgba(0,200,224,0.08)'"
+        ondragleave="this.style.borderColor='#2a4060';this.style.background=''"
+        ondrop="event.preventDefault();this.style.borderColor='#2a4060';this.style.background='';addJobPhotos(event.dataTransfer.files)">
+        <span>&#128247; Drag photos here to add them to this job</span>
+        <button type="button" class="btn-clear" style="padding:3px 10px;font-size:11px" onclick="document.getElementById('jobPhotoPick').click()">or choose photos</button>
+        <input type="file" id="jobPhotoPick" multiple accept="image/*" style="display:none" onchange="addJobPhotos(this.files);this.value=''">
+      </div>
+      <div id="jobPhotoGrid" class="photo-grid"></div>
+    </div>
+
     <div class="contacts-section" id="jobActivitySection" style="display:none">
       <div class="contacts-section-hdr">
         <span>Activity History</span>
@@ -978,6 +991,19 @@
       <div class="field"><label>Linked Job <span id="lLinkedJobHint" style="font-weight:400;font-size:10px;color:#10b981"></span></label><input id="lLinkedJob" list="lLinkedJobOpts" placeholder="e.g. XPS-008" autocomplete="off" oninput="onLoanJobRefChange(false)" onchange="onLoanJobRefChange(true)"><datalist id="lLinkedJobOpts"></datalist></div>
     </div>
     <div class="field"><label>Notes</label><textarea id="lNotes" placeholder="Any notes about the loan..." style="min-height:60px"></textarea></div>
+    <div class="contacts-section" id="loanPhotosSection" style="display:none">
+      <div class="contacts-section-hdr"><span>Photos <span id="loanPhotoCount" style="font-weight:400;color:#8aa8c0"></span></span></div>
+      <div id="loanPhotoDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:9px 12px;margin-bottom:8px;font-size:12px;color:#8aa8c0;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center"
+        ondragover="event.preventDefault();this.style.borderColor='#00c8e0';this.style.background='rgba(0,200,224,0.08)'"
+        ondragleave="this.style.borderColor='#2a4060';this.style.background=''"
+        ondrop="event.preventDefault();this.style.borderColor='#2a4060';this.style.background='';addLoanPhotos(event.dataTransfer.files, document.getElementById('lPhotoKind').value)">
+        <span>&#128247; Drag photos here</span>
+        <select id="lPhotoKind" style="padding:3px 8px;border-radius:6px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:11px"><option value="out">Out - when it went</option><option value="in">In - when it came back</option></select>
+        <button type="button" class="btn-clear" style="padding:3px 10px;font-size:11px" onclick="document.getElementById('loanPhotoPick').click()">or choose photos</button>
+        <input type="file" id="loanPhotoPick" multiple accept="image/*" style="display:none" onchange="addLoanPhotos(this.files, document.getElementById('lPhotoKind').value);this.value=''">
+      </div>
+      <div id="loanPhotoGrid" class="photo-grid"></div>
+    </div>
     <div id="lReturnSection" style="display:none">
       <div class="section-label">Return</div>
       <div class="g2">
@@ -1898,6 +1924,7 @@ function onLoanJobRefChange(commit) {
 
 function openNewLoanModal(){
   editingLoan=null; document.getElementById('loanModalTitle').textContent='New Loan'; clearLoanForm();
+  _loanPhotos=[]; var lps=document.getElementById('loanPhotosSection'); if(lps) lps.style.display='none';
   document.getElementById('lReturnSection').style.display='none';
   document.getElementById('btnMarkReturned').style.display='none';
   document.getElementById('btnPrintLoanTag').style.display='none';
@@ -1938,6 +1965,7 @@ function openEditLoanModal(loanId){
   document.getElementById('btnDeleteLoan').style.display='block';
   document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
   fillLoanJobOptions(); onLoanJobRefChange(false);
+  document.getElementById('lPhotoKind').value=isR?'in':'out'; _loanPhotos=[]; loadLoanPhotos(l.id);
   document.getElementById('loanOverlay').classList.add('show');
 }
 function closeLoanModal(){document.getElementById('loanOverlay').classList.remove('show');}
@@ -3846,6 +3874,8 @@ function openNewJobModal(skipFocus) {
   refreshJobDatesLine();
   document.getElementById('btnDeleteJob').style.display = 'none';
   var jas = document.getElementById('jobActivitySection'); if(jas) jas.style.display = 'none';
+  var jps = document.getElementById('jobPhotosSection'); if(jps) jps.style.display = 'none';
+  _jobPhotos = [];
   document.getElementById('jobOverlay').classList.add('show');
   if (!skipFocus) setTimeout(function() { document.getElementById('jCustomer').focus(); }, 100);
 }
@@ -3983,6 +4013,7 @@ async function openEditJobModal(jobId) {
   var jobActSec = document.getElementById('jobActivitySection');
   var jobActList = document.getElementById('jobActivityList');
   jobActSec.style.display = 'none'; jobActList.innerHTML = '';
+  loadJobPhotos(j.id);
   db('GET', 'activities?job_id=eq.' + j.id + '&order=activity_date.desc,created_at.desc').then(function(acts) {
     if (acts && acts.length) {
       jobActSec.style.display = 'block';
@@ -5613,6 +5644,9 @@ function renderJobCard(j, tools, jparts) {
 // assessment sections, service fee or labour) for jobs where we're only supplying parts.
 async function generateAssessmentReport(jobId, opts) {
   var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
+  var reportPhotos = [];
+  if (!(opts && opts.partsOnly)) { try { reportPhotos = await getReportPhotos(jobId); } catch (pe) { /* photos are optional */ } }
+  opts = Object.assign({}, opts || {}, { photos: reportPhotos });
   if (!allParts.length) await loadAllParts();
   // Load tools from Supabase then render
   db('GET', 'job_tools?job_id=eq.' + jobId + '&select=*&order=tool_number.asc').then(function(tools) {
@@ -6226,6 +6260,10 @@ function renderAssessmentReport(j, tools, jparts, opts) {
   w.document.write('<div><div class="sig-field"></div><div class="sig-label">Date Authorised</div></div>');
   w.document.write('</div></div>');
 
+  if (!partsOnly && opts && opts.photos && opts.photos.length) {
+    w.document.write('<div style="margin-top:16px;page-break-before:always"><div style="font-size:11pt;font-weight:700;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:10px">PHOTOS</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      opts.photos.map(function(p) { return '<div style="break-inside:avoid"><img src="' + p.url + '" style="width:100%;max-height:95mm;object-fit:contain;border:1px solid #ccc">' + (p.caption ? '<div style="font-size:9pt;color:#444;margin-top:3px">' + _wcEsc(p.caption) + '</div>' : '') + '</div>'; }).join('') + '</div></div>');
+  }
   w.document.write('<div class="footer">X-Pak Global &nbsp;|&nbsp; Service Department &nbsp;|&nbsp; This ' + (partsOnly ? 'quotation' : 'report') + ' is valid for 30 days from the date of issue</div>');
   w.document.write('</body></html>');
   w.document.close();
@@ -9827,6 +9865,138 @@ function _emTrimQuoted(t) {
 }
 function _emFmtDate(d) { return d.toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }); }
 function _emLocalIso(d) { var p = function(n) { return String(n).padStart(2, '0'); }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+
+// ── PHOTOS (jobs and loans) ───────────────────────────────────────
+// Photos live in the private Supabase Storage bucket "job-photos"; the job_photos table has one row per photo,
+// belonging to a job (job_id) or to a loan (loan_id, photo_kind 'out' or 'in').
+// Each photo is shrunk in the browser first (1600px JPEG plus a small thumbnail) so the free 1 GB lasts.
+var JOB_PHOTO_BUCKET = 'job-photos', _jobPhotos = [], _loanPhotos = [], _photoThumbUrls = {};
+function _photoJpeg(file, maxEdge, quality) {
+  return createImageBitmap(file).then(function(bmp) {
+    var sc = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * sc), h = Math.round(bmp.height * sc);
+    var c = document.createElement('canvas'); c.width = w; c.height = h;
+    var ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(bmp, 0, 0, w, h);
+    if (bmp.close) bmp.close();
+    return new Promise(function(res, rej) { c.toBlob(function(b) { if (b) res(b); else rej(new Error('could not convert')); }, 'image/jpeg', quality); });
+  });
+}
+// Shrinks one picture and uploads the full size and the thumbnail; returns the columns for its job_photos row
+async function _uploadPhotoFile(f, folder, n) {
+  var base = folder + '/' + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now() + '_' + n), full, thumb;
+  try { full = await _photoJpeg(f, 1600, 0.8); thumb = await _photoJpeg(f, 360, 0.7); }
+  catch (ce) { throw new Error('this browser could not read the picture' + (/heic|heif/i.test(f.name + f.type) ? ' (HEIC - set the phone camera to "Most Compatible")' : '')); }
+  var up = await _supabase.storage.from(JOB_PHOTO_BUCKET).upload(base + '.jpg', full, { contentType: 'image/jpeg' });
+  if (up.error) throw new Error(up.error.message);
+  var upT = await _supabase.storage.from(JOB_PHOTO_BUCKET).upload(base + '_t.jpg', thumb, { contentType: 'image/jpeg' });
+  if (upT.error) throw new Error(upT.error.message);
+  return { path: base + '.jpg', thumb_path: base + '_t.jpg', size_bytes: full.size + thumb.size };
+}
+async function _addPhotos(fileList, folder, parent, reload) {
+  var files = Array.prototype.slice.call(fileList || []).filter(function(f) { return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(f.name); });
+  if (!files.length) { showToast('Drop photo files (JPG or PNG)', 'error'); return; }
+  var ok = 0, failed = [];
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    try {
+      showToast('Adding photo ' + (i + 1) + ' of ' + files.length + '...');
+      var up = await _uploadPhotoFile(f, folder, i);
+      await db('POST', 'job_photos', Object.assign({ file_name: f.name, include_in_report: false, uploaded_by: (_currentUser && _currentUser.email) || null }, up, parent));
+      ok++;
+    } catch (e) { failed.push(f.name + ' - ' + e.message); }
+  }
+  try { await reload(); } catch (e) { /* grid refresh is cosmetic */ }
+  showToast((ok ? ok + ' photo' + (ok > 1 ? 's' : '') + ' added' : 'No photos added') + (failed.length ? '. Failed: ' + failed.join('; ') : ''), failed.length ? 'error' : undefined);
+}
+function addJobPhotos(fileList) {
+  if (!editingJob) { showToast('Save the job first, then add the photos', 'error'); return; }
+  var id = editingJob.id;
+  return _addPhotos(fileList, id, { job_id: id }, function() { return editingJob && editingJob.id === id ? loadJobPhotos(id) : null; });
+}
+function addLoanPhotos(fileList, kind) {
+  if (!editingLoan) { showToast('Save the loan first, then add the photos', 'error'); return; }
+  var id = editingLoan.id;
+  return _addPhotos(fileList, 'loans/' + id, { loan_id: id, photo_kind: kind || 'out' }, function() { return editingLoan && editingLoan.id === id ? loadLoanPhotos(id) : null; });
+}
+async function _signPhotoThumbs(rows) {
+  _photoThumbUrls = {};
+  var paths = rows.map(function(p) { return p.thumb_path; }).filter(Boolean);
+  if (!paths.length) return;
+  var r = await _supabase.storage.from(JOB_PHOTO_BUCKET).createSignedUrls(paths, 3600);
+  (r.data || []).forEach(function(x) { if (x.signedUrl) _photoThumbUrls[x.path] = x.signedUrl; });
+}
+async function loadJobPhotos(jobId) {
+  var sec = document.getElementById('jobPhotosSection'), grid = document.getElementById('jobPhotoGrid'); if (!sec || !grid) return;
+  sec.style.display = 'block';
+  try { _jobPhotos = await db('GET', 'job_photos?job_id=eq.' + jobId + '&is_deleted=eq.false&order=created_at.asc'); }
+  catch (e) { _jobPhotos = []; grid.innerHTML = '<div style="font-size:12px;color:#f59e0b">Photos are not set up yet - run add_job_photos.sql in Supabase.</div>'; return; }
+  await _signPhotoThumbs(_jobPhotos);
+  renderJobPhotos();
+}
+async function loadLoanPhotos(loanId) {
+  var sec = document.getElementById('loanPhotosSection'), grid = document.getElementById('loanPhotoGrid'); if (!sec || !grid) return;
+  sec.style.display = 'block';
+  try { _loanPhotos = await db('GET', 'job_photos?loan_id=eq.' + loanId + '&is_deleted=eq.false&order=created_at.asc'); }
+  catch (e) { _loanPhotos = []; grid.innerHTML = '<div style="font-size:12px;color:#f59e0b">Loan photos are not set up yet - run add_loan_photos.sql in Supabase.</div>'; return; }
+  await _signPhotoThumbs(_loanPhotos);
+  renderLoanPhotos();
+}
+function _photoCards(rows, forLoan) {
+  return rows.map(function(p) {
+    return '<div class="photo-card">' +
+      '<img src="' + (_photoThumbUrls[p.thumb_path] || '') + '" alt="" onclick="openJobPhoto(\'' + p.id + '\')">' +
+      '<input type="text" class="photo-cap" value="' + _wcEsc(p.caption || '') + '" placeholder="Caption" maxlength="120" onchange="setJobPhotoCaption(\'' + p.id + '\', this.value)">' +
+      '<div class="photo-row">' + (forLoan
+        ? '<span class="photo-kind">' + (p.photo_kind === 'in' ? 'IN' : 'OUT') + '</span>'
+        : '<label><input type="checkbox"' + (p.include_in_report ? ' checked' : '') + ' onchange="setJobPhotoReport(\'' + p.id + '\', this.checked)"> In report</label>') +
+      '<button type="button" title="Remove this photo" onclick="deleteJobPhoto(\'' + p.id + '\')">&times;</button></div></div>';
+  }).join('');
+}
+function renderJobPhotos() {
+  var grid = document.getElementById('jobPhotoGrid'); if (!grid) return;
+  var n = document.getElementById('jobPhotoCount'); if (n) n.textContent = _jobPhotos.length ? '(' + _jobPhotos.length + ')' : '';
+  grid.innerHTML = _jobPhotos.length ? _photoCards(_jobPhotos, false) : '<div style="font-size:12px;color:#5a8090">No photos yet.</div>';
+}
+function renderLoanPhotos() {
+  var grid = document.getElementById('loanPhotoGrid'); if (!grid) return;
+  var n = document.getElementById('loanPhotoCount'); if (n) n.textContent = _loanPhotos.length ? '(' + _loanPhotos.length + ')' : '';
+  grid.innerHTML = _loanPhotos.length ? _photoCards(_loanPhotos, true) : '<div style="font-size:12px;color:#5a8090">No photos yet.</div>';
+}
+function _jobPhoto(id) { return _jobPhotos.concat(_loanPhotos).find(function(x) { return x.id === id; }); }
+async function openJobPhoto(id) {
+  var p = _jobPhoto(id); if (!p) return;
+  var r = await _supabase.storage.from(JOB_PHOTO_BUCKET).createSignedUrl(p.path, 3600);
+  if (r.error || !r.data) { showToast('Could not open the photo', 'error'); return; }
+  var d = document.createElement('div'); d.id = 'photoLightbox'; d.className = 'photo-lightbox';
+  d.onclick = function() { d.remove(); };
+  d.innerHTML = '<img src="' + r.data.signedUrl + '" alt="">' + (p.caption ? '<div>' + _wcEsc(p.caption) + '</div>' : '');
+  document.body.appendChild(d);
+}
+async function setJobPhotoCaption(id, v) {
+  var p = _jobPhoto(id); if (!p) return;
+  try { await db('PATCH', 'job_photos?id=eq.' + id, { caption: v.trim() || null }); p.caption = v.trim() || null; }
+  catch (e) { showToast('Could not save the caption: ' + e.message, 'error'); }
+}
+async function setJobPhotoReport(id, on) {
+  var p = _jobPhoto(id); if (!p) return;
+  try { await db('PATCH', 'job_photos?id=eq.' + id, { include_in_report: !!on }); p.include_in_report = !!on; }
+  catch (e) { showToast('Could not update: ' + e.message, 'error'); renderJobPhotos(); }
+}
+async function deleteJobPhoto(id) {
+  if (!confirm('Remove this photo?')) return;
+  try {
+    await db('PATCH', 'job_photos?id=eq.' + id, { is_deleted: true });
+    _jobPhotos = _jobPhotos.filter(function(x) { return x.id !== id; }); _loanPhotos = _loanPhotos.filter(function(x) { return x.id !== id; });
+    renderJobPhotos(); renderLoanPhotos();
+  } catch (e) { showToast('Could not remove the photo: ' + e.message, 'error'); }
+}
+// Photos ticked "In report" for a job, with temporary links the report window can load
+async function getReportPhotos(jobId) {
+  var rows = await db('GET', 'job_photos?job_id=eq.' + jobId + '&is_deleted=eq.false&include_in_report=eq.true&order=created_at.asc');
+  if (!rows.length) return [];
+  var r = await _supabase.storage.from(JOB_PHOTO_BUCKET).createSignedUrls(rows.map(function(p) { return p.path; }), 3600), url = {};
+  (r.data || []).forEach(function(x) { if (x.signedUrl) url[x.path] = x.signedUrl; });
+  return rows.filter(function(p) { return url[p.path]; }).map(function(p) { return { url: url[p.path], caption: p.caption || '' }; });
+}
 
 async function refreshJobActivityList() {
   if (!editingJob) return;
