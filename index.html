@@ -5345,23 +5345,7 @@ function sendWarrantyClaim(mode) {
   var to = document.getElementById('wcTo').value.trim(), cc = document.getElementById('wcCc').value.trim();
   var subject = document.getElementById('wcSubject').value, body = document.getElementById('wcText').value;
   if (!to) { showToast('Enter the supplier email address first', 'error'); document.getElementById('wcTo').focus(); return; }
-  if (mode === 'web') {
-    var web = 'https://outlook.office.com/mail/deeplink/compose?to=' + encodeURIComponent(to) + (cc ? '&cc=' + encodeURIComponent(cc) : '') + '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-    if (web.length > 7000) { copyWarrantyClaim(); showToast('Long message - copied to the clipboard; paste it into a new Outlook message', 'error'); }
-    else { window.open(web, '_blank'); }
-  } else if (mode === 'eml') {
-    var CRLF = '\r\n';
-    var eml = 'To: ' + to + CRLF + (cc ? 'Cc: ' + cc + CRLF : '') + 'Subject: ' + subject.replace(/[\r\n]+/g, ' ') + CRLF +
-      'X-Unsent: 1' + CRLF + 'MIME-Version: 1.0' + CRLF + 'Content-Type: text/plain; charset=UTF-8' + CRLF + 'Content-Transfer-Encoding: 8bit' + CRLF + CRLF + body.replace(/\r?\n/g, CRLF);
-    var blob = new Blob([eml], { type: 'message/rfc822' });
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (editingJob ? xpsNum(editingJob.job_number) + ' - ' : '') + 'Warranty claim.eml';
-    document.body.appendChild(a); a.click(); setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-    showToast('Saved as ' + a.download + '. Open it (bottom of the browser) to send from Outlook.');
-  } else {
-    var href = 'mailto:' + to + '?' + (cc ? 'cc=' + encodeURIComponent(cc) + '&' : '') + 'subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
-    if (href.length > 1900) { showToast('Long message - use Outlook draft file or Copy text instead', 'error'); return; }
-    window.location.href = href;
-  }
+  openComposedEmail(mode, to, cc, subject, body, (editingJob ? xpsNum(editingJob.job_number) + ' - ' : '') + 'Warranty claim.eml', copyWarrantyClaim);
 }
 
 function renderToolsList() {
@@ -7320,7 +7304,7 @@ function printSvInvoiceNotice() {
   }
   // Open mailto to accounts
   var subject = encodeURIComponent('Invoice Notice — ' + refLabel + ' — ' + customer);
-  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + customer + ' (' + refLabel + ').\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nThanks,\nRob');
+  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + customer + ' (' + refLabel + ').\n\nTotal: ' + fmt(invoiceTotal) + ' ex GST (' + fmt(invoiceTotal+invoiceGST) + ' inc GST)\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nAttached: ' + docTitle(refLabel, 'Invoice Notice', customer) + '.pdf\n\nThanks,\nRob');
   setTimeout(function(){ window.location.href = 'mailto:info@xpak.com.au?subject=' + subject + '&body=' + body; }, 600);
   setTimeout(function(){ w.print(); }, 500);
 }
@@ -9694,7 +9678,7 @@ function renderInvoiceNotice(j, tools, jparts) {
   }
   // Open mailto to accounts
   var subject = encodeURIComponent('Invoice Notice — ' + xpsNum(j.job_number) + ' — ' + (j.customer||''));
-  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + (j.customer||'') + ' (' + xpsNum(j.job_number) + ').\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nThanks,\nRob');
+  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + (j.customer||'') + ' (' + xpsNum(j.job_number) + ').\n\nTotal: ' + fmt(invoiceTotal) + ' ex GST (' + fmt(invoiceTotal+invoiceGST) + ' inc GST)' + (j.order_number ? '\nCustomer order number: ' + j.order_number : '') + '\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nAttached: ' + docTitle(xpsNum(j.job_number), 'Invoice Notice', j.customer) + '.pdf\n\nThanks,\nRob');
   setTimeout(function(){
     window.location.href = 'mailto:info@xpak.com.au?subject=' + subject + '&body=' + body;
   }, 600);
