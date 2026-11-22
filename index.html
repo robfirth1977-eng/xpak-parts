@@ -806,6 +806,7 @@
       <span class="jab-label">Print</span>
       <button class="jab-btn print" data-act="label" onclick="jobAction('label')">&#127991; Bin Label</button>
       <button class="jab-btn print" data-act="card" onclick="jobAction('card')">&#128203; Job Card</button>
+      <button class="jab-btn print" data-act="aform" onclick="jobAction('aform')" title="A4 form to fill in by hand at the bench, then scan">&#128221; Assessment Form</button>
       <span class="jab-sep"></span><span class="jab-label">Reports</span>
       <button class="jab-btn report" data-act="report" onclick="jobAction('report')">&#128196; Report</button>
       <button class="jab-btn report" data-act="partsq" onclick="jobAction('partsq')">&#128178; Parts Quote</button>
@@ -1319,12 +1320,20 @@ function computeJobMilestones(prevJob, newStatus) {
   };
 }
 
+// Full clean, degrease & relube: recommended on the assessment form (cleaning = 'Full clean') and shown
+// as an option on the Assessment Report. It is only charged once the customer approves it, which sets
+// full_clean_fee (default $150). Every total that adds service fees adds this fee too.
+var FULL_CLEAN_FEE = 150;
+function toolFullCleanFee(t) { return parseFloat(t && t.full_clean_fee) || 0; }
+function toolCharges(t) { return (parseFloat(t && t.service_fee) || 0) + toolFullCleanFee(t); }
+function fullCleanOffered(t) { return !!t && t.cleaning === 'Full clean' && !toolFullCleanFee(t); }
+
 // Shared job revenue calc - used by Weekly Report, Board and List views so they never disagree.
 function jobRevenue(j) {
   // Use manually entered invoice_amount if available (from MYOB)
   if (j.invoice_amount) return parseFloat(j.invoice_amount);
   // Fall back to calculated amount from parts/labour
-  var svc = (j.job_tools||[]).reduce(function(s,t){ return s + parseFloat(t.service_fee||0); },0);
+  var svc = (j.job_tools||[]).reduce(function(s,t){ return s + toolCharges(t); },0);
   var pts = (j.job_parts||[]).reduce(function(s,p){ return s + parseFloat(p.unit_price||0) * parseFloat(p.quantity||1); },0);
   var lh  = parseFloat(j.hours_spent||0) * parseFloat(j.labour_rate||120);
   var ld  = parseFloat(j.labour_discount||0);
@@ -3220,6 +3229,7 @@ function recalcJobCostSummary() {
   var fmt = function(n){ return '$'+parseFloat(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}); };
 
   var serviceFeeTotal = jobToolsLocal.reduce(function(s,t){ return s + parseFloat(t.service_fee||0); },0);
+  var fullCleanTotal  = jobToolsLocal.reduce(function(s,t){ return s + toolFullCleanFee(t); },0);
   var partsTotal      = parseFloat(document.getElementById('jParts').value) || 0;
   var hours           = parseFloat(document.getElementById('jHoursSpent').value) || 0;
   var rate             = parseFloat(document.getElementById('jLabourRate').value) || 120;
@@ -3230,11 +3240,12 @@ function recalcJobCostSummary() {
   var labourGross = hours * rate;
   var labourNet   = Math.max(0, labourGross - labourDiscount);
   var partsNet    = Math.max(0, partsTotal - partsDiscount);
-  var totalExGst  = serviceFeeTotal + partsNet + labourNet + freight;
+  var totalExGst  = serviceFeeTotal + fullCleanTotal + partsNet + labourNet + freight;
   var gst         = totalExGst * 0.1;
 
   var rows = '';
   if (serviceFeeTotal) rows += '<div class="jcs-row"><span>Service Fee</span><span>'+fmt(serviceFeeTotal)+'</span></div>';
+  if (fullCleanTotal) rows += '<div class="jcs-row"><span>Full Clean &amp; Relube</span><span>'+fmt(fullCleanTotal)+'</span></div>';
   if (partsTotal) {
     rows += '<div class="jcs-row"><span>Parts</span><span>'+fmt(partsTotal)+'</span></div>';
     if (partsDiscount > 0) {
@@ -3824,7 +3835,7 @@ function refreshJobDatesLine() {
   el.innerHTML = 'Received <strong style="color:#e2e8f0">' + _fmtDay(document.getElementById('jReceived').value) + '</strong> &nbsp;·&nbsp; Completed <strong style="color:#e2e8f0">' + _fmtDay(document.getElementById('jCompleted').value) + '</strong> &nbsp;·&nbsp; Last activity <strong style="color:#e2e8f0">' + act + '</strong>';
 }
 // Action strip at the top of the open job: shown for saved jobs, highlights the usual next step for the status
-var JOB_NEXT_ACTION = { 'NEW JOB': 'label', 'WAITING FOR TOOLS': 'label', 'AWAITING ASSESSMENT': 'email', 'AWAITING SUPPLIER QUOTE': 'order', 'AWAITING REP APPROVAL': 'email',
+var JOB_NEXT_ACTION = { 'NEW JOB': 'label', 'WAITING FOR TOOLS': 'label', 'AWAITING ASSESSMENT': 'aform', 'AWAITING SUPPLIER QUOTE': 'order', 'AWAITING REP APPROVAL': 'email',
   'QUOTED - AWAITING APPROVAL': 'email', 'WAITING ON PARTS': 'order', 'IN WORKSHOP': 'card', 'WAITING TO BE INVOICED': 'invoice' };
 var _jobSig = '';
 // Fingerprint of everything on the open job form, to tell whether there are unsaved changes
@@ -3851,6 +3862,7 @@ async function jobAction(kind) {
   }
   if (kind === 'label') printCaseLabel(id);
   else if (kind === 'card') printJobCard(id);
+  else if (kind === 'aform') printAssessmentForm(id);
   else if (kind === 'report') generateAssessmentReport(id);
   else if (kind === 'partsq') generateAssessmentReport(id, { partsOnly: true });
   else if (kind === 'email') openReportEmail(id);
@@ -4323,7 +4335,7 @@ async function saveJob() {
     await db('DELETE', 'job_tools?job_id=eq.' + savedJob.id);
     for (var ti = 0; ti < jobToolsLocal.length; ti++) {
       var jt = jobToolsLocal[ti];
-      var jtRes = await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: normSerial(jt.serial_number) || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, warranty_claim: !!jt.warranty_claim, warranty_reason: jt.warranty_reason || null, customer_environment: jt.customer_environment || null, tension_setting: jt.tension_setting || null, strap_size: jt.strap_size || null, weld_time: jt.weld_time || null, service_fee: parseFloat(jt.service_fee)||null, updated_at: new Date().toISOString() });
+      var jtRes = await db('POST', 'job_tools', { job_id: savedJob.id, tool_number: jt.tool_number, machine_id: jt.machine_id || null, serial_number: normSerial(jt.serial_number) || null, fault_type: jt.fault_type || null, error_code: jt.error_code || null, cycle_count: jt.cycle_count ? parseInt(jt.cycle_count) : null, customer_issue: jt.customer_issue || null, workshop_notes: jt.workshop_notes || null, diagnosis: jt.diagnosis || null, recommendation: jt.recommendation || null, work_completed: jt.work_completed || null, date_of_manufacture: jt.date_of_manufacture || null, warranty_period: jt.warranty_period || null, warranty_claim: !!jt.warranty_claim, warranty_reason: jt.warranty_reason || null, customer_environment: jt.customer_environment || null, tension_setting: jt.tension_setting || null, strap_size: jt.strap_size || null, weld_time: jt.weld_time || null, service_fee: parseFloat(jt.service_fee)||null, tool_condition: jt.tool_condition || null, cleaning: jt.cleaning || null, full_clean_fee: parseFloat(jt.full_clean_fee)||null, final_test: jt.final_test || null, photo_evidence: jt.photo_evidence || null, next_service_parts: jt.next_service_parts || null, updated_at: new Date().toISOString() });
       // Every save deletes+recreates this row with a fresh id - keep _existingId in sync so
       // anything referencing it later in the same session (e.g. Split Job) targets the row
       // that actually exists, not the one that was just deleted.
@@ -5105,6 +5117,100 @@ function printCaseLabel(jobId) {
   }).catch(function() { showToast('Could not load tool details', 'error'); });
 }
 
+// ── ASSESSMENT FORM (paper, filled in by hand at the bench, then scanned and loaded back in) ──
+// One A4 page per tool. Wear parts come from part_machines where is_wear_part is ticked, in wear_order.
+// The parts table always has 15 rows: the wear parts first, then blank "other parts" lines.
+var AFORM_PART_ROWS = 15;
+async function printAssessmentForm(jobId) {
+  var j = jobs.find(function(x) { return x.id === jobId; }); if (!j) return;
+  var w = window.open('', '_blank');
+  if (!w) { showToast('Allow pop-ups to print the assessment form', 'error'); return; }
+  w.document.write('<p style="font-family:Arial;padding:20px">Preparing assessment form...</p>');
+  try {
+    var tools = await db('GET', 'job_tools?job_id=eq.' + jobId + '&select=*&order=tool_number.asc');
+    if (!tools.length) tools = [{ tool_number: 1, machine_id: j.machine_id || null, serial_number: j.serial_number || '', customer_issue: j.customer_issue || '' }];
+    var wear = {};
+    var mids = tools.map(function(t) { return t.machine_id; }).filter(function(m, i, a) { return m && a.indexOf(m) === i; });
+    for (var i = 0; i < mids.length; i++) {
+      var rows = await db('GET', 'part_machines?machine_id=eq.' + mids[i] + '&is_wear_part=eq.true&select=wear_order,parts(key_no,description,is_deleted)&order=wear_order.asc.nullslast');
+      wear[mids[i]] = rows.filter(function(r) { return r.parts && r.parts.is_deleted !== true; }).map(function(r) { return r.parts; });
+    }
+    w.document.open();
+    w.document.write(buildAssessmentFormHtml(j, tools, wear));
+    w.document.close();
+    setTimeout(function() { w.focus(); w.print(); }, 400);
+  } catch (e) {
+    w.close();
+    showToast('Could not prepare the assessment form: ' + e.message, 'error');
+  }
+}
+function buildAssessmentFormHtml(j, tools, wear) {
+  var e = _wcEsc, xps = xpsNum(j.job_number);
+  var rec = j.received_at ? j.received_at.slice(0, 10).split('-').reverse().join('/') : '';
+  var ck = '<span class="ck"></span>';
+  function opt(label) { return '<span class="opt">' + ck + label + '</span>'; }
+  function box(label, unit) { return '<div class="box"><span class="lbl">' + label + '</span><span class="write"></span>' + (unit ? '<span class="unit">' + unit + '</span>' : '') + '</div>'; }
+  function lines(n) { var s = ''; for (var i = 0; i < n; i++) s += '<div class="line"></div>'; return s; }
+  var pages = tools.map(function(t) {
+    var m = machines.find(function(x) { return x.id === t.machine_id; });
+    var wp = (t.machine_id && wear[t.machine_id]) || [];
+    var issue = (t.customer_issue || '').replace(/\s+/g, ' ').trim();
+    if (issue.length > 220) issue = issue.slice(0, 217) + '...';
+    var partRows = wp.map(function(p) {
+      return '<tr><td class="pn">' + e(p.key_no) + '</td><td>' + e(p.description) + '</td><td class="c">' + ck + '</td><td class="c">' + ck + '</td><td class="c">' + ck + '</td><td class="c"><span class="qty"></span></td></tr>';
+    }).join('');
+    var blanks = Math.max(3, AFORM_PART_ROWS - wp.length), blankRows = '';
+    for (var b = 0; b < blanks; b++) blankRows += '<tr><td class="blank"></td><td class="blank"></td><td class="c blank">' + ck + '</td><td class="c blank">' + ck + '</td><td class="c blank"></td><td class="c blank"><span class="qty"></span></td></tr>';
+    return '<div class="page">' +
+      '<div class="hdr"><div class="logo">X-PAK<span>SERVICE</span></div><div class="title">SERVICE ASSESSMENT<small>Fill in by hand - scan when done</small></div>' +
+        '<div class="xps"><b>' + xps + '</b><i>Tool ' + t.tool_number + ' of ' + tools.length + '</i></div></div>' +
+      '<div class="info">' +
+        '<div><span class="lbl">Customer</span><span class="val">' + e(j.customer) + '</span></div>' +
+        '<div><span class="lbl">Model</span><span class="val">' + e(m ? m.name : '') + '</span></div>' +
+        '<div><span class="lbl">Serial No.</span><span class="val">' + e(t.serial_number) + '</span></div>' +
+        '<div><span class="lbl">Received</span><span class="val">' + rec + '</span></div>' +
+        '<div class="full"><span class="lbl">Customer reported issue</span><span class="val" style="font-weight:400">' + e(issue) + '</span></div>' +
+      '</div>' +
+      '<h2>1. Readings</h2><div class="readings">' + box('Error code') + box('Cycle count') + box('Date of manuf.', 'MM/YY') + box('Tension') + box('Weld time') + box('Strap size', 'mm') + '</div>' +
+      '<div class="linelbl" style="margin-top:1.5mm"><span class="lbl">Fault type</span><span class="line"></span></div>' +
+      '<div class="opts" style="margin-top:2mm"><span class="grp">Condition</span>' + opt('Well looked after') + opt('Fair') + opt('Poor / neglected') + '</div>' +
+      '<div class="opts"><span class="grp">Cleaning</span>' + opt('Blow out only') + opt('Full clean, degrease &amp; relube <b style="font-size:7.5pt">(2-3 hrs - $' + FULL_CLEAN_FEE + ' option)</b>') + '</div>' +
+      '<h2>2. Diagnosis / Findings</h2>' + lines(3) +
+      '<h2>3. Wear parts</h2><table><thead><tr><th>Part no.</th><th>Description</th><th class="c">Replace now</th><th class="c">Next service</th><th class="c">Not required</th><th class="c">Qty</th></tr></thead><tbody>' +
+        partRows +
+        '<tr><td colspan="6" class="sub">' + (wp.length ? 'Other parts (write part no.)' : 'Parts (no wear list set up for this model yet - write part no.)') + '</td></tr>' +
+        blankRows + '</tbody></table>' +
+      '<h2>4. Outcome</h2>' +
+      '<div class="opts"><span class="grp">Recommendation</span>' + opt('Repair') + opt('Repair not required') + opt('Repair declined') + opt('Written off') + '</div>' +
+      '<div class="opts"><span class="grp">Warranty claim</span>' + opt('Yes') + opt('No') + '<span class="grp" style="margin-left:8mm">Photo evidence</span>' + opt('Taken') + opt('Not needed') + '</div>' +
+      '<div class="linelbl"><span class="lbl">Recommendation notes</span><span class="line"></span></div>' +
+      '<h2>5. Work completed</h2>' + lines(3) +
+      '<div class="opts" style="margin-top:2mm"><span class="grp">Final test</span>' + opt('Pass') + opt('Fail') + '<span class="box" style="margin-left:8mm;width:48mm"><span class="lbl">Hours spent</span><span class="write"></span></span></div>' +
+      '<div class="foot"><div class="linelbl"><span class="lbl">Technician</span><span class="line"></span></div><div class="linelbl"><span class="lbl">Date</span><span class="line"></span></div><div class="linelbl"><span class="lbl">Signature</span><span class="line"></span></div></div>' +
+      '<div class="note">Tick one box per part. "Replace now" parts are added to the job. "Next service" parts are noted against this serial number.</div>' +
+    '</div>';
+  }).join('');
+  var css = '@page{size:A4;margin:10mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#000;font-size:9.5pt;background:#fff}' +
+    '.page{width:190mm;page-break-after:always;break-after:page}.page:last-child{page-break-after:auto;break-after:auto}' +
+    '@media screen{body{background:#888}.page{width:210mm;min-height:297mm;margin:6mm auto;padding:10mm;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.4)}}' +
+    '.hdr{display:flex;align-items:stretch;justify-content:space-between;border-bottom:.6mm solid #000;padding-bottom:2mm;margin-bottom:2.5mm}' +
+    '.logo{font-weight:900;font-size:20pt;letter-spacing:.5px;line-height:1}.logo span{font-weight:400;letter-spacing:3px;font-size:13pt;display:block;margin-top:1mm}' +
+    '.title{align-self:center;text-align:center;font-size:13pt;font-weight:900;letter-spacing:1px}.title small{display:block;font-size:8pt;font-weight:400;letter-spacing:0;margin-top:1mm}' +
+    '.xps{border:.8mm solid #000;padding:1.5mm 4mm;text-align:center;min-width:42mm}.xps b{display:block;font-size:22pt;font-family:"Courier New",monospace;letter-spacing:1px}.xps i{font-style:normal;font-size:9pt;font-weight:700}' +
+    '.info{display:grid;grid-template-columns:1.4fr 1fr 1fr .8fr;border:.3mm solid #000;margin-bottom:3mm}.info div{padding:1.2mm 2mm;border-right:.3mm solid #000}.info div:last-child{border-right:none}.info .full{grid-column:1/-1;border-top:.3mm solid #000;border-right:none}' +
+    '.lbl{display:block;font-size:6.5pt;text-transform:uppercase;color:#444;letter-spacing:.3px}.val{font-size:10pt;font-weight:700}' +
+    'h2{font-size:9pt;text-transform:uppercase;letter-spacing:.6px;background:#000;color:#fff;padding:.6mm 2mm;margin:1.8mm 0 .8mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.readings{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5mm 4mm}.box{display:flex;align-items:flex-end;gap:2mm}.box .lbl{white-space:nowrap;font-size:7pt;color:#000;padding-bottom:.6mm}.box .write{flex:1;height:6mm;border:.3mm solid #000}.box .unit{font-size:7pt;padding-bottom:.6mm}' +
+    '.line{border-bottom:.3mm solid #000;height:5.8mm}.linelbl{display:flex;align-items:flex-end;gap:2mm}.linelbl .lbl{white-space:nowrap;font-size:7pt;color:#000;padding-bottom:.6mm}.linelbl .line{flex:1}' +
+    'table{width:100%;border-collapse:collapse}th{font-size:6.8pt;text-transform:uppercase;text-align:left;border-bottom:.4mm solid #000;padding:.6mm 1mm}th.c,td.c{text-align:center}' +
+    'td{border-bottom:.2mm solid #999;padding:0 1mm;height:5.2mm;font-size:8.5pt}td.pn{font-family:"Courier New",monospace;font-weight:700;width:27mm}td.blank{border-bottom:.3mm solid #000}' +
+    'td.sub{font-size:6.8pt;font-weight:700;text-transform:uppercase;border-bottom:.4mm solid #000;padding-top:1.5mm;height:auto}' +
+    '.ck{display:inline-block;width:4.2mm;height:4.2mm;border:.35mm solid #000;vertical-align:middle}.qty{display:inline-block;width:9mm;height:5mm;border:.3mm solid #000;vertical-align:middle}' +
+    '.opts{display:flex;flex-wrap:wrap;gap:1.5mm 6mm;align-items:center;margin:.8mm 0}.opts .grp{font-size:7pt;font-weight:700;text-transform:uppercase;min-width:26mm}.opt{display:inline-flex;align-items:center;gap:1.5mm;font-size:9pt}' +
+    '.foot{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:6mm;margin-top:2mm}.note{font-size:6.8pt;color:#444;margin-top:1.2mm;text-align:center}';
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + docTitle(xps, 'Assessment Form', j.customer) + '</title><style>' + css + '</style></head><body>' + pages + '</body></html>';
+}
+
 // ── MULTI-TOOL MANAGEMENT ─────────────────────────────────────────
 
 var FAULT_OPTIONS = ['Feeding Issue','Tensioning Issue','Welding Issue','Cutting Issue','Battery / Power Issue','Electrical Fault','Machine Gunning','Error Code Showing','Jammed / Seized','Motor / Gearbox Issue','Physical Damage','Misuse','Routine Service'];
@@ -5280,6 +5386,7 @@ function setToolField(tempId, field, val) {
   if (!t) return;
   t[field] = val;
   if (field === 'service_fee') { t._feeTouched = true; t._feeAuto = false; recalcJobCostSummary(); }
+  if (field === 'full_clean_fee') recalcJobCostSummary();
   // When machine changes, update work_completed if still a default value
   if (field === 'machine_id') {
     var powered = getDefaultWorkCompleted('');
@@ -5294,6 +5401,30 @@ function setToolField(tempId, field, val) {
 var WARRANTY_CLAIM_TO = 'brenton.emery@cyklop.com.au';
 var WARRANTY_CLAIM_CC = 'tony.ash@cyklop.com.au';
 function _wcEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+// Fields from the paper assessment form: condition, cleaning (with the optional $150 full clean),
+// final test, and wear parts marked "Next service".
+function assessmentFieldsBlock(t) {
+  var id = t._tempId;
+  var inp = 'width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none';
+  function sel(field, label, opts) {
+    return '<div class="field"><label>' + label + '</label><select onchange="setToolField(\'' + id + '\',\'' + field + '\',this.value);renderToolsList()" style="' + inp + '">' +
+      '<option value="">-- Not recorded --</option>' + opts.map(function(o) { return '<option' + (t[field] === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select></div>';
+  }
+  var fc = t.cleaning === 'Full clean', approved = toolFullCleanFee(t) > 0;
+  return sel('tool_condition', 'Condition', ['Well looked after', 'Fair', 'Poor / neglected']) +
+    sel('cleaning', 'Cleaning', ['Blow out only', 'Full clean']) +
+    (fc ? '<div class="field full" style="border:1px solid ' + (approved ? '#10b981' : '#f59e0b') + ';border-radius:8px;padding:8px 10px">' +
+      '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;color:' + (approved ? '#10b981' : '#f59e0b') + ';font-weight:700;margin:0">' +
+      '<input type="checkbox"' + (approved ? ' checked' : '') + ' onchange="setToolField(\'' + id + '\',\'full_clean_fee\',this.checked?' + FULL_CLEAN_FEE + ':null);renderToolsList()" style="accent-color:#10b981;cursor:pointer"> ' +
+      (approved ? 'Full clean approved by customer - charged' : 'Full clean, degrease &amp; relube offered as an option ($' + FULL_CLEAN_FEE + ') - tick when the customer approves') + '</label>' +
+      (approved ? '<div style="display:flex;gap:8px;align-items:center;margin-top:6px"><span style="font-size:12px;color:#8aa8c0">Fee $</span><input type="number" step="0.01" min="0" value="' + toolFullCleanFee(t) + '" oninput="setToolField(\'' + id + '\',\'full_clean_fee\',this.value)" style="' + inp + ';width:110px"></div>' : '') +
+      '</div>' : '') +
+    sel('final_test', 'Final test', ['Pass', 'Fail']) +
+    '<div class="field"><label>Photo evidence</label><select onchange="setToolField(\'' + id + '\',\'photo_evidence\',this.value)" style="' + inp + '"><option value="">-- Not recorded --</option>' +
+      ['Taken', 'Not needed'].map(function(o) { return '<option' + (t.photo_evidence === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field full"><label>Wear parts due next service</label><textarea oninput="setToolField(\'' + id + '\',\'next_service_parts\',this.value)" placeholder="Filled in from the assessment form, e.g. H46-10700 Tensioning Wheel A" style="' + inp + ';font-family:inherit;resize:vertical;min-height:38px">' + _wcEsc(t.next_service_parts) + '</textarea></div>';
+}
+
 function warrantyClaimBlock(t) {
   var on = !!t.warranty_claim, id = t._tempId;
   var inp = 'width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none';
@@ -5383,6 +5514,7 @@ function renderToolsList() {
         '<div class="field"><label>Fault Type</label><input value="' + (t.fault_type||'') + '" list="fltOpts_' + t._tempId + '" placeholder="Select or type..." oninput="setToolField(\'' + t._tempId + '\',\'fault_type\',this.value)" autocomplete="off" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"><datalist id="fltOpts_' + t._tempId + '">' + FAULT_OPTIONS.map(function(f){return'<option value="'+f+'">';}).join('') + '</datalist></div>' +
         '<div class="field"><label>Error Code</label><input value="' + (t.error_code||'') + '" placeholder="e.g. E.2" oninput="setToolField(\'' + t._tempId + '\',\'error_code\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
         '<div class="field"><label>Cycle Count</label><input type="number" value="' + (t.cycle_count||'') + '" placeholder="e.g. 16835" min="0" oninput="setToolField(\'' + t._tempId + '\',\'cycle_count\',this.value)" style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none"></div>' +
+        assessmentFieldsBlock(t) +
         warrantyClaimBlock(t) +
         '<div class="field full"><label>Customer Reported Issue</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'customer_issue\',this.value)" placeholder="What the customer reported..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.customer_issue||'') + '</textarea></div>' +
         '<div class="field full"><label>Diagnosis / Findings</label><textarea oninput="setToolField(\'' + t._tempId + '\',\'diagnosis\',this.value)" placeholder="Technical findings from assessment..." style="width:100%;padding:8px 11px;border-radius:8px;border:1px solid #2a4060;background:#0f1923;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical;min-height:55px">' + (t.diagnosis||'') + '</textarea></div>' +
@@ -5661,7 +5793,7 @@ function reportEmailTotal(j, tools, jparts, partsOnly) {
     var sell = p.unit_price != null ? parseFloat(p.unit_price) : (pd && pd.sell_price ? parseFloat(pd.sell_price) : 0);
     return sum + sell * (p.quantity || 1);
   }, 0);
-  var fee = partsOnly ? 0 : tools.filter(function(t) { return !_rpNoRepair(t); }).reduce(function(s, t) { return s + (parseFloat(t.service_fee) || 0); }, 0);
+  var fee = partsOnly ? 0 : tools.filter(function(t) { return !_rpNoRepair(t); }).reduce(function(s, t) { return s + toolCharges(t); }, 0);
   var lab = partsOnly ? 0 : Math.max(0, (parseFloat(j.hours_spent) || 0) * (parseFloat(j.labour_rate) || 120) - (parseFloat(j.labour_discount) || 0));
   return fee + Math.max(0, partsTotal - (parseFloat(j.parts_discount) || 0)) + lab + (parseFloat(j.freight_cost) || 0);
 }
@@ -5788,7 +5920,7 @@ function jobValueTba(j) {
     if (!(sell > 0)) tba = true;
     return sum + sell * (p.quantity || 1);
   }, 0);
-  var fee = tools.filter(function(t) { return !_rpNoRepair(t); }).reduce(function(s, t) { return s + (parseFloat(t.service_fee) || 0); }, 0);
+  var fee = tools.filter(function(t) { return !_rpNoRepair(t); }).reduce(function(s, t) { return s + toolCharges(t); }, 0);
   var lab = Math.max(0, (parseFloat(j.hours_spent) || 0) * (parseFloat(j.labour_rate) || 120) - (parseFloat(j.labour_discount) || 0));
   var total = fee + Math.max(0, partsTotal - (parseFloat(j.parts_discount) || 0)) + lab + (parseFloat(j.freight_cost) || 0);
   if (j.invoice_amount && parseFloat(j.invoice_amount) > 0) { total = parseFloat(j.invoice_amount); tba = false; }
@@ -6098,6 +6230,8 @@ function renderAssessmentReport(j, tools, jparts, opts) {
       (t.recommendation ? '<div class="field-block"' + (noRepair ? ' style="background:#fef3cd"' : '') + '><div class="field-label" ' + (noRepair ? 'style="color:#e87722"' : '') + '>Recommendation</div><div class="field-val">' + t.recommendation.split('\n').join('<br>') + '</div></div>' : '') +
       '<div class="field-block"><div class="field-label">Parts Required' + partsHeaderNote + '</div>' + partsTable + '</div>' +
       (!noRepair && t.service_fee ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Service Fee</div><div class="field-val" style="color:#f97316;font-weight:700">$' + parseFloat(t.service_fee).toFixed(2) + '</div></div>' : '') +
+      (!noRepair && toolFullCleanFee(t) ? '<div class="field-block" style="background:#fff8f0"><div class="field-label" style="color:#f97316">Full Clean, Degrease &amp; Relube</div><div class="field-val" style="color:#f97316;font-weight:700">$' + toolFullCleanFee(t).toFixed(2) + '</div></div>' : '') +
+      (!noRepair && !partsOnly && fullCleanOffered(t) ? '<div class="field-block" style="background:#f0f7ff;border-top:1px dashed #1e3799"><div class="field-label">Optional Extra - not included in the total</div><div class="field-val">' + (t.tool_condition === 'Poor / neglected' ? 'This tool is heavily soiled. ' : '') + 'We recommend a <strong>full clean, degrease and relube</strong> (2-3 hours) to extend the life of the tool: <strong>$' + FULL_CLEAN_FEE.toFixed(2) + ' ex GST</strong>. Please tick the option in the approval section below if you would like this done.</div></div>' : '') +
       '</div>';
   }).join('');
 
@@ -6134,7 +6268,9 @@ function renderAssessmentReport(j, tools, jparts, opts) {
   var billableParts = partsOnly ? jparts : jparts.filter(function(p){ return billableToolNums.indexOf(p.tool_number||1) !== -1; });
   var partsTotal = billableParts.reduce(function(sum, p) { var pd2 = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null; var stdSell2 = pd2&&pd2.sell_price ? parseFloat(pd2.sell_price) : 0; var sell2 = p.unit_price != null ? parseFloat(p.unit_price) : stdSell2; return sum + (sell2 * (p.quantity||1)); }, 0);
   var serviceFeeTotal = partsOnly ? 0 : tools.filter(function(t){ return !isNoRepairTool(t); }).reduce(function(sum, t) { return sum + (parseFloat(t.service_fee)||0); }, 0);
-  var grandTotal = partsTotal + serviceFeeTotal;
+  var fullCleanTotal = partsOnly ? 0 : tools.filter(function(t){ return !isNoRepairTool(t); }).reduce(function(sum, t) { return sum + toolFullCleanFee(t); }, 0);
+  var fullCleanOptionTools = partsOnly ? [] : tools.filter(function(t){ return !isNoRepairTool(t) && fullCleanOffered(t); });
+  var grandTotal = partsTotal + serviceFeeTotal + fullCleanTotal;
 
   var w = window.open('', '_blank');
   // Title (= default PDF file name): job number first, then the document type, then the customer
@@ -6207,11 +6343,12 @@ function renderAssessmentReport(j, tools, jparts, opts) {
   var labourGross    = labourHours * labourRate;
   var labourNet      = Math.max(0, labourGross - labourDiscount);
   var partsNet       = Math.max(0, partsTotal - partsDiscount);
-  var reportTotal    = serviceFeeTotal + partsNet + labourNet + freightCost;
+  var reportTotal    = serviceFeeTotal + fullCleanTotal + partsNet + labourNet + freightCost;
 
   if (reportTotal > 0 || serviceFeeTotal > 0 || partsTotal > 0) {
     w.document.write('<div class="totals-box"><table style="width:auto;margin-left:auto;min-width:320px">');
     if (serviceFeeTotal > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Service Fee</td><td style="text-align:right;font-family:monospace">$' + serviceFeeTotal.toFixed(2) + '</td></tr>');
+    if (fullCleanTotal > 0) w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Full Clean, Degrease &amp; Relube</td><td style="text-align:right;font-family:monospace">$' + fullCleanTotal.toFixed(2) + '</td></tr>');
     if (partsTotal > 0) {
       w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#555">Parts</td><td style="text-align:right;font-family:monospace">$' + partsTotal.toFixed(2) + '</td></tr>');
       if (partsDiscount > 0) {
@@ -6230,12 +6367,16 @@ function renderAssessmentReport(j, tools, jparts, opts) {
     w.document.write('<tr class="total-row"><td style="text-align:right;padding-right:20px">Total (ex GST)</td><td style="text-align:right;font-family:monospace">$' + reportTotal.toFixed(2) + '</td></tr>');
     w.document.write('<tr><td style="text-align:right;padding-right:20px;color:#888">GST (10%)</td><td style="text-align:right;font-family:monospace;color:#888">$' + (reportTotal * 0.1).toFixed(2) + '</td></tr>');
     w.document.write('<tr><td style="text-align:right;padding-right:20px;font-weight:700">Total (inc GST)</td><td style="text-align:right;font-family:monospace;font-weight:700">$' + (reportTotal * 1.1).toFixed(2) + '</td></tr>');
-    w.document.write('</table></div><div class="gst-note">All prices ex GST unless stated</div>');
+    w.document.write('</table></div><div class="gst-note">All prices ex GST unless stated' + (fullCleanOptionTools.length ? '. Optional full clean not included.' : '') + '</div>');
   }
 
   // Approval
   w.document.write('<div class="approval-box"><h3>Customer Approval</h3>');
   w.document.write('<p style="font-size:10.5pt;color:#444">I/We hereby authorise X-Pak Global to ' + (partsOnly ? 'supply the parts as detailed in this quotation.' : 'proceed with the recommended work and parts as detailed in this report.') + '</p>');
+  if (fullCleanOptionTools.length) {
+    w.document.write('<div style="border:1px solid #1e379940;border-radius:6px;padding:8px 12px;margin-top:12px;font-size:10.5pt"><strong style="color:#1e3799">Optional full clean, degrease &amp; relube</strong> - $' + FULL_CLEAN_FEE.toFixed(2) + ' ex GST per tool' +
+      fullCleanOptionTools.map(function(t) { var mn = mLookup(t.machine_id); return '<div style="margin-top:6px">' + (fullCleanOptionTools.length > 1 || tools.length > 1 ? 'Tool ' + t.tool_number + (mn ? ' - ' + mn : '') + (t.serial_number ? ' (S/N ' + t.serial_number + ')' : '') + ': &nbsp;' : '') + '<span style="display:inline-block;width:12px;height:12px;border:1.5px solid #333;vertical-align:middle"></span> Yes, please &nbsp;&nbsp; <span style="display:inline-block;width:12px;height:12px;border:1.5px solid #333;vertical-align:middle"></span> No thanks</div>'; }).join('') + '</div>');
+  }
   w.document.write('<div style="background:#fff8f0;border:1px solid #f9731660;border-radius:6px;padding:8px 12px;margin-top:12px"><span style="font-size:10.5pt;font-weight:700;color:#f97316">Please provide a Purchase Order / Order Number with your reply.</span>' + (j.order_number ? ' <span style="font-size:10pt;color:#444">(on file: <strong>' + j.order_number + '</strong>)</span>' : '') + '</div>');
   w.document.write('<div class="sig-row">');
   w.document.write('<div><div class="sig-field"></div><div class="sig-label">Authorised Signature</div></div>');
@@ -9570,6 +9711,7 @@ function renderInvoiceNotice(j, tools, jparts) {
 
   // Calculate totals
   var serviceFeeTotal = tools.reduce(function(s,t){ return s+parseFloat(t.service_fee||0); },0);
+  var fullCleanTotal = tools.reduce(function(s,t){ return s+toolFullCleanFee(t); },0);
   var partsTotal = jparts.reduce(function(s,p){
     var pd = p.part_id ? allParts.find(function(x){return x.id===p.part_id;}) : null;
     var stdSell = pd && pd.sell_price ? parseFloat(pd.sell_price) : 0;
@@ -9595,7 +9737,7 @@ function renderInvoiceNotice(j, tools, jparts) {
     return '<div style="margin-bottom:12px;padding:10px 12px;background:#f8fafc;border-radius:6px;border-left:3px solid #10b981">' +
       '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">' +
         '<span style="font-weight:700;font-size:11pt">'+mName+(t.serial_number?' <span style="font-weight:400;font-size:9pt;color:#555">S/N: '+t.serial_number+'</span>':'')+'</span>' +
-        (t.service_fee ? '<span style="font-weight:700;color:#1e3799">Service Fee: '+fmt(t.service_fee)+'</span>' : '') +
+        (t.service_fee || toolFullCleanFee(t) ? '<span style="font-weight:700;color:#1e3799">' + (t.service_fee ? 'Service Fee: '+fmt(t.service_fee) : '') + (toolFullCleanFee(t) ? (t.service_fee ? ' &nbsp;+&nbsp; ' : '') + 'Full Clean: '+fmt(toolFullCleanFee(t)) : '') + '</span>' : '') +
       '</div>' +
       (workDone ? '<div style="font-size:9pt;color:#333;margin-bottom:4px">'+workDone+'</div>' : '') +
       partsRows +
@@ -9642,10 +9784,11 @@ function renderInvoiceNotice(j, tools, jparts) {
   var labourGross2    = labourHours2 * labourRate2;
   var labourNet2      = Math.max(0, labourGross2 - labourDiscount2);
   var partsNet2       = Math.max(0, partsTotal - partsDiscount2);
-  var invoiceTotal    = serviceFeeTotal + partsNet2 + labourNet2 + freightCost2;
+  var invoiceTotal    = serviceFeeTotal + fullCleanTotal + partsNet2 + labourNet2 + freightCost2;
   var invoiceGST      = invoiceTotal * 0.1;
 
   if (serviceFeeTotal) w.document.write('<div class="tot-row"><span>Service Fee</span><span>'+fmt(serviceFeeTotal)+'</span></div>');
+  if (fullCleanTotal) w.document.write('<div class="tot-row"><span>Full Clean &amp; Relube</span><span>'+fmt(fullCleanTotal)+'</span></div>');
   if (partsTotal) {
     w.document.write('<div class="tot-row"><span>Parts</span><span>'+fmt(partsTotal)+'</span></div>');
     if (partsDiscount2 > 0) {
