@@ -313,7 +313,7 @@
   <div class="modal" style="border-top:3px solid #3b82f6;max-width:760px;width:96%;border-radius:12px">
     <div class="modal-header"><div class="modal-title">Email report for approval</div><button class="modal-close" onclick="closeReportEmail()">x</button></div>
     <div class="g2">
-      <div class="field"><label>Report</label><select id="rpType" onchange="rebuildReportEmail()"><option value="report">Assessment / Service Report</option><option value="parts">Parts Quote</option><option value="quote">Supplier quote request</option></select></div>
+      <div class="field"><label>Report</label><select id="rpType" onchange="rebuildReportEmail()"><option value="report">Assessment / Service Report</option><option value="parts">Parts Quote</option><option value="quote">Supplier quote request</option><option value="invoice">Invoice notice</option></select></div>
       <div class="field"><label>After sending, set status to</label><select id="rpStatus"><option value="">Leave as is</option><option value="QUOTED - AWAITING APPROVAL">QUOTED - AWAITING APPROVAL</option><option value="AWAITING REP APPROVAL">AWAITING REP APPROVAL</option></select></div>
       <div class="field"><label>To (job contact)</label><input id="rpTo" placeholder="customer email"></div>
       <div class="field"><label>Cc (the team is copied every time)</label><input id="rpCc"></div>
@@ -5870,6 +5870,13 @@ async function openReportEmail(jobId, kind) {
 }
 function rebuildReportEmail() {
   if (!_rpJob) return;
+  if (reportEmailKind() === 'invoice') {
+    var ie = buildInvoiceEmail(_rpJob);
+    document.getElementById('rpSubject').value = ie.subject;
+    document.getElementById('rpText').value = ie.text;
+    document.getElementById('rpStatus').value = '';
+    return;
+  }
   if (reportEmailKind() === 'quote') {
     var qe = buildQuoteRequestEmail(_rpJob, _rqCurrent ? _rqCurrent.parts : []);
     document.getElementById('rpSubject').value = qe.subject;
@@ -5900,7 +5907,7 @@ async function sendReportEmail(mode) {
   var to = document.getElementById('rpTo').value.trim(), cc = document.getElementById('rpCc').value.trim();
   var subject = document.getElementById('rpSubject').value, body = document.getElementById('rpText').value;
   if (!to) { showToast('Enter the email address first', 'error'); document.getElementById('rpTo').focus(); return; }
-  if (!openComposedEmail(mode, to, cc, subject, body, xpsNum(j.job_number) + (reportEmailKind() === 'quote' ? ' - Quote request.eml' : ' - Report email.eml'), copyReportEmail)) return;
+  if (!openComposedEmail(mode, to, cc, subject, body, xpsNum(j.job_number) + (reportEmailKind() === 'quote' ? ' - Quote request.eml' : (reportEmailKind() === 'invoice' ? ' - Invoice notice.eml' : ' - Report email.eml')), copyReportEmail)) return;
   // Record it: status moves on, and the email is logged in the job's Activity History
   var ns = document.getElementById('rpStatus').value, notes = [];
   try {
@@ -6459,6 +6466,25 @@ function openNextQuoteRequest() {
   document.getElementById('rpLog').checked = true;
   rebuildReportEmail();
   document.getElementById('rpOverlay').classList.add('show');
+}
+var _invTotals = { total: 0, gst: 0 };
+function openInvoiceEmail(j, total, gst) {
+  _invTotals = { total: total, gst: gst };
+  _rpJob = j; _rpTools = []; _rpParts = [];
+  document.getElementById('rpType').value = 'invoice';
+  document.getElementById('rpType').disabled = true;
+  document.getElementById('rpTo').value = 'info@xpak.com.au';
+  document.getElementById('rpCc').value = REPORT_EMAIL_CC;
+  document.getElementById('rpLog').checked = true;
+  rebuildReportEmail();
+  document.getElementById('rpOverlay').classList.add('show');
+}
+function buildInvoiceEmail(j) {
+  var file = docTitle(xpsNum(j.job_number), 'Invoice Notice', j.customer) + '.pdf';
+  var t = 'Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + (j.customer || '') + ' (' + xpsNum(j.job_number) + ').\n\nTotal: ' + _money(_invTotals.total) + ' ex GST (' + _money(_invTotals.total + _invTotals.gst) + ' inc GST)' +
+    (j.order_number ? '\nCustomer order number: ' + j.order_number : '') +
+    '\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nAttached: ' + file + '\n\nThanks,\nRob';
+  return { subject: 'Invoice Notice — ' + xpsNum(j.job_number) + ' — ' + (j.customer || ''), text: t };
 }
 function buildQuoteRequestEmail(j, parts) {
   var lines = parts.map(function(p) {
@@ -9827,12 +9853,8 @@ function renderInvoiceNotice(j, tools, jparts) {
       db('PATCH','jobs?id=eq.'+j.id,{status:'WAITING TO BE INVOICED'}).then(function(){ renderBoard(); renderList(); }).catch(function(){});
     }
   }
-  // Open mailto to accounts
-  var subject = encodeURIComponent('Invoice Notice — ' + xpsNum(j.job_number) + ' — ' + (j.customer||''));
-  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + (j.customer||'') + ' (' + xpsNum(j.job_number) + ').\n\nTotal: ' + fmt(invoiceTotal) + ' ex GST (' + fmt(invoiceTotal+invoiceGST) + ' inc GST)' + (j.order_number ? '\nCustomer order number: ' + j.order_number : '') + '\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nAttached: ' + docTitle(xpsNum(j.job_number), 'Invoice Notice', j.customer) + '.pdf\n\nThanks,\nRob');
-  setTimeout(function(){
-    window.location.href = 'mailto:info@xpak.com.au?subject=' + subject + '&body=' + body;
-  }, 600);
+  // Open the invoice email in the report email window (same as reports)
+  openInvoiceEmail(j, invoiceTotal, invoiceGST);
   setTimeout(function(){ w.print(); }, 500);
 }
 
