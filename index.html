@@ -3582,7 +3582,7 @@ function convertIntakeRequest(id) {
     var tools = Array.isArray(r.tools) && r.tools.length ? r.tools : [{ description: '', serial_number: '' }];
     jobToolsLocal = tools.map(function(t, i) {
       var desc = (t.description ? 'Tool: ' + t.description + '\n' : '') + (r.fault_description || '');
-      return { _tempId: 'tool_' + Date.now() + '_' + i, tool_number: i + 1, machine_id: '', serial_number: normSerial(t.serial_number || ''), fault_type: '', error_code: '', cycle_count: '', customer_issue: desc, workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '' };
+      return { _tempId: 'tool_' + Date.now() + '_' + i, tool_number: i + 1, machine_id: '', serial_number: normSerial(t.serial_number || ''), fault_type: '', error_code: '', cycle_count: '', customer_issue: desc, workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '400' };
     });
 
     applyDefaultFees();
@@ -3810,7 +3810,7 @@ function clearJobForm() {
   document.getElementById('jFreight').value = '';
   jobLinks = []; renderLinksList();
   jobPartsLocal = [];
-  jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', date_of_manufacture: '', warranty_period: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '' }];
+  jobToolsLocal = [{ _tempId: 'tool_' + Date.now(), tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', date_of_manufacture: '', warranty_period: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '400' }];
   renderToolsList();
   recalcJobCostSummary();
   jobLoanState = { linkedLoan: null, noLoanNeeded: false, selectedToolId: null };
@@ -3994,7 +3994,7 @@ async function openEditJobModal(jobId) {
   } catch(e) {
     _jobDataLoadFailed = true;
     showToast('Failed to load this job\'s tool data - close and reopen before saving, or real data could be overwritten', 'error');
-    jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '' }];
+    jobToolsLocal = [{ _tempId: 'tool_new', tool_number: 1, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '400' }];
   }
   renderToolsList();
   // Auto-check serial history for existing tools
@@ -5235,7 +5235,7 @@ async function applyDefaultFees() {
 }
 function addTool() {
   var num = jobToolsLocal.length + 1;
-  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '' });
+  jobToolsLocal.push({ _tempId: 'tool_' + Date.now(), tool_number: num, machine_id: '', serial_number: '', fault_type: '', error_code: '', cycle_count: '', customer_issue: '', workshop_notes: '', diagnosis: '', recommendation: '', work_completed: '', service_fee: '400' });
   renderToolsList();
   recalcJobCostSummary();
   applyDefaultFees();
