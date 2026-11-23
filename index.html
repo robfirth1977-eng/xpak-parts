@@ -3346,7 +3346,14 @@ function setJobPartSell(tempId, sellVal) {
   jp.unit_price = parseFloat(sellVal) > 0 ? parseFloat(parseFloat(sellVal).toFixed(2)) : null;
   renderToolPartsList(jp._toolTempId); recalcPartsTotal();
 }
-function renderJobPartsList(){jobToolsLocal.forEach(function(t){renderToolPartsList(t._tempId);}); recalcPartsTotal();}
+// Re-link any part whose tool card is missing (stale temp id) to the tool with the same number, so it never disappears from the screen while still counting in the totals
+function relinkOrphanParts() {
+  jobPartsLocal.forEach(function(p) {
+    var ok = jobToolsLocal.some(function(t) { return t._tempId === p._toolTempId; });
+    if (!ok) { var m = jobToolsLocal.find(function(t) { return t.tool_number === (p.tool_number || 1); }) || jobToolsLocal[0]; p._toolTempId = m ? m._tempId : null; }
+  });
+}
+function renderJobPartsList(){ relinkOrphanParts(); jobToolsLocal.forEach(function(t){renderToolPartsList(t._tempId);}); recalcPartsTotal();}
 function quickEditJobPart(tid) {
   var jp = jobPartsLocal.find(function(x){return x._tempId===tid;});
   if (!jp || !jp.part_id) { showToast('This part isn\x27t linked to a catalog part', 'error'); return; }
@@ -4018,8 +4025,7 @@ async function openEditJobModal(jobId) {
     showToast('Failed to load this job\'s parts data - close and reopen before saving, or real data could be overwritten', 'error');
     jobPartsLocal = [];
   }
-  jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
-  recalcPartsTotal();
+  renderJobPartsList();
   document.getElementById('btnDeleteJob').style.display = 'block';
   // Load activity history for this job
   var jobActSec = document.getElementById('jobActivitySection');
@@ -5136,7 +5142,8 @@ async function printAssessmentForm(jobId) {
       wear[mids[i]] = rows.filter(function(r) { return r.parts && r.parts.is_deleted !== true; }).map(function(r) { return r.parts; });
     }
     w.document.open();
-    w.document.write(buildAssessmentFormHtml(j, tools, wear));
+    var jparts = await db('GET', 'job_parts?job_id=eq.' + jobId + '&select=id,part_key_no,part_description,quantity,tool_number&order=created_at.asc');
+    w.document.write(buildAssessmentFormHtml(j, tools, wear, jparts));
     w.document.close();
     setTimeout(function() { w.focus(); w.print(); }, 400);
   } catch (e) {
@@ -5144,23 +5151,33 @@ async function printAssessmentForm(jobId) {
     showToast('Could not prepare the assessment form: ' + e.message, 'error');
   }
 }
-function buildAssessmentFormHtml(j, tools, wear) {
+function buildAssessmentFormHtml(j, tools, wear, jparts) {
   var e = _wcEsc, xps = xpsNum(j.job_number);
   var rec = j.received_at ? j.received_at.slice(0, 10).split('-').reverse().join('/') : '';
   var ck = '<span class="ck"></span>';
-  function opt(label) { return '<span class="opt">' + ck + label + '</span>'; }
-  function box(label, unit) { return '<div class="box"><span class="lbl">' + label + '</span><span class="write"></span>' + (unit ? '<span class="unit">' + unit + '</span>' : '') + '</div>'; }
+  var ckOn = '<span class="ck on">&#10003;</span>';
+  function opt(label, on) { return '<span class="opt">' + (on ? ckOn : ck) + label + '</span>'; }
+  function box(label, unit, val) { return '<div class="box"><span class="lbl">' + label + '</span><span class="write">' + (val != null && val !== '' ? e(String(val)) : '') + '</span>' + (unit ? '<span class="unit">' + unit + '</span>' : '') + '</div>'; }
   function lines(n) { var s = ''; for (var i = 0; i < n; i++) s += '<div class="line"></div>'; return s; }
   var pages = tools.map(function(t) {
     var m = machines.find(function(x) { return x.id === t.machine_id; });
     var wp = (t.machine_id && wear[t.machine_id]) || [];
     var issue = (t.customer_issue || '').replace(/\s+/g, ' ').trim();
     if (issue.length > 220) issue = issue.slice(0, 217) + '...';
+    var jpForTool = (jparts || []).filter(function(jp) { return (jp.tool_number || 1) === t.tool_number; });
+    var usedIds = {};
     var partRows = wp.map(function(p) {
-      return '<tr><td class="pn">' + e(p.key_no) + '</td><td>' + e(p.description) + '</td><td class="c">' + ck + '</td><td class="c">' + ck + '</td><td class="c">' + ck + '</td><td class="c"><span class="qty"></span></td></tr>';
+      var jp = jpForTool.find(function(x) { return x.part_key_no === p.key_no; });
+      if (jp) usedIds[jp.id] = true;
+      return '<tr><td class="pn">' + e(p.key_no) + '</td><td>' + e(p.description) + '</td><td class="c">' + (jp ? ckOn : ck) + '</td><td class="c">' + ck + '</td><td class="c">' + ck + '</td><td class="c">' + (jp ? '<span class="qty">' + e(String(jp.quantity || 1)) + '</span>' : '<span class="qty"></span>') + '</td></tr>';
     }).join('');
-    var blanks = Math.max(3, AFORM_PART_ROWS - wp.length), blankRows = '';
-    for (var b = 0; b < blanks; b++) blankRows += '<tr><td class="blank"></td><td class="blank"></td><td class="c blank">' + ck + '</td><td class="c blank">' + ck + '</td><td class="c blank"></td><td class="c blank"><span class="qty"></span></td></tr>';
+    var extras = jpForTool.filter(function(jp) { return !usedIds[jp.id]; });
+    var blanks = Math.max(3, AFORM_PART_ROWS - wp.length, extras.length), blankRows = '';
+    for (var b = 0; b < blanks; b++) {
+      var x = extras[b];
+      if (x) blankRows += '<tr><td class="blank pn">' + e(x.part_key_no || '') + '</td><td class="blank">' + e(x.part_description || '') + '</td><td class="c blank">' + ckOn + '</td><td class="c blank">' + ck + '</td><td class="c blank"></td><td class="c blank"><span class="qty">' + e(String(x.quantity || 1)) + '</span></td></tr>';
+      else blankRows += '<tr><td class="blank"></td><td class="blank"></td><td class="c blank">' + ck + '</td><td class="c blank">' + ck + '</td><td class="c blank"></td><td class="c blank"><span class="qty"></span></td></tr>';
+    }
     return '<div class="page">' +
       '<div class="hdr"><div class="logo">X-PAK<span>SERVICE</span></div><div class="title">SERVICE ASSESSMENT<small>Fill in by hand - scan when done</small></div>' +
         '<div class="xps"><b>' + xps + '</b><i>Tool ' + t.tool_number + ' of ' + tools.length + '</i></div></div>' +
@@ -5171,10 +5188,10 @@ function buildAssessmentFormHtml(j, tools, wear) {
         '<div><span class="lbl">Received</span><span class="val">' + rec + '</span></div>' +
         '<div class="full"><span class="lbl">Customer reported issue</span><span class="val" style="font-weight:400">' + e(issue) + '</span></div>' +
       '</div>' +
-      '<h2>1. Readings</h2><div class="readings">' + box('Error code') + box('Cycle count') + box('Date of manuf.', 'MM/YY') + box('Tension') + box('Weld time') + box('Strap size', 'mm') + '</div>' +
-      '<div class="linelbl" style="margin-top:1.5mm"><span class="lbl">Fault type</span><span class="line"></span></div>' +
-      '<div class="opts" style="margin-top:2mm"><span class="grp">Condition</span>' + opt('Well looked after') + opt('Fair') + opt('Poor / neglected') + '</div>' +
-      '<div class="opts"><span class="grp">Cleaning</span>' + opt('Blow out only') + opt('Full clean, degrease &amp; relube <b style="font-size:7.5pt">(2-3 hrs - $' + FULL_CLEAN_FEE + ' option)</b>') + '</div>' +
+      '<h2>1. Readings</h2><div class="readings">' + box('Error code', '', t.error_code) + box('Cycle count', '', t.cycle_count) + box('Date of manuf.', 'MM/YY') + box('Tension') + box('Weld time') + box('Strap size', 'mm') + '</div>' +
+      '<div class="linelbl" style="margin-top:1.5mm"><span class="lbl">Fault type</span><span class="line" style="font-size:9.5pt;font-weight:700">' + e(t.fault_type || '') + '</span></div>' +
+      '<div class="opts" style="margin-top:2mm"><span class="grp">Condition</span>' + opt('Well looked after', t.tool_condition === 'Well looked after') + opt('Fair', t.tool_condition === 'Fair') + opt('Poor / neglected', t.tool_condition === 'Poor / neglected') + '</div>' +
+      '<div class="opts"><span class="grp">Cleaning</span>' + opt('Blow out only', t.cleaning === 'Blow out only') + opt('Full clean, degrease &amp; relube <b style="font-size:7.5pt">(2-3 hrs - $' + FULL_CLEAN_FEE + ' option)</b>', t.cleaning === 'Full clean') + '</div>' +
       '<h2>2. Diagnosis / Findings</h2>' + lines(3) +
       '<h2>3. Wear parts</h2><table><thead><tr><th>Part no.</th><th>Description</th><th class="c">Replace now</th><th class="c">Next service</th><th class="c">Not required</th><th class="c">Qty</th></tr></thead><tbody>' +
         partRows +
@@ -5182,10 +5199,10 @@ function buildAssessmentFormHtml(j, tools, wear) {
         blankRows + '</tbody></table>' +
       '<h2>4. Outcome</h2>' +
       '<div class="opts"><span class="grp">Recommendation</span>' + opt('Repair') + opt('Repair not required') + opt('Repair declined') + opt('Written off') + '</div>' +
-      '<div class="opts"><span class="grp">Warranty claim</span>' + opt('Yes') + opt('No') + '<span class="grp" style="margin-left:8mm">Photo evidence</span>' + opt('Taken') + opt('Not needed') + '</div>' +
+      '<div class="opts"><span class="grp">Warranty claim</span>' + opt('Yes') + opt('No') + '<span class="grp" style="margin-left:8mm">Photo evidence</span>' + opt('Taken', t.photo_evidence === 'Taken') + opt('Not needed', t.photo_evidence === 'Not needed') + '</div>' +
       '<div class="linelbl"><span class="lbl">Recommendation notes</span><span class="line"></span></div>' +
       '<h2>5. Work completed</h2>' + lines(3) +
-      '<div class="opts" style="margin-top:2mm"><span class="grp">Final test</span>' + opt('Pass') + opt('Fail') + '<span class="box" style="margin-left:8mm;width:48mm"><span class="lbl">Hours spent</span><span class="write"></span></span></div>' +
+      '<div class="opts" style="margin-top:2mm"><span class="grp">Final test</span>' + opt('Pass', t.final_test === 'Pass') + opt('Fail', t.final_test === 'Fail') + '<span class="box" style="margin-left:8mm;width:48mm"><span class="lbl">Hours spent</span><span class="write"></span></span></div>' +
       '<div class="foot"><div class="linelbl"><span class="lbl">Technician</span><span class="line"></span></div><div class="linelbl"><span class="lbl">Date</span><span class="line"></span></div><div class="linelbl"><span class="lbl">Signature</span><span class="line"></span></div></div>' +
       '<div class="note">Tick one box per part. "Replace now" parts are added to the job. "Next service" parts are noted against this serial number.</div>' +
     '</div>';
@@ -5205,7 +5222,7 @@ function buildAssessmentFormHtml(j, tools, wear) {
     'table{width:100%;border-collapse:collapse}th{font-size:6.8pt;text-transform:uppercase;text-align:left;border-bottom:.4mm solid #000;padding:.6mm 1mm}th.c,td.c{text-align:center}' +
     'td{border-bottom:.2mm solid #999;padding:0 1mm;height:5.2mm;font-size:8.5pt}td.pn{font-family:"Courier New",monospace;font-weight:700;width:27mm}td.blank{border-bottom:.3mm solid #000}' +
     'td.sub{font-size:6.8pt;font-weight:700;text-transform:uppercase;border-bottom:.4mm solid #000;padding-top:1.5mm;height:auto}' +
-    '.ck{display:inline-block;width:4.2mm;height:4.2mm;border:.35mm solid #000;vertical-align:middle}.qty{display:inline-block;width:9mm;height:5mm;border:.3mm solid #000;vertical-align:middle}' +
+    '.ck{display:inline-block;width:4.2mm;height:4.2mm;border:.35mm solid #000;vertical-align:middle}.ck.on{text-align:center;line-height:3.9mm;font-size:9pt;font-weight:900}.qty{display:inline-block;width:9mm;height:5mm;border:.3mm solid #000;vertical-align:middle}' +
     '.opts{display:flex;flex-wrap:wrap;gap:1.5mm 6mm;align-items:center;margin:.8mm 0}.opts .grp{font-size:7pt;font-weight:700;text-transform:uppercase;min-width:26mm}.opt{display:inline-flex;align-items:center;gap:1.5mm;font-size:9pt}' +
     '.foot{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:6mm;margin-top:2mm}.note{font-size:6.8pt;color:#444;margin-top:1.2mm;text-align:center}';
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + docTitle(xps, 'Assessment Form', j.customer) + '</title><style>' + css + '</style></head><body>' + pages + '</body></html>';
@@ -5330,7 +5347,7 @@ async function splitSelectedTools() {
     }
 
     renderToolsList();
-    jobToolsLocal.forEach(function(t) { renderToolPartsList(t._tempId); });
+    renderJobPartsList();
     await loadJobs();
     showToast('Split into new job ' + xpsNum(newJob.job_number));
   } catch(e) {
