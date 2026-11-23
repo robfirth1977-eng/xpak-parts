@@ -5459,7 +5459,7 @@ function buildWarrantyClaimText(t) {
   var parts = jobPartsLocal.filter(function(p) { return p._toolTempId === t._tempId; });
   var v = function(x) { return (x == null || String(x).trim() === '') ? 'not recorded' : String(x).trim(); };
   var rows = parts.length ? parts.map(function(p) { return '- ' + (p.part_key_no || '') + ' | ' + (p.part_description || '') + ' | Qty ' + (p.quantity || 1); }).join('\n') : '- none entered';
-  return 'Hi,\n\nWe would like to submit a warranty claim for the tool below.\n\n' +
+  return 'Hello,\n\nWe would like to submit a warranty claim for the tool below.\n\n' +
     'Model: ' + m + '\nSerial number: ' + v(t.serial_number) + '\nDate of manufacture: ' + v(t.date_of_manufacture) + '\nCycle count: ' + (t.cycle_count ? parseInt(t.cycle_count).toLocaleString('en-AU') : 'not recorded') + '\n' +
     'Customer type / environment: ' + v(t.customer_environment) + '\nStrap size: ' + v(t.strap_size) + '\nTension setting: ' + v(t.tension_setting) + '\nWeld time: ' + v(t.weld_time) + '\n\n' +
     'Fault: ' + v(t.fault_type) + (t.error_code ? ' (error code ' + t.error_code + ')' : '') + '\nReason for claim: ' + v(t.warranty_reason) + '\nFindings: ' + v(t.diagnosis) + '\n\n' +
@@ -5844,7 +5844,7 @@ function buildReportEmail(j, tools, jparts, kind) {
     return '- ' + mName(t.machine_id) + (t.serial_number ? ' S/N ' + t.serial_number : '') + (what ? ': ' + what : '');
   });
   var file = docTitle(xpsNum(j.job_number), docType, j.customer) + '.pdf';
-  var t = 'Hi ' + first + ',\n\nPlease find attached the ' + title + ' for ' + xpsNum(j.job_number) + '.\n\n';
+  var t = 'Hello ' + first + ',\n\nPlease find attached the ' + title + ' for ' + xpsNum(j.job_number) + '.\n\n';
   if (lines.length) t += lines.join('\n') + '\n\n';
   if (total > 0) t += 'Total: ' + _money(total) + ' ex GST (' + _money(total * 1.1) + ' inc GST)\n\n';
   if (done) t += 'The work is complete. Please let us know if you have any questions.\n\n';
@@ -8605,7 +8605,7 @@ function buildPORequestText(po) {
     var t = (parseFloat(i.unit_cost) || 0) * (i.qty || 1);
     return '- ' + (i.key_no || '') + ' | ' + (i.description || '') + ' | Qty ' + (i.qty || 1) + (i.unit_cost ? ' | $' + parseFloat(i.unit_cost).toFixed(2) + ' ea | $' + t.toFixed(2) : ' | price TBC') + ' | ' + (i.job_number ? 'for ' + i.job_number : 'stock');
   });
-  return 'Hi Lyndon,\n\nPlease order the following from ' + po.supplier + '.' + (quote ? ' Pricing is per ' + po.supplier + ' quote ' + quote[1].trim() + '.' : '') + ' Prices are ex GST.\n\n' +
+  return 'Hello Lyndon,\n\nPlease order the following from ' + po.supplier + '.' + (quote ? ' Pricing is per ' + po.supplier + ' quote ' + quote[1].trim() + '.' : '') + ' Prices are ex GST.\n\n' +
     'Request: ' + po.po_number + '\n\n' + rows.join('\n') + '\n\n' +
     'Total: ' + _money(total) + ' ex GST\n' +
     'Approval: ' + (appr ? 'over $' + (appr === 'Brent and Trent' ? ORDER_APPROVAL_TRENT : ORDER_APPROVAL_BRENT).toLocaleString('en-AU') + ' - ' + appr + (appr === 'Brent and Trent' ? ' to approve' : ' to approve') : 'under $' + ORDER_APPROVAL_BRENT.toLocaleString('en-AU') + ' - no approval needed') + '\n\n' +
