@@ -5463,7 +5463,7 @@ function buildWarrantyClaimText(t) {
     'Model: ' + m + '\nSerial number: ' + v(t.serial_number) + '\nDate of manufacture: ' + v(t.date_of_manufacture) + '\nCycle count: ' + (t.cycle_count ? parseInt(t.cycle_count).toLocaleString('en-AU') : 'not recorded') + '\n' +
     'Customer type / environment: ' + v(t.customer_environment) + '\nStrap size: ' + v(t.strap_size) + '\nTension setting: ' + v(t.tension_setting) + '\nWeld time: ' + v(t.weld_time) + '\n\n' +
     'Fault: ' + v(t.fault_type) + (t.error_code ? ' (error code ' + t.error_code + ')' : '') + '\nReason for claim: ' + v(t.warranty_reason) + '\nFindings: ' + v(t.diagnosis) + '\n\n' +
-    'Parts used:\n' + rows + '\n\nOur reference: ' + (editingJob ? xpsNum(editingJob.job_number) : 'new job') + '\n\nPlease let us know if you need photos or the failed parts.\n\nThanks,\nRob';
+    'Parts used:\n' + rows + '\n\nOur reference: ' + (editingJob ? xpsNum(editingJob.job_number) : 'new job') + '\n\nPlease let us know if you need photos or the failed parts.';
 }
 function openWarrantyClaim(tempId) {
   var t = jobToolsLocal.find(function(x) { return x._tempId === tempId; }); if (!t) return;
@@ -5849,7 +5849,7 @@ function buildReportEmail(j, tools, jparts, kind) {
   if (total > 0) t += 'Total: ' + _money(total) + ' ex GST (' + _money(total * 1.1) + ' inc GST)\n\n';
   if (done) t += 'The work is complete. Please let us know if you have any questions.\n\n';
   else t += 'To go ahead, please reply to this email confirming your approval and include a Purchase Order / Order Number' + (j.order_number ? ' (we have ' + j.order_number + ' on file)' : '') + '.\n\n';
-  t += 'Attached: ' + file + '\n\nThanks,\nRob';
+  t += 'Attached: ' + file + '';
   return { text: t, subject: xpsNum(j.job_number) + ' - ' + title + ' - ' + (j.customer || ''), done: done };
 }
 async function openReportEmail(jobId, kind) {
@@ -5998,7 +5998,7 @@ function buildDailyReport(day) {
     if (!(sell > 0)) toOrderTba = true;
     toOrderVal += sell * (p.quantity || 1);
   });
-  t += 'PARTS STILL TO ORDER: ' + toOrder.length + ' line' + (toOrder.length === 1 ? '' : 's') + ' - ' + _drVal({ total: toOrderVal, tba: toOrderTba }) + '\n\nThanks,\nRob';
+  t += 'PARTS STILL TO ORDER: ' + toOrder.length + ' line' + (toOrder.length === 1 ? '' : 's') + ' - ' + _drVal({ total: toOrderVal, tba: toOrderTba }) + '';
   return t;
 }
 async function openDailyReport() {
@@ -6483,15 +6483,17 @@ function buildInvoiceEmail(j) {
   var file = docTitle(xpsNum(j.job_number), 'Invoice Notice', j.customer) + '.pdf';
   var t = 'Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + (j.customer || '') + ' (' + xpsNum(j.job_number) + ').\n\nTotal: ' + _money(_invTotals.total) + ' ex GST (' + _money(_invTotals.total + _invTotals.gst) + ' inc GST)' +
     (j.order_number ? '\nCustomer order number: ' + j.order_number : '') +
-    '\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nAttached: ' + file + '\n\nThanks,\nRob';
+    '\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nAttached: ' + file + '';
   return { subject: 'Invoice Notice — ' + xpsNum(j.job_number) + ' — ' + (j.customer || ''), text: t };
 }
 function buildQuoteRequestEmail(j, parts) {
-  var lines = parts.map(function(p) {
-    return '- ' + (p.part_key_no || '') + ' ' + (p.part_description || '') + ' - qty ' + (p.quantity || 1) + (p.notes ? ' (' + p.notes + ')' : '');
+  var blocks = parts.map(function(p) {
+    var head = (p.part_key_no || '') + ' - ' + (p.part_description || '') + (p.notes ? ' (' + p.notes + ')' : '');
+    var line = '    Qty ' + (p.quantity || 1) + '  |  Price each (ex GST): ________  |  Availability: ________';
+    return head + '\n' + line;
   });
-  var t = 'Hello,\n\nCould you please quote the following parts for ' + xpsNum(j.job_number) + '?\n\n' + lines.join('\n') +
-    '\n\nPlease reply with the unit price (ex GST) and lead time for each line.\n\nThanks,\nRob\nX-Pak Global Service Division';
+  var t = 'Hello,\n\nCould you please quote the following parts for ' + xpsNum(j.job_number) + '?\n\n' + blocks.join('\n\n') +
+    '\n\nPlease reply with the unit price (ex GST) and availability for each line.';
   return { subject: xpsNum(j.job_number) + ' - Quote request', text: t };
 }
 function showToast(msg, type) {
@@ -7479,7 +7481,7 @@ function printSvInvoiceNotice() {
   }
   // Open mailto to accounts
   var subject = encodeURIComponent('Invoice Notice — ' + refLabel + ' — ' + customer);
-  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + customer + ' (' + refLabel + ').\n\nTotal: ' + fmt(invoiceTotal) + ' ex GST (' + fmt(invoiceTotal+invoiceGST) + ' inc GST)\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nAttached: ' + docTitle(refLabel, 'Invoice Notice', customer) + '.pdf\n\nThanks,\nRob');
+  var body = encodeURIComponent('Hello Anaïs / Mikayla,\n\nPlease find the invoice notice attached for ' + customer + ' (' + refLabel + ').\n\nTotal: ' + fmt(invoiceTotal) + ' ex GST (' + fmt(invoiceTotal+invoiceGST) + ' inc GST)\n\nPlease raise the invoice in MYOB at your earliest convenience.\n\nAttached: ' + docTitle(refLabel, 'Invoice Notice', customer) + '.pdf');
   setTimeout(function(){ window.location.href = 'mailto:info@xpak.com.au?subject=' + subject + '&body=' + body; }, 600);
   setTimeout(function(){ w.print(); }, 500);
 }
@@ -8635,7 +8637,7 @@ function buildPORequestText(po) {
     'Request: ' + po.po_number + '\n\n' + rows.join('\n') + '\n\n' +
     'Total: ' + _money(total) + ' ex GST\n' +
     'Approval: ' + (appr ? 'over $' + (appr === 'Brent and Trent' ? ORDER_APPROVAL_TRENT : ORDER_APPROVAL_BRENT).toLocaleString('en-AU') + ' - ' + appr + (appr === 'Brent and Trent' ? ' to approve' : ' to approve') : 'under $' + ORDER_APPROVAL_BRENT.toLocaleString('en-AU') + ' - no approval needed') + '\n\n' +
-    'Please deliver to ' + ORDER_DELIVERY + '.\nPlease copy me in on the order to the supplier.\n\nThanks,\nRob';
+    'Please deliver to ' + ORDER_DELIVERY + '.\nPlease copy me in on the order to the supplier.';
 }
 
 async function openSendRequest() {
