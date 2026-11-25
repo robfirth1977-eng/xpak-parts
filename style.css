@@ -54,7 +54,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .stock-status-badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:5px;white-space:nowrap}
 .loan-card{background:#141f2d;border-radius:10px;padding:12px 13px;margin-bottom:8px;border-left:4px solid #a78bfa;cursor:pointer;transition:background 0.1s}
 .loan-card:hover{background:#1a2a3d}
-.loan-card.permanent{border-left-color:#10b981}
+.loan-card.permanent{background:#dcfce7;border-left-color:#15803d}
+.loan-card.permanent:hover{background:#bbf7d0}
 .loan-card.overdue{border-left-color:#ef4444}
 .loan-card.trial{border-left-color:#f59e0b}
 .trial-badge{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
