@@ -9372,8 +9372,8 @@ async function deleteMachineFromAccount(custId, machineIndex) {
     var cJobs = [], cLoans = [], cActs = [];
     try {
       var encoded = encodeURIComponent(c.company_name);
-      cJobs = await db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; });
-      cLoans = await db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; });
+      cJobs = await _custJobsByName(c.company_name).catch(function(){ return []; });
+      cLoans = await _custLoansByName(c.company_name).catch(function(){ return []; });
       cActs = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc,created_at.desc&limit=500').catch(function(){ return []; });
       var cPurchases2 = await db('GET', 'stock_tools?sold_account_id=eq.' + custId + '&select=*&order=sold_date.desc').catch(function(){ return []; });
     } catch(e2) { console.error('account view reload failed', e2); showToast('Some account data may be incomplete - reload to retry', 'error'); }
@@ -9394,7 +9394,7 @@ async function printAccountReport(custId) {
   var custJobs = [];
   var jobToolsMap = {};
   try {
-    custJobs = await db('GET', 'jobs?customer=eq.' + encodeURIComponent(customerName) + '&select=*&order=created_at.desc');
+    custJobs = await _custJobsByName(customerName);
     for (var i = 0; i < custJobs.length; i++) {
       var jt = await db('GET', 'job_tools?job_id=eq.' + custJobs[i].id + '&select=*');
       jobToolsMap[custJobs[i].id] = jt;
@@ -9497,7 +9497,7 @@ async function syncMachinesFromJobs(custId) {
     }
 
     // ── FROM JOBS ──
-    var custJobs = await db('GET', 'jobs?customer=eq.' + encodeURIComponent(customerName) + '&select=id').catch(function(){ return []; });
+    var custJobs = await _custJobsByName(customerName).catch(function(){ return []; });
     for (var i = 0; i < custJobs.length; i++) {
       var jt = await db('GET', 'job_tools?job_id=eq.' + custJobs[i].id + '&select=machine_id,serial_number').catch(function(){ return []; });
       jt.forEach(function(t) {
@@ -9523,8 +9523,8 @@ async function syncMachinesFromJobs(custId) {
     var ci2 = customers.findIndex(function(x){ return x.id === custId; }); if (ci2>-1) customers[ci2].machines_owned = formatMachinesJson(existing);
     showToast(added > 0 ? added + ' machine' + (added!==1?'s':'') + ' added' : 'Already up to date');
     // Re-render without full reload
-    var cJobs2 = await db('GET', 'jobs?customer=eq.' + encodeURIComponent(customerName) + '&select=*&order=created_at.desc').catch(function(){ return []; });
-    var cLoans2 = await db('GET', 'loans?customer=eq.' + encodeURIComponent(customerName) + '&select=*&order=loan_number.desc').catch(function(){ return []; });
+    var cJobs2 = await _custJobsByName(customerName).catch(function(){ return []; });
+    var cLoans2 = await _custLoansByName(customerName).catch(function(){ return []; });
     var cActs2 = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc,created_at.desc&limit=500').catch(function(){ return []; });
     var cPurch2 = await db('GET', 'stock_tools?sold_account_id=eq.' + custId + '&select=*&order=sold_date.desc').catch(function(){ return []; });
     renderAccountView(c, cJobs2, cLoans2, cActs2, cPurch2);
@@ -9607,6 +9607,16 @@ function selectCustFromDropdown(custId, ctx) {
 // ── CUSTOMER ACCOUNT VIEW ─────────────────────────────────────────────────────
 var _viewingCustId = null;
 
+// Customer names with brackets (e.g. "Bare Co - Sydney (R H Bare)") fail inside a URL, so search on the part before the bracket and keep exact matches
+function _custNameFrag(name) { return String(name || '').split('(')[0].trim(); }
+async function _custJobsByName(name) {
+  var rows = await db('GET', 'jobs?customer=ilike.' + encodeURIComponent(_custNameFrag(name)) + '%25&select=*&order=created_at.desc');
+  return rows.filter(function(x) { return x.customer === name; });
+}
+async function _custLoansByName(name) {
+  var rows = await db('GET', 'loans?customer=ilike.' + encodeURIComponent(_custNameFrag(name)) + '%25&select=*&order=loan_number.desc');
+  return rows.filter(function(x) { return x.customer === name; });
+}
 async function openCustomerAccount(id) {
   var c = customers.find(function(x){ return x.id === id; }); if (!c) return;
   _viewingCustId = id;
@@ -9619,8 +9629,8 @@ async function openCustomerAccount(id) {
   try {
     var encoded = encodeURIComponent(c.company_name);
     [cJobs, cLoans, cActs, cPurchases] = await Promise.all([
-      db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; }),
-      db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; }),
+      _custJobsByName(c.company_name).catch(function(){ return []; }),
+      _custLoansByName(c.company_name).catch(function(){ return []; }),
       db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc,created_at.desc&limit=500').catch(function(){ return []; }),
       db('GET', 'stock_tools?sold_account_id=eq.' + id + '&select=*&order=sold_date.desc').catch(function(){ return []; })
     ]);
