@@ -9374,7 +9374,7 @@ async function deleteMachineFromAccount(custId, machineIndex) {
       var encoded = encodeURIComponent(c.company_name);
       cJobs = await db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; });
       cLoans = await db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; });
-      cActs = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc&limit=8').catch(function(){ return []; });
+      cActs = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc,created_at.desc&limit=500').catch(function(){ return []; });
       var cPurchases2 = await db('GET', 'stock_tools?sold_account_id=eq.' + custId + '&select=*&order=sold_date.desc').catch(function(){ return []; });
     } catch(e2) { console.error('account view reload failed', e2); showToast('Some account data may be incomplete - reload to retry', 'error'); }
     renderAccountView(c, cJobs, cLoans, cActs, cPurchases2);
@@ -9525,7 +9525,7 @@ async function syncMachinesFromJobs(custId) {
     // Re-render without full reload
     var cJobs2 = await db('GET', 'jobs?customer=eq.' + encodeURIComponent(customerName) + '&select=*&order=created_at.desc').catch(function(){ return []; });
     var cLoans2 = await db('GET', 'loans?customer=eq.' + encodeURIComponent(customerName) + '&select=*&order=loan_number.desc').catch(function(){ return []; });
-    var cActs2 = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc&limit=8').catch(function(){ return []; });
+    var cActs2 = await db('GET', 'activities?customer_id=eq.' + custId + '&order=activity_date.desc,created_at.desc&limit=500').catch(function(){ return []; });
     var cPurch2 = await db('GET', 'stock_tools?sold_account_id=eq.' + custId + '&select=*&order=sold_date.desc').catch(function(){ return []; });
     renderAccountView(c, cJobs2, cLoans2, cActs2, cPurch2);
   } catch(e) { showToast('Sync failed: ' + e.message, 'error'); }
@@ -9621,7 +9621,7 @@ async function openCustomerAccount(id) {
     [cJobs, cLoans, cActs, cPurchases] = await Promise.all([
       db('GET', 'jobs?customer=eq.' + encoded + '&select=*&order=created_at.desc').catch(function(){ return []; }),
       db('GET', 'loans?customer=eq.' + encodeURIComponent(c.company_name) + '&select=*&order=loan_number.desc').catch(function(){ return []; }),
-      db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc&limit=8').catch(function(){ return []; }),
+      db('GET', 'activities?customer_id=eq.' + id + '&order=activity_date.desc,created_at.desc&limit=500').catch(function(){ return []; }),
       db('GET', 'stock_tools?sold_account_id=eq.' + id + '&select=*&order=sold_date.desc').catch(function(){ return []; })
     ]);
   } catch(e) { console.error('openCustAccount load failed', e); showToast('Some account data may be incomplete - reload to retry', 'error'); }
@@ -9731,7 +9731,7 @@ function renderAccountView(c, cJobs, cLoans, cActs, cPurchases) {
         '<span class="acct-item-ref" style="color:#a78bfa">' + xplNum(l.loan_number) + '</span>' +
         '<div class="acct-item-main"><div class="acct-item-title">' + toolName + '</div><div class="acct-item-sub">' + fmtDate(l.loaned_date) + (l.returned_date?' → returned '+fmtDate(l.returned_date):'') + '</div></div>' +
         '<span class="acct-item-badge" style="background:' + col + '20;color:' + col + ';border:1px solid ' + col + '40">' + (l.status||'ACTIVE') + '</span>' +
-      '</div>';
+      '</div>' + (l.notes ? '<div style="padding:0 14px 8px;font-size:11px;color:#8aa8c0;white-space:pre-wrap">' + _wcEsc(l.notes) + '</div>' : '');
     }).join('');
   } else {
     loansHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No loans on record.</div>';
@@ -9793,18 +9793,21 @@ function renderAccountView(c, cJobs, cLoans, cActs, cPurchases) {
 
   // RECENT ACTIVITY panel
   var actHtml = '<div class="acct-panel">' +
-    '<div class="acct-panel-hdr"><span class="acct-panel-title" style="color:#64b5c8">📋 Recent Activity</span>' +
+    '<div class="acct-panel-hdr"><span class="acct-panel-title" style="color:#64b5c8">📋 Activity history (newest first)</span>' +
       '<button class="add-contact-btn" style="width:auto;padding:2px 8px;border-color:#00c8e060;color:#00c8e0;font-size:10px" onclick="openActModal(null,\'' + c.id + '\')">+ Log</button>' +
     '</div>';
+  var jobById = {}; (cJobs || []).forEach(function(j) { jobById[j.id] = j; });
   if (cActs.length) {
-    actHtml += cActs.map(function(a) {
+    actHtml += '<div style="max-height:460px;overflow-y:auto">' + cActs.map(function(a) {
       var cls = a.type==='Phone Call'?'phone':a.type==='Email'?'email':a.type==='Site Visit'?'visit':'note';
       var col = {phone:'#10b981',email:'#00c8e0',visit:'#f59e0b',note:'#8b5cf6'}[cls]||'#5a8090';
-      return '<div class="acct-panel-item">' +
+      var jr = (a.job_id && jobById[a.job_id]) ? ' <span style="font-size:10px;color:#64b5c8">' + xpsNum(jobById[a.job_id].job_number) + '</span>' : '';
+      var body = a.notes ? '<pre style="white-space:pre-wrap;font-size:11px;color:#8aa8c0;margin:6px 0 2px;font-family:inherit">' + _wcEsc(a.notes) + '</pre>' : '';
+      return '<details class="acct-panel-item" style="display:block"><summary style="cursor:pointer;list-style:none;display:flex;gap:10px;align-items:flex-start">' +
         '<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:' + col + '20;color:' + col + ';flex-shrink:0">' + a.type + '</span>' +
-        '<div class="acct-item-main"><div class="acct-item-title">' + (a.subject||'') + '</div><div class="acct-item-sub">' + fmtDate(a.activity_date) + (a.created_by?' · '+a.created_by:'') + '</div></div>' +
-      '</div>';
-    }).join('');
+        '<div class="acct-item-main"><div class="acct-item-title">' + _wcEsc(a.subject||'') + jr + '</div><div class="acct-item-sub">' + fmtDate(a.activity_date) + (a.created_by?' · '+a.created_by:'') + '</div></div>' +
+        '</summary>' + body + '</details>';
+    }).join('') + '</div>';
   } else {
     actHtml += '<div style="padding:12px 14px;font-size:12px;color:#3a5070">No activity logged yet.</div>';
   }
