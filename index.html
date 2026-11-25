@@ -1855,8 +1855,8 @@ function renderActiveLoans(){
     var isOverdue=l.expected_return&&new Date(l.expected_return)<today;
     var isTrial=!!l.is_trial;
     var daysOut=l.loaned_date?Math.floor((today-new Date(l.loaned_date))/86400000):0;
-    var col=isOverdue?'#ef4444':isTrial?'#f59e0b':'#a78bfa';
-    var statusLabel=isOverdue?'OVERDUE':isTrial?'TRIAL':'ACTIVE';
+    var col=isOverdue?'#ef4444':isTrial?'#f59e0b':l.is_permanent?'#14532d':'#a78bfa';
+    var statusLabel=isOverdue?'OVERDUE':isTrial?'TRIAL':l.is_permanent?'PERMANENT':'ACTIVE';
     return '<div class="loan-card'+(l.is_permanent?' permanent':'')+(isOverdue?' overdue':'')+(isTrial?' trial':'')+'" onclick="openEditLoanModal(\'' + l.id + '\')">'+
       '<div class="loan-card-top"><div><div class="loan-number">'+xplNum(l.loan_number)+'</div><div class="loan-customer">'+toolName+'</div></div>'+
       '<span class="loan-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+statusLabel+'</span></div>'+
