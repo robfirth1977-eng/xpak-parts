@@ -1858,9 +1858,9 @@ function renderActiveLoans(){
     var col=isOverdue?'#ef4444':isTrial?'#f59e0b':'#a78bfa';
     var statusLabel=isOverdue?'OVERDUE':isTrial?'TRIAL':'ACTIVE';
     return '<div class="loan-card'+(isOverdue?' overdue':'')+(isTrial?' trial':'')+'" onclick="openEditLoanModal(\'' + l.id + '\')">'+
-      '<div class="loan-card-top"><div><div class="loan-number">'+xplNum(l.loan_number)+'</div><div class="loan-customer">'+(l.customer||'No customer')+'</div></div>'+
+      '<div class="loan-card-top"><div><div class="loan-number">'+xplNum(l.loan_number)+'</div><div class="loan-customer">'+toolName+'</div></div>'+
       '<span class="loan-status-badge" style="background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+statusLabel+'</span></div>'+
-      '<div class="loan-meta"><span>'+toolName+'</span>'+(l.contact_name?'<span>'+l.contact_name+(l.mobile?' '+l.mobile:'')+'</span>':'')+
+      '<div class="loan-meta"><span>'+(l.customer||'No customer')+'</span>'+(l.contact_name?'<span>'+l.contact_name+(l.mobile?' '+l.mobile:'')+'</span>':'')+
       '<span>Out: '+fmtDate(l.loaned_date)+(daysOut>0?' ('+daysOut+'d)':'')+'</span>'+
       (l.expected_return?'<span'+(isOverdue?' class="loan-overdue-flag"':'')+'>Due '+fmtDate(l.expected_return)+'</span>':'')+
       (l.loaned_by?'<span>By: '+l.loaned_by+'</span>':'')+
