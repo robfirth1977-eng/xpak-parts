@@ -2035,6 +2035,16 @@ function _emlParse(raw) {
           found = { body: part.slice(ps).replace(/^\r?\n\r?\n/, ''), enc: ph['content-transfer-encoding'] };
         }
       }
+      if (!found) {
+        for (var q = 0; q < parts.length && !found; q++) {
+          var qp = parts[q].replace(/^\r?\n/, ''), qs = qp.search(/\r?\n\r?\n/);
+          if (qs < 0) continue;
+          var qh = _emlHeaders(qp.slice(0, qs));
+          if ((qh['content-type'] || '').toLowerCase().indexOf('text/html') === 0) {
+            found = { body: qp.slice(qs).replace(/^\r?\n\r?\n/, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n\n'), enc: qh['content-transfer-encoding'] };
+          }
+        }
+      }
       if (found) { body = found.body; enc = found.enc; }
     }
   } else if (ct.indexOf('text/html') === 0) {
@@ -2068,8 +2078,8 @@ async function _emailRecordCtx(kind) {
   return { kind: 'job', label: null, customer: cust, job_id: editingJob.id, customer_id: await _emailCustomerId(cust) };
 }
 async function dropEmailRecord(files, kind) {
-  var list = Array.prototype.slice.call(files || []).filter(function(f) { return /\.(eml|txt)$/i.test(f.name); });
-  if (!list.length) { showToast('Drop saved Outlook emails (.eml). In Outlook: File, Save As, Outlook Message Format (.eml).', 'error'); return; }
+  var list = Array.prototype.slice.call(files || []).filter(function(f) { return /\.(eml|mht|txt)$/i.test(f.name); });
+  if (!list.length) { showToast('Drop saved Outlook emails (.mht). In Outlook: File, Save As, MHT files (.mht).', 'error'); return; }
   var ctx = await _emailRecordCtx(kind);
   if (!ctx) { showToast('Open the ' + kind + ' first', 'error'); return; }
   var saved = 0;
