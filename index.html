@@ -3054,6 +3054,7 @@ function renderMachineCardList() {
         '<div class="machine-card-name">' + m.name + '</div>' +
         (m.description ? '<div class="machine-card-meta">' + m.description + '</div>' : '') +
         '</div>' +
+        (MODEL_PAGE_DATA[m.name] ? '<button class="btn-add-machine" style="margin-right:4px" title="Model page" onclick="event.stopPropagation();openModelPage(\'' + m.name + '\')">📘</button>' : '') +
         '<button class="btn-add-machine" style="margin-right:4px" onclick="event.stopPropagation();openEditMachineModal(' + mIdx + ')">✏️</button>' +
         '<span class="machine-card-arrow" onclick="drillIntoMachine(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">&#9654;</span></div>';
     });
@@ -4478,6 +4479,137 @@ function openMachineModal() {
   populateMachineSupplierDropdown(null);
   document.getElementById('machineOverlay').classList.add('show');
   setTimeout(function() { document.getElementById('mName').focus(); }, 100);
+}
+
+// ── MODEL PAGES (phase one: CHT 460) ──────────────────────────────────────────
+// Reference + known issues are stored here for now. Serial history is read live from jobs each time the page opens.
+var MODEL_PAGE_DATA = {
+  'CHT 460': {
+    about: 'Cyklop CHT 460 (heavy, 2024 generation): trigger release, ProCORE 18 V battery. Serial letter C = heavy tier. Strap 15/16 to 19 mm.',
+    issues: [
+      { date: '2026-10-26', serial: 'C25104063', where: 'Peuker and Alexander, Dandenong', issue: 'Plastic guides for the retractable cover sheared off, same as the Campbellfield machine. Tom: probably forced, not a load-bearing part.', status: 'Open' },
+      { date: '2026-10-26', serial: '(Campbellfield, serial not in email)', where: 'Peuker and Alexander, Campbellfield', issue: 'Retractable cover plastic guides sheared off.', status: 'Open' },
+      { date: '2026-11-03', serial: 'C25104050', where: 'Peuker and Alexander, Campbellfield', issue: 'Same fault came back after repair: number 1 button does not lift the tensioning as it should. Asked whether it happens on the trigger or the button.', status: 'Open' },
+      { date: '2026-11-12', serial: 'C25104052', where: 'Customer (Tony)', issue: 'Machine gunning. Still with the customer. Parts batch requested.', status: 'Open' }
+    ],
+    errors: [
+      ['E11', 'Invalid or unknown battery; wrong control print; control unit defective.', 'E2', 'Insert the correct battery. Change the control print.'],
+      ['E20', 'Battery above 60 C.', 'E2', 'Let the battery cool. Replace the battery.'],
+      ['E21*', 'Battery too cold (tensioning reduced).', 'Snowflake + battery', 'Recovers when the battery warms up.'],
+      ['E23', 'Battery undervoltage in operation (empty or too cold).', 'E2', 'Charge the battery. Replace the battery.'],
+      ['E24', 'Battery coding error (not seated, coding resistor, wiring, control unit).', 'E2', 'Insert the battery correctly. Replace the battery.'],
+      ['E25', 'Battery temperature sensor invalid (not seated, sensor, wiring, control unit).', 'E2', 'Insert the battery correctly. Replace the battery.'],
+      ['E27', 'Idle-run voltage not reached (battery empty).', 'E2', 'Charge the battery. Replace the battery.'],
+      ['E32', 'Internal electronics error.', 'E2', 'Replace the control unit.'],
+      ['E33', 'Electronics overheating.', 'E2', 'Let the control unit cool. Replace the control unit.'],
+      ['E34', 'Supply undervoltage (USB only, low charge, or control unit).', 'E2', 'Charge the battery. Replace the battery and control unit.'],
+      ['E35', 'Supply overvoltage.', 'E1', 'If it repeats: replace the control unit.'],
+      ['E36', '5 V supply undervoltage (motor Hall sensors or encoder, or control unit).', 'E2', 'Check motor and wiring. Replace the control unit.'],
+      ['E37', 'Motor overcurrent (wiring, motor or control unit). Operator manual: jamming during welding, dirty welding mechanism.', 'E1', 'If it repeats: check motor and wiring, replace control unit. Clean the welding mechanism.'],
+      ['E38', 'Hall sensor error (wiring, motor Hall sensors or control unit).', 'E2', 'Check motor and wiring. Replace the control unit.'],
+      ['E39', 'Encoder error (wiring, motor encoder or control unit).', 'E2', 'Check motor and wiring. Replace the control unit.'],
+      ['E40', 'Internal drive software error.', 'E1', 'If it repeats: replace the control unit.'],
+      ['E41', 'Internal software error.', 'E1', 'If it repeats: replace the control unit.'],
+      ['E42', 'Display not identified (display print or control print).', 'E2', 'Install the display print and control print correctly.'],
+      ['E43', 'Display communication error (flexprint, display or control unit).', 'E2', 'Replace the display flexprint, display and control unit.'],
+      ['E50', 'Welding cancelled: rocker opened.', 'E2 orange', 'Incorrect weld: repeat strapping. Replace rocker switch wiring.'],
+      ['E51', 'Cooling cancelled: rocker switch open.', 'E2 orange', 'Incorrect weld: repeat strapping. Replace rocker switch wiring.'],
+      ['E53', 'Welding mechanism not lowered (jammed, or cam switch and wiring).', 'E2 red', 'Incorrect weld: repeat strapping. Clean mechanical components. Replace cam switch and wiring.'],
+      ['E54', 'Welding end position not found (jammed). Newer manual: seal already welded.', 'E2 red', 'Incorrect weld: repeat strapping. Clean mechanical components. Do not re-weld a seal.'],
+      ['E55', 'Performance limitation [AUTO].', 'E1', 'Repeat auto tensioning.'],
+      ['E56', 'Tensioning timeout [AUTO].', 'E1', 'Repeat auto tensioning.'],
+      ['E57', 'Strap torn or slipped.', 'E1', 'Reduce tensioning force. Insert the strap again. Clean or replace the tensioning wheel.'],
+      ['E60*', 'Tensioning timeout in manual mode.', '-', 'Check the application. Remove foreign bodies. Repeat manual tensioning.'],
+      ['E61*', 'Unexpected device error.', '-', 'Contact the service department if it recurs.'],
+      ['A10', 'Tension button pressed without releasing.', '1 short beep', 'Insert strap.'],
+      ['A11', 'Tension button pressed while mechanism disassembled.', '1 short beep', '-'],
+      ['A13', 'Rocker, tension or weld button pressed during tensioning [AUTO].', '1 short beep', '-'],
+      ['A14', 'Permitted number of cycles exceeded [MAN].', '1 short beep', 'Weld or insert the strap.'],
+      ['A15', 'Tensioning timeout.', '2 short beeps', 'Tension again.'],
+      ['A16', 'Limit switch open during tensioning.', '1 short beep', '-'],
+      ['A18', 'Performance limit [MAN, SEMI].', '2 short beeps', 'Tension again.'],
+      ['A19', 'Tension button pressed with cam switch active.', '1 short beep', 'Insert the strap (actuate rocker).'],
+      ['A20', 'Weld button pressed without welding release.', '1 short beep', 'Insert and tension the strap.'],
+      ['A21', 'Weld button pressed while mechanism disassembled.', '1 short beep', '-'],
+      ['A24', 'Tension button pressed during welding.', '1 short beep', '-'],
+      ['A25', 'Tension button pressed during cooling.', '1 short beep', '-']
+    ]
+  }
+};
+
+function openModelPage(modelName) {
+  closeModelPage();
+  var ov = document.createElement('div');
+  ov.id = 'modelPageOverlay';
+  ov.className = 'overlay show';
+  ov.style.cssText = 'z-index:420;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 10px';
+  ov.onclick = function(e) { if (e.target === ov) closeModelPage(); };
+  ov.innerHTML = '<div class="modal" style="max-width:940px;width:100%;border-top:3px solid #64b5c8;border-radius:12px;margin:0 auto">' +
+    '<div class="modal-header"><div class="modal-title">' + _wcEsc(modelName) + ' - model page</div><button class="modal-close" onclick="closeModelPage()">x</button></div>' +
+    '<div id="modelPageBody" style="padding:4px 2px 8px;font-size:13px;color:#cfe3ef">Loading serial history...</div></div>';
+  document.body.appendChild(ov);
+  renderModelPage(modelName);
+}
+function closeModelPage() { var o = document.getElementById('modelPageOverlay'); if (o) o.remove(); }
+
+async function renderModelPage(modelName) {
+  var body = document.getElementById('modelPageBody'); if (!body) return;
+  var esc = _wcEsc, data = MODEL_PAGE_DATA[modelName] || { about: '', issues: [], errors: [] };
+  var m = machines.find(function(x) { return x.name === modelName; });
+  var rows = [], loadErr = null;
+  try {
+    if (m) rows = await db('GET', 'job_tools?machine_id=eq.' + m.id + '&select=serial_number,tool_number,error_code,fault_type,customer_issue,final_test,cycle_count,created_at,jobs(job_number,customer,status,received_at)&order=created_at.asc');
+  } catch(e) { loadErr = e.message; }
+  var bySerial = {}, order = [];
+  rows.forEach(function(r) {
+    var sn = (r.serial_number || '(no serial)').trim();
+    if (!bySerial[sn]) { bySerial[sn] = []; order.push(sn); }
+    bySerial[sn].push(r);
+  });
+  var h = '';
+  h += '<div style="margin:6px 0 10px;color:#9fc3d6">' + esc(data.about) + '</div>';
+
+  h += '<h3 style="font-size:12px;color:#64b5c8;text-transform:uppercase;letter-spacing:.6px;margin:14px 0 6px">Known issues (from email)</h3>';
+  if (!data.issues.length) h += '<div style="color:#5a8090">None recorded.</div>';
+  else {
+    h += '<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#5a8090;text-align:left"><th style="padding:4px">Date</th><th style="padding:4px">Serial</th><th style="padding:4px">Where</th><th style="padding:4px">Issue</th><th style="padding:4px">Status</th></tr>';
+    data.issues.forEach(function(i) {
+      h += '<tr style="border-top:1px solid #1e3048"><td style="padding:5px;white-space:nowrap">' + esc(i.date) + '</td><td style="padding:5px;white-space:nowrap">' + esc(i.serial) + '</td><td style="padding:5px">' + esc(i.where) + '</td><td style="padding:5px">' + esc(i.issue) + '</td><td style="padding:5px;color:' + (i.status === 'Open' ? '#f59e0b' : '#10b981') + '">' + esc(i.status) + '</td></tr>';
+    });
+    h += '</table>';
+  }
+
+  h += '<h3 style="font-size:12px;color:#64b5c8;text-transform:uppercase;letter-spacing:.6px;margin:16px 0 6px">Serial history (from MainFlow jobs)</h3>';
+  if (loadErr) h += '<div style="color:#ef4444">Could not load serial history: ' + esc(loadErr) + '</div>';
+  else if (!order.length) h += '<div style="color:#5a8090">No jobs recorded for this model yet.</div>';
+  else {
+    order.forEach(function(sn) {
+      var list = bySerial[sn];
+      var rep = list.length >= 2 ? ' <span style="color:#f59e0b;font-size:11px">Repeat - ' + list.length + ' jobs</span>' : '';
+      h += '<div style="border:1px solid #1e3048;border-radius:8px;padding:8px 10px;margin-bottom:8px">';
+      h += '<div style="font-weight:700;color:#e2e8f0">S/N ' + esc(sn) + rep + '</div>';
+      list.forEach(function(r) {
+        var j = r.jobs || {};
+        h += '<div style="font-size:12px;color:#9fc3d6;margin-top:4px">' + esc(j.job_number ? xpsNum(j.job_number) : '') + ' - ' + esc(j.customer || '') + ' - received ' + esc(j.received_at || '') + ' - ' + esc(j.status || '') +
+          (r.error_code ? ' - error ' + esc(r.error_code) : '') +
+          (r.fault_type ? ' - fault: ' + esc(r.fault_type) : '') +
+          (r.final_test ? ' - final test ' + esc(r.final_test) : '') +
+          (r.cycle_count != null && r.cycle_count !== '' ? ' - cycles ' + esc(String(r.cycle_count)) : '') + '</div>';
+      });
+      h += '</div>';
+    });
+  }
+
+  h += '<h3 style="font-size:12px;color:#64b5c8;text-transform:uppercase;letter-spacing:.6px;margin:16px 0 6px">Error codes (manual reference)</h3>';
+  h += '<div style="font-size:11px;color:#5a8090;margin-bottom:6px">E1 = temporary (clears on a new cycle). E2 = static (remove battery, fix cause, re-insert). A-codes = beep only. * = newer manual only.</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#5a8090;text-align:left"><th style="padding:4px">Code</th><th style="padding:4px">Meaning</th><th style="padding:4px">Signal</th><th style="padding:4px">Fix</th></tr>';
+  data.errors.forEach(function(e) {
+    h += '<tr style="border-top:1px solid #1e3048"><td style="padding:4px;white-space:nowrap;font-weight:700">' + esc(e[0]) + '</td><td style="padding:4px">' + esc(e[1]) + '</td><td style="padding:4px;white-space:nowrap">' + esc(e[2]) + '</td><td style="padding:4px">' + esc(e[3]) + '</td></tr>';
+  });
+  h += '</table>';
+
+  h += '<div style="margin-top:16px;padding:8px 10px;border-radius:8px;background:#0f1923;border:1px solid #1e3048;font-size:11px;color:#5a8090">Serial history updates each time this page is opened. Known issues and the error list are stored in the code for now; a later phase will add a table where you can add issues yourself.</div>';
+  body.innerHTML = h;
 }
 
 function openEditMachineModal(idx) {
