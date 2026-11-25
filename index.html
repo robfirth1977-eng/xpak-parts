@@ -903,6 +903,7 @@
     <div class="section-label">Notes</div>
     <div class="g2">
       <div class="field full"><label>Internal Notes <span style="font-weight:400;color:#8aa8c0">(never printed - warranty flags, thread details, anything just for us)</span></label><textarea id="jInternalNotes" placeholder="Notes for X-Pak only..."></textarea></div>
+<div class="field"><label>Email records</label><div id="jobEmailDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:8px 12px;font-size:12px;color:#8aa8c0" ondragover="event.preventDefault();this.style.borderColor='#00c8e0'" ondragleave="this.style.borderColor='#2a4060'" ondrop="event.preventDefault();this.style.borderColor='#2a4060';dropEmailRecord(event.dataTransfer.files,'job')">Drop saved Outlook emails (.eml) here to add them to this job</div><div id="jobEmailList" style="font-size:12px;margin-top:6px"></div></div>
       <div class="field full"><label>Customer Notes <span style="font-weight:400;color:#f97316">(printed on the assessment report, parts quote, invoice and agreement report)</span></label><textarea id="jCustomerNotes" placeholder="Anything the customer should see, e.g. Parts supply only..."></textarea></div>
     </div>
 
@@ -992,6 +993,7 @@
       <div class="field"><label>Linked Job <span id="lLinkedJobHint" style="font-weight:400;font-size:10px;color:#10b981"></span></label><input id="lLinkedJob" list="lLinkedJobOpts" placeholder="e.g. XPS-008" autocomplete="off" oninput="onLoanJobRefChange(false)" onchange="onLoanJobRefChange(true)"><datalist id="lLinkedJobOpts"></datalist></div>
     </div>
     <div class="field"><label>Notes</label><textarea id="lNotes" placeholder="Any notes about the loan..." style="min-height:60px"></textarea></div>
+    <div class="field"><label>Email records</label><div id="loanEmailDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:8px 12px;font-size:12px;color:#8aa8c0" ondragover="event.preventDefault();this.style.borderColor='#00c8e0'" ondragleave="this.style.borderColor='#2a4060'" ondrop="event.preventDefault();this.style.borderColor='#2a4060';dropEmailRecord(event.dataTransfer.files,'loan')">Drop saved Outlook emails (.eml) here to add them to this loan</div><div id="loanEmailList" style="font-size:12px;margin-top:6px"></div></div>
     <div class="contacts-section" id="loanPhotosSection" style="display:none">
       <div class="contacts-section-hdr"><span>Photos <span id="loanPhotoCount" style="font-weight:400;color:#8aa8c0"></span></span></div>
       <div id="loanPhotoDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:9px 12px;margin-bottom:8px;font-size:12px;color:#8aa8c0;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center"
@@ -1947,7 +1949,7 @@ function openNewLoanModal(){
     return al?'':'<option value="'+t.id+'">'+t.name+(t.serial_number?' ('+t.serial_number+')':'')+'</option>';
   }).join('');
   fillLoanJobOptions(); onLoanJobRefChange(false);
-  document.getElementById('loanOverlay').classList.add('show');
+  document.getElementById('loanOverlay').classList.add('show');renderEmailRecords('loan');
   setTimeout(function(){document.getElementById('lCustomer').focus();},100);
 }
 function openEditLoanModal(loanId){
@@ -1975,8 +1977,131 @@ function openEditLoanModal(loanId){
   document.getElementById('btnSaveLoan').onclick=saveLoan; document.getElementById('btnSaveLoan').textContent='Save Loan'; document.getElementById('btnSaveLoan').style.background='#a78bfa';
   fillLoanJobOptions(); onLoanJobRefChange(false);
   document.getElementById('lPhotoKind').value=isR?'in':'out'; _loanPhotos=[]; loadLoanPhotos(l.id);
-  document.getElementById('loanOverlay').classList.add('show');
+  document.getElementById('loanOverlay').classList.add('show');renderEmailRecords('loan');
 }
+// ── EMAIL DROP RECORDS (drop a saved Outlook .eml onto a loan or job) ─────────
+function _emlHeaders(block) {
+  var out = {}, last = '';
+  block.split(/\r?\n/).forEach(function(ln) {
+    if (/^[ \t]/.test(ln) && last) { out[last] += ' ' + ln.trim(); return; }
+    var i = ln.indexOf(':'); if (i < 1) return;
+    last = ln.slice(0, i).trim().toLowerCase();
+    out[last] = ln.slice(i + 1).trim();
+  });
+  return out;
+}
+function _emlDecodeBody(text, enc) {
+  enc = (enc || '').toLowerCase();
+  try {
+    if (enc === 'base64') {
+      var b = atob(text.replace(/\s+/g, '')), bytes = new Uint8Array(b.length);
+      for (var i = 0; i < b.length; i++) bytes[i] = b.charCodeAt(i);
+      return new TextDecoder('utf-8').decode(bytes);
+    }
+    if (enc === 'quoted-printable') {
+      var q = Array.from(text.replace(/=\r?\n/g, '')), out = [];
+      for (var k = 0; k < q.length; k++) {
+        var hex = q.slice(k + 1, k + 3).join('');
+        if (q[k] === '=' && /^[0-9A-Fa-f]{2}$/.test(hex)) { out.push(parseInt(hex, 16)); k += 2; }
+        else { var eb = new TextEncoder().encode(q[k]); for (var e = 0; e < eb.length; e++) out.push(eb[e]); }
+      }
+      return new TextDecoder('utf-8').decode(new Uint8Array(out));
+    }
+  } catch(err) {}
+  return text;
+}
+function _emlWords(s) {
+  return String(s || '').replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, function(m, cs, e, t) {
+    try { return e.toUpperCase() === 'B' ? _emlDecodeBody(t, 'base64') : _emlDecodeBody(t.replace(/_/g, ' '), 'quoted-printable'); } catch(x) { return m; }
+  });
+}
+function _emlParse(raw) {
+  var text = raw.replace(/^﻿/, '');
+  var split = text.search(/\r?\n\r?\n/);
+  var hdrBlock = split > -1 ? text.slice(0, split) : text;
+  var bodyRaw = split > -1 ? text.slice(split).replace(/^\r?\n\r?\n/, '') : '';
+  var h = _emlHeaders(hdrBlock);
+  var body = bodyRaw, enc = h['content-transfer-encoding'];
+  var ct = (h['content-type'] || 'text/plain').toLowerCase();
+  if (ct.indexOf('multipart/') === 0) {
+    var bm = (h['content-type'] || '').match(/boundary="?([^";]+)"?/i);
+    if (bm) {
+      var parts = bodyRaw.split('--' + bm[1]), found = null;
+      for (var p = 0; p < parts.length && !found; p++) {
+        var part = parts[p].replace(/^\r?\n/, ''), ps = part.search(/\r?\n\r?\n/);
+        if (ps < 0) continue;
+        var ph = _emlHeaders(part.slice(0, ps));
+        if ((ph['content-type'] || 'text/plain').toLowerCase().indexOf('text/plain') === 0) {
+          found = { body: part.slice(ps).replace(/^\r?\n\r?\n/, ''), enc: ph['content-transfer-encoding'] };
+        }
+      }
+      if (found) { body = found.body; enc = found.enc; }
+    }
+  } else if (ct.indexOf('text/html') === 0) {
+    body = bodyRaw.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n\n');
+  }
+  body = _emlDecodeBody(body, enc).trim();
+  if (body.length > 20000) body = body.slice(0, 20000) + '\n[truncated]';
+  var d = h['date'] ? new Date(h['date']) : null;
+  return {
+    from: _emlWords(h['from'] || ''), to: _emlWords(h['to'] || ''), cc: _emlWords(h['cc'] || ''),
+    subject: _emlWords(h['subject'] || '(no subject)'),
+    date: (d && !isNaN(d)) ? d : new Date(), body: body
+  };
+}
+async function _emailCustomerId(name) {
+  if (!name) return null;
+  var hit = (_custCache || []).find(function(x) { return x.company_name === name; });
+  if (hit) return hit.id;
+  var r = await db('GET', 'customers?company_name=eq.' + encodeURIComponent(name) + '&select=id&limit=1');
+  return r.length ? r[0].id : null;
+}
+// Context for the open record: which customer and job the email belongs to.
+async function _emailRecordCtx(kind) {
+  if (kind === 'loan') {
+    if (!editingLoan) return null;
+    return { kind: 'loan', label: 'Loan ' + xplNum(editingLoan.loan_number), customer: editingLoan.customer, job_id: editingLoan.job_id || null,
+      customer_id: await _emailCustomerId(editingLoan.customer) };
+  }
+  if (!editingJob) return null;
+  var cust = (document.getElementById('jCustomer') || {}).value || editingJob.customer || '';
+  return { kind: 'job', label: null, customer: cust, job_id: editingJob.id, customer_id: await _emailCustomerId(cust) };
+}
+async function dropEmailRecord(files, kind) {
+  var list = Array.prototype.slice.call(files || []).filter(function(f) { return /\.(eml|txt)$/i.test(f.name); });
+  if (!list.length) { showToast('Drop saved Outlook emails (.eml). In Outlook: File, Save As, Outlook Message Format (.eml).', 'error'); return; }
+  var ctx = await _emailRecordCtx(kind);
+  if (!ctx) { showToast('Open the ' + kind + ' first', 'error'); return; }
+  var saved = 0;
+  for (var i = 0; i < list.length; i++) {
+    try {
+      var em = _emlParse(await list[i].text());
+      var notes = (ctx.label ? ctx.label + '\n' : '') + 'From: ' + em.from + '\nTo: ' + em.to + (em.cc ? '\nCc: ' + em.cc : '') +
+        '\nDate: ' + _emFmtDate(em.date) + '\n\n' + em.body;
+      await db('POST', 'activities', { type: 'Email', subject: em.subject, notes: notes, activity_date: _emLocalIso(em.date),
+        customer_id: ctx.customer_id, job_id: ctx.job_id, created_by: 'Rob Firth' });
+      saved++;
+    } catch(e) { showToast('Could not save ' + list[i].name + ': ' + e.message, 'error'); }
+  }
+  if (saved) showToast(saved + ' email' + (saved > 1 ? 's' : '') + ' saved to Activity History');
+  renderEmailRecords(kind);
+}
+// Lists the saved emails for the open record (newest first).
+async function renderEmailRecords(kind) {
+  var el = document.getElementById(kind === 'loan' ? 'loanEmailList' : 'jobEmailList');
+  if (!el) return;
+  var ctx = await _emailRecordCtx(kind);
+  if (!ctx || (!ctx.job_id && !ctx.customer_id)) { el.innerHTML = ''; return; }
+  var q = 'activities?type=eq.Email&select=subject,activity_date,notes&order=activity_date.desc&limit=10&' +
+    (ctx.job_id ? 'job_id=eq.' + ctx.job_id : 'customer_id=eq.' + ctx.customer_id);
+  var rows = [];
+  try { rows = await db('GET', q); } catch(e) { el.innerHTML = ''; return; }
+  if (kind === 'loan' && !ctx.job_id) rows = rows.filter(function(r) { return (r.notes || '').indexOf(ctx.label) === 0; });
+  el.innerHTML = rows.length ? rows.map(function(r) {
+    return '<div style="padding:3px 0;border-top:1px solid #1e3048"><span style="color:#8aa8c0">' + _wcEsc(r.activity_date || '') + '</span> ' + _wcEsc(r.subject || '') + '</div>';
+  }).join('') : '<div style="color:#5a8090">No saved emails yet.</div>';
+}
+
 function closeLoanModal(){document.getElementById('loanOverlay').classList.remove('show');}
 async function saveLoan(){
   var toolId=document.getElementById('lToolId').value, customer=document.getElementById('lCustomer').value.trim();
@@ -3896,7 +4021,7 @@ function openNewJobModal(skipFocus) {
   var jas = document.getElementById('jobActivitySection'); if(jas) jas.style.display = 'none';
   var jps = document.getElementById('jobPhotosSection'); if(jps) jps.style.display = 'none';
   _jobPhotos = [];
-  document.getElementById('jobOverlay').classList.add('show');
+  document.getElementById('jobOverlay').classList.add('show');renderEmailRecords('job');
   if (!skipFocus) setTimeout(function() { document.getElementById('jCustomer').focus(); }, 100);
 }
 
@@ -4043,7 +4168,7 @@ async function openEditJobModal(jobId) {
     }
   }).catch(function(){});
   _jobSig = jobFormSig();
-  document.getElementById('jobOverlay').classList.add('show');
+  document.getElementById('jobOverlay').classList.add('show');renderEmailRecords('job');
 }
 
 function populateMachineDropdown(selId) {
