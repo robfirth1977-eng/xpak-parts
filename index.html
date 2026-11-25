@@ -4556,18 +4556,46 @@ async function renderModelPage(modelName) {
   var body = document.getElementById('modelPageBody'); if (!body) return;
   var esc = _wcEsc, data = MODEL_PAGE_DATA[modelName] || { about: '', issues: [], errors: [] };
   var m = machines.find(function(x) { return x.name === modelName; });
-  var rows = [], loadErr = null;
+  var rows = [], parts = [], loadErr = null;
   try {
-    if (m) rows = await db('GET', 'job_tools?machine_id=eq.' + m.id + '&select=serial_number,tool_number,error_code,fault_type,customer_issue,final_test,cycle_count,created_at,jobs(job_number,customer,status,received_at)&order=created_at.asc');
+    if (m) rows = await db('GET', 'job_tools?machine_id=eq.' + m.id + '&select=serial_number,tool_number,job_id,error_code,fault_type,final_test,cycle_count,created_at,jobs(job_number,customer,status,received_at)&order=created_at.asc');
+    var jobIds = [];
+    rows.forEach(function(r) { if (r.job_id && jobIds.indexOf(r.job_id) === -1) jobIds.push(r.job_id); });
+    if (jobIds.length) parts = await db('GET', 'job_parts?job_id=in.(' + jobIds.join(',') + ')&select=job_id,tool_number,part_key_no,part_description,quantity,status');
   } catch(e) { loadErr = e.message; }
-  var bySerial = {}, order = [];
+
+  // Each tool counts once per fault. Error codes are pulled out of both the error code and fault type fields.
+  var toolKeys = {}, codeCount = {}, faultCount = {}, faultLabel = {}, bySerial = {}, serialOrder = [];
   rows.forEach(function(r) {
+    toolKeys[r.job_id + '|' + (r.tool_number || 1)] = true;
     var sn = (r.serial_number || '(no serial)').trim();
-    if (!bySerial[sn]) { bySerial[sn] = []; order.push(sn); }
+    if (!bySerial[sn]) { bySerial[sn] = []; serialOrder.push(sn); }
     bySerial[sn].push(r);
+    var text = ((r.error_code || '') + ' ' + (r.fault_type || '')).toUpperCase();
+    var codes = text.match(/\b[EA]\d{1,2}\*?/g) || [], seen = {};
+    codes.forEach(function(c) { if (!seen[c]) { seen[c] = true; codeCount[c] = (codeCount[c] || 0) + 1; } });
+    var ft = (r.fault_type || '').replace(/\s+/g, ' ').trim();
+    if (ft) { var fk = ft.toLowerCase(); if (!faultLabel[fk]) faultLabel[fk] = ft; faultCount[fk] = (faultCount[fk] || 0) + 1; }
   });
+
+  // Parts used: only parts on the same job and tool number as a tool of this model.
+  var partAgg = {};
+  parts.forEach(function(p) {
+    var tk = p.job_id + '|' + (p.tool_number || 1);
+    if (!toolKeys[tk]) return;
+    var k = p.part_key_no || '(no part no)';
+    if (!partAgg[k]) partAgg[k] = { desc: p.part_description || '', qty: 0, tools: {} };
+    partAgg[k].qty += (p.quantity || 1);
+    partAgg[k].tools[tk] = true;
+  });
+  var partRows = Object.keys(partAgg).map(function(k) { return { key: k, desc: partAgg[k].desc, qty: partAgg[k].qty, tools: Object.keys(partAgg[k].tools).length }; })
+    .sort(function(a, b) { return b.tools - a.tools || b.qty - a.qty; });
+  var sortCounts = function(obj) { return Object.keys(obj).map(function(k) { return { k: k, n: obj[k] }; }).sort(function(a, b) { return b.n - a.n; }); };
+
+  var jobCount = {}; rows.forEach(function(r) { if (r.job_id) jobCount[r.job_id] = true; });
   var h = '';
   h += '<div style="margin:6px 0 10px;color:#9fc3d6">' + esc(data.about) + '</div>';
+  if (!loadErr) h += '<div style="font-size:12px;color:#cfe3ef;margin-bottom:6px">' + rows.length + ' tools across ' + Object.keys(jobCount).length + ' jobs, ' + serialOrder.length + ' serial numbers.</div>';
 
   h += '<h3 style="font-size:12px;color:#64b5c8;text-transform:uppercase;letter-spacing:.6px;margin:14px 0 6px">Known issues (from email)</h3>';
   if (!data.issues.length) h += '<div style="color:#5a8090">None recorded.</div>';
@@ -4579,25 +4607,48 @@ async function renderModelPage(modelName) {
     h += '</table>';
   }
 
-  h += '<h3 style="font-size:12px;color:#64b5c8;text-transform:uppercase;letter-spacing:.6px;margin:16px 0 6px">Serial history (from MainFlow jobs)</h3>';
-  if (loadErr) h += '<div style="color:#ef4444">Could not load serial history: ' + esc(loadErr) + '</div>';
-  else if (!order.length) h += '<div style="color:#5a8090">No jobs recorded for this model yet.</div>';
+  h += '<h3 style="font-size:12px;color:#64b5c8;text-transform:uppercase;letter-spacing:.6px;margin:16px 0 6px">Faults seen (number of tools)</h3>';
+  if (loadErr) h += '<div style="color:#ef4444">Could not load job data: ' + esc(loadErr) + '</div>';
+  else if (!rows.length) h += '<div style="color:#5a8090">No jobs recorded for this model yet.</div>';
   else {
-    order.forEach(function(sn) {
+    var codes = sortCounts(codeCount), faults = sortCounts(faultCount).map(function(f) { return { k: faultLabel[f.k] || f.k, n: f.n }; });
+    h += '<div style="display:flex;gap:16px;flex-wrap:wrap">';
+    h += '<div style="flex:1;min-width:240px"><div style="font-size:11px;color:#5a8090;margin-bottom:4px">Error codes</div>';
+    h += codes.length ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' + codes.map(function(c) { return '<tr style="border-top:1px solid #1e3048"><td style="padding:4px;font-weight:700">' + esc(c.k) + '</td><td style="padding:4px;text-align:right">' + c.n + '</td></tr>'; }).join('') + '</table>' : '<div style="color:#5a8090;font-size:12px">None recorded.</div>';
+    h += '</div>';
+    h += '<div style="flex:2;min-width:300px"><div style="font-size:11px;color:#5a8090;margin-bottom:4px">Fault types as written on jobs</div>';
+    h += faults.length ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' + faults.map(function(f) { return '<tr style="border-top:1px solid #1e3048"><td style="padding:4px">' + esc(f.k) + '</td><td style="padding:4px;text-align:right;white-space:nowrap">' + f.n + '</td></tr>'; }).join('') + '</table>' : '<div style="color:#5a8090;font-size:12px">None recorded.</div>';
+    h += '</div></div>';
+  }
+
+  h += '<h3 style="font-size:12px;color:#64b5c8;text-transform:uppercase;letter-spacing:.6px;margin:16px 0 6px">Parts used (number of tools)</h3>';
+  if (loadErr) h += '';
+  else if (!partRows.length) h += '<div style="color:#5a8090">No parts recorded against this model yet.</div>';
+  else {
+    h += '<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#5a8090;text-align:left"><th style="padding:4px">Part no.</th><th style="padding:4px">Description</th><th style="padding:4px;text-align:right">Tools</th><th style="padding:4px;text-align:right">Qty</th></tr>';
+    partRows.forEach(function(p) {
+      h += '<tr style="border-top:1px solid #1e3048"><td style="padding:4px;white-space:nowrap">' + esc(p.key) + '</td><td style="padding:4px">' + esc(p.desc) + '</td><td style="padding:4px;text-align:right">' + p.tools + '</td><td style="padding:4px;text-align:right">' + p.qty + '</td></tr>';
+    });
+    h += '</table>';
+  }
+
+  if (serialOrder.length) {
+    h += '<details style="margin-top:16px"><summary style="cursor:pointer;font-size:12px;color:#64b5c8">Serial numbers (' + serialOrder.length + ')</summary>';
+    serialOrder.forEach(function(sn) {
       var list = bySerial[sn];
-      var rep = list.length >= 2 ? ' <span style="color:#f59e0b;font-size:11px">Repeat - ' + list.length + ' jobs</span>' : '';
-      h += '<div style="border:1px solid #1e3048;border-radius:8px;padding:8px 10px;margin-bottom:8px">';
+      var rep = list.length >= 2 ? ' <span style="color:#f59e0b;font-size:11px">' + list.length + ' jobs</span>' : '';
+      h += '<div style="border:1px solid #1e3048;border-radius:8px;padding:6px 10px;margin:6px 0">';
       h += '<div style="font-weight:700;color:#e2e8f0">S/N ' + esc(sn) + rep + '</div>';
       list.forEach(function(r) {
         var j = r.jobs || {};
-        h += '<div style="font-size:12px;color:#9fc3d6;margin-top:4px">' + esc(j.job_number ? xpsNum(j.job_number) : '') + ' - ' + esc(j.customer || '') + ' - received ' + esc(j.received_at || '') + ' - ' + esc(j.status || '') +
+        h += '<div style="font-size:12px;color:#9fc3d6;margin-top:3px">' + esc(j.job_number ? xpsNum(j.job_number) : '') + ' - ' + esc(j.customer || '') + ' - ' + esc(j.received_at || '') + ' - ' + esc(j.status || '') +
           (r.error_code ? ' - error ' + esc(r.error_code) : '') +
           (r.fault_type ? ' - fault: ' + esc(r.fault_type) : '') +
-          (r.final_test ? ' - final test ' + esc(r.final_test) : '') +
-          (r.cycle_count != null && r.cycle_count !== '' ? ' - cycles ' + esc(String(r.cycle_count)) : '') + '</div>';
+          (r.final_test ? ' - final test ' + esc(r.final_test) : '') + '</div>';
       });
       h += '</div>';
     });
+    h += '</details>';
   }
 
   h += '<h3 style="font-size:12px;color:#64b5c8;text-transform:uppercase;letter-spacing:.6px;margin:16px 0 6px">Error codes (manual reference)</h3>';
@@ -4608,7 +4659,7 @@ async function renderModelPage(modelName) {
   });
   h += '</table>';
 
-  h += '<div style="margin-top:16px;padding:8px 10px;border-radius:8px;background:#0f1923;border:1px solid #1e3048;font-size:11px;color:#5a8090">Serial history updates each time this page is opened. Known issues and the error list are stored in the code for now; a later phase will add a table where you can add issues yourself.</div>';
+  h += '<div style="margin-top:16px;padding:8px 10px;border-radius:8px;background:#0f1923;border:1px solid #1e3048;font-size:11px;color:#5a8090">Faults and parts are counted from jobs each time this page is opened. Known issues and the error list are stored in the code for now.</div>';
   body.innerHTML = h;
 }
 
