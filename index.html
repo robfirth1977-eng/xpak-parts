@@ -902,8 +902,7 @@
 
     <div class="section-label">Notes</div>
     <div class="g2">
-      <div class="field full"><label>Internal Notes <span style="font-weight:400;color:#8aa8c0">(never printed - warranty flags, thread details, anything just for us)</span></label><textarea id="jInternalNotes" placeholder="Notes for X-Pak only..."></textarea></div>
-<div class="field"><label>Email records</label><div id="jobEmailDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:8px 12px;font-size:12px;color:#8aa8c0" ondragover="event.preventDefault();this.style.borderColor='#00c8e0'" ondragleave="this.style.borderColor='#2a4060'" ondrop="event.preventDefault();this.style.borderColor='#2a4060';dropEmailRecord(event.dataTransfer.files,'job')">Drop saved Outlook emails (.eml) here to add them to this job</div><div id="jobEmailList" style="font-size:12px;margin-top:6px"></div></div>
+      <div class="field full"><label>Internal Notes <span style="font-weight:400;color:#8aa8c0">(never printed - warranty flags, thread details, anything just for us)</span></label><textarea id="jInternalNotes" placeholder="Notes for X-Pak only..."></textarea></div>
       <div class="field full"><label>Customer Notes <span style="font-weight:400;color:#f97316">(printed on the assessment report, parts quote, invoice and agreement report)</span></label><textarea id="jCustomerNotes" placeholder="Anything the customer should see, e.g. Parts supply only..."></textarea></div>
     </div>
 
@@ -993,7 +992,7 @@
       <div class="field"><label>Linked Job <span id="lLinkedJobHint" style="font-weight:400;font-size:10px;color:#10b981"></span></label><input id="lLinkedJob" list="lLinkedJobOpts" placeholder="e.g. XPS-008" autocomplete="off" oninput="onLoanJobRefChange(false)" onchange="onLoanJobRefChange(true)"><datalist id="lLinkedJobOpts"></datalist></div>
     </div>
     <div class="field"><label>Notes</label><textarea id="lNotes" placeholder="Any notes about the loan..." style="min-height:60px"></textarea></div>
-    <div class="field"><label>Email records</label><div id="loanEmailDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:8px 12px;font-size:12px;color:#8aa8c0" ondragover="event.preventDefault();this.style.borderColor='#00c8e0'" ondragleave="this.style.borderColor='#2a4060'" ondrop="event.preventDefault();this.style.borderColor='#2a4060';dropEmailRecord(event.dataTransfer.files,'loan')">Drop saved Outlook emails (.eml) here to add them to this loan</div><div id="loanEmailList" style="font-size:12px;margin-top:6px"></div></div>
+    <div class="field"><label>Email records</label><div id="loanEmailDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:8px 12px;font-size:12px;color:#8aa8c0" ondragover="event.preventDefault();this.style.borderColor='#00c8e0'" ondragleave="this.style.borderColor='#2a4060'" ondrop="event.preventDefault();this.style.borderColor='#2a4060';logLoanEmailFiles(event.dataTransfer.files)">Drop saved Outlook emails (.eml) here to add them to this loan</div><div id="loanEmailList" style="font-size:12px;margin-top:6px"></div></div>
     <div class="contacts-section" id="loanPhotosSection" style="display:none">
       <div class="contacts-section-hdr"><span>Photos <span id="loanPhotoCount" style="font-weight:400;color:#8aa8c0"></span></span></div>
       <div id="loanPhotoDrop" style="border:1px dashed #2a4060;border-radius:8px;padding:9px 12px;margin-bottom:8px;font-size:12px;color:#8aa8c0;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center"
@@ -2076,25 +2075,6 @@ async function _emailRecordCtx(kind) {
   if (!editingJob) return null;
   var cust = (document.getElementById('jCustomer') || {}).value || editingJob.customer || '';
   return { kind: 'job', label: null, customer: cust, job_id: editingJob.id, customer_id: await _emailCustomerId(cust) };
-}
-async function dropEmailRecord(files, kind) {
-  var list = Array.prototype.slice.call(files || []).filter(function(f) { return /\.(eml|mht|txt)$/i.test(f.name); });
-  if (!list.length) { showToast('Drop saved Outlook emails (.mht). In Outlook: File, Save As, MHT files (.mht).', 'error'); return; }
-  var ctx = await _emailRecordCtx(kind);
-  if (!ctx) { showToast('Open the ' + kind + ' first', 'error'); return; }
-  var saved = 0;
-  for (var i = 0; i < list.length; i++) {
-    try {
-      var em = _emlParse(await list[i].text());
-      var notes = (ctx.label ? ctx.label + '\n' : '') + 'From: ' + em.from + '\nTo: ' + em.to + (em.cc ? '\nCc: ' + em.cc : '') +
-        '\nDate: ' + _emFmtDate(em.date) + '\n\n' + em.body;
-      await db('POST', 'activities', { type: 'Email', subject: em.subject, notes: notes, activity_date: _emLocalIso(em.date),
-        customer_id: ctx.customer_id, job_id: ctx.job_id, created_by: 'Rob Firth' });
-      saved++;
-    } catch(e) { showToast('Could not save ' + list[i].name + ': ' + e.message, 'error'); }
-  }
-  if (saved) showToast(saved + ' email' + (saved > 1 ? 's' : '') + ' saved to Activity History');
-  renderEmailRecords(kind);
 }
 // Lists the saved emails for the open record (newest first).
 async function renderEmailRecords(kind) {
@@ -10483,40 +10463,56 @@ async function refreshJobActivityList() {
   var sec = document.getElementById('jobActivitySection'); if (sec) sec.style.display = 'block';
   document.getElementById('jobActivityList').innerHTML = acts.map(renderActivityItem).join('');
 }
-async function logEmailFiles(fileList) {
+// Logs dropped emails (.msg, .eml, .mht) to Activity History. target = { job_id, customer, label } for a job or loan.
+async function logEmailFiles(fileList, target) {
   var files = Array.prototype.slice.call(fileList || []);
   if (!files.length) return;
-  if (!editingJob) { showToast('Save the job first, then drop the emails onto it', 'error'); return; }
+  if (!target) {
+    if (!editingJob) { showToast('Save the job first, then drop the emails onto it', 'error'); return; }
+    target = { job_id: editingJob.id, customer: editingJob.customer, label: null };
+  }
   var trim = document.getElementById('emailTrimQuoted') ? document.getElementById('emailTrimQuoted').checked : true;
   var custId = null, logged = 0, dupes = 0, failed = [];
   try {
-    var hit = (_custCache || []).find(function(x) { return x.company_name === editingJob.customer; });
+    var hit = (_custCache || []).find(function(x) { return x.company_name === target.customer; });
     if (hit) custId = hit.id;
-    else if (editingJob.customer) { var cr = await db('GET', 'customers?company_name=eq.' + encodeURIComponent(editingJob.customer) + '&select=id&limit=1'); if (cr.length) custId = cr[0].id; }
+    else if (target.customer) { var cr = await db('GET', 'customers?company_name=eq.' + encodeURIComponent(target.customer) + '&select=id&limit=1'); if (cr.length) custId = cr[0].id; }
   } catch (e) { /* customer link is optional */ }
   for (var i = 0; i < files.length; i++) {
     var f = files[i];
     try {
-      if (!/\.(msg|eml)$/i.test(f.name)) throw new Error('not an email file (.msg or .eml)');
-      var buf = await f.arrayBuffer();
-      var em = /\.msg$/i.test(f.name) ? _emParseMsg(buf) : _emParseEml(buf);
+      if (!/\.(msg|eml|mht)$/i.test(f.name)) throw new Error('not an email file (.msg, .eml or .mht)');
+      var em;
+      if (/\.mht$/i.test(f.name)) { em = _emlParse(await f.text()); em.attachments = []; }
+      else {
+        var buf = await f.arrayBuffer();
+        em = /\.msg$/i.test(f.name) ? _emParseMsg(buf) : _emParseEml(buf);
+      }
       if (!em.subject && !em.body) throw new Error('could not read this email');
       var when = em.date || new Date(f.lastModified || Date.now());
-      var head = 'From: ' + (em.from || 'unknown') + '\nTo: ' + (em.to || 'unknown') + (em.cc ? '\nCc: ' + em.cc : '') + '\nDate: ' + _emFmtDate(when) + (em.attachments.length ? '\nAttachments: ' + em.attachments.join(', ') : '');
+      var head = (target.label ? target.label + '\n' : '') + 'From: ' + (em.from || 'unknown') + '\nTo: ' + (em.to || 'unknown') + (em.cc ? '\nCc: ' + em.cc : '') + '\nDate: ' + _emFmtDate(when) + (em.attachments && em.attachments.length ? '\nAttachments: ' + em.attachments.join(', ') : '');
       var body = (em.body || '').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
       if (trim) body = _emTrimQuoted(body);
       if (body.length > 15000) body = body.slice(0, 15000) + '\n\n[cut - email longer than 15,000 characters]';
       var subject = (em.subject || '(no subject)').trim(), day = _emLocalIso(when);
-      var same = await db('GET', 'activities?job_id=eq.' + editingJob.id + '&type=eq.Email&activity_date=eq.' + day + '&select=id,notes');
+      var sameQ = target.job_id ? 'job_id=eq.' + target.job_id : 'customer_id=eq.' + custId;
+      var same = await db('GET', 'activities?' + sameQ + '&type=eq.Email&activity_date=eq.' + day + '&select=id,notes');
       if (same.some(function(a) { return (a.notes || '').indexOf(head) === 0; })) { dupes++; continue; }
-      await db('POST', 'activities', { type: 'Email', subject: subject, notes: head + '\n\n' + body, activity_date: day, customer_id: custId, job_id: editingJob.id, created_by: 'Rob Firth' });
+      await db('POST', 'activities', { type: 'Email', subject: subject, notes: head + '\n\n' + body, activity_date: day, customer_id: custId, job_id: target.job_id || null, created_by: 'Rob Firth' });
       logged++;
     } catch (e) { failed.push(f.name + ' - ' + e.message); }
   }
   _custCache = null;
-  try { await refreshJobActivityList(); } catch (e) { /* list refresh is cosmetic */ }
+  try {
+    if (target.label) renderEmailRecords('loan'); else await refreshJobActivityList();
+  } catch (e) { /* list refresh is cosmetic */ }
   var msg = (logged ? logged + ' email' + (logged > 1 ? 's' : '') + ' logged' : 'No new emails logged') + (dupes ? ', ' + dupes + ' already logged' : '') + (failed.length ? '. Failed: ' + failed.join('; ') : '');
   showToast(msg, failed.length ? 'error' : undefined);
+}
+// Loan drop box: builds the loan's target (its job and customer) and logs the emails against it.
+async function logLoanEmailFiles(files) {
+  if (!editingLoan) { showToast('Open the loan first', 'error'); return; }
+  await logEmailFiles(files, { job_id: editingLoan.job_id || null, customer: editingLoan.customer, label: xplNum(editingLoan.loan_number) });
 }
 
 function renderActivityItem(a) {
