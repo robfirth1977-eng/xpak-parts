@@ -9507,7 +9507,7 @@ async function syncMachinesFromJobs(custId) {
     }
 
     // ── FROM SITE VISITS ──
-    var custVisits = await db('GET', 'site_visits?customer=eq.' + encodeURIComponent(customerName) + '&select=id').catch(function(){ return []; });
+    var custVisits = await _custSiteVisitsByName(customerName).catch(function(){ return []; });
     for (var j = 0; j < custVisits.length; j++) {
       var svm = await db('GET', 'site_visit_machines?site_visit_id=eq.' + custVisits[j].id + '&select=machine_type,serial_number').catch(function(){ return []; });
       svm.forEach(function(m) {
@@ -9611,6 +9611,10 @@ var _viewingCustId = null;
 function _custNameFrag(name) { return String(name || '').split('(')[0].trim(); }
 async function _custJobsByName(name) {
   var rows = await db('GET', 'jobs?customer=ilike.' + encodeURIComponent(_custNameFrag(name)) + '%25&select=*&order=created_at.desc');
+  return rows.filter(function(x) { return x.customer === name; });
+}
+async function _custSiteVisitsByName(name) {
+  var rows = await db('GET', 'site_visits?customer=ilike.' + encodeURIComponent(_custNameFrag(name)) + '%25&select=id,customer');
   return rows.filter(function(x) { return x.customer === name; });
 }
 async function _custLoansByName(name) {
