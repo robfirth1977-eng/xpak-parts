@@ -56,6 +56,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#0f
 .loan-card:hover{background:#1a2a3d}
 .loan-card.permanent{background:#bbf7d0;border-left:8px solid #14532d}
 .loan-card.permanent:hover{background:#86efac}
+.loan-card.permanent .loan-number,.loan-card.permanent .loan-customer{color:#052e16}
+.loan-card.permanent .loan-meta{color:#14532d}
+.loan-card.permanent .loan-meta span:not(.loan-overdue-flag){color:#052e16 !important}
 .loan-card.overdue{border-left-color:#ef4444}
 .loan-card.trial{border-left-color:#f59e0b}
 .trial-badge{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
