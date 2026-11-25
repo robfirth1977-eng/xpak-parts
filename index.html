@@ -6403,6 +6403,7 @@ function renderAssessmentReport(j, tools, jparts, opts) {
   // Approval
   w.document.write('<div class="approval-box"><h3>Customer Approval</h3>');
   w.document.write('<p style="font-size:10.5pt;color:#444">I/We hereby authorise X-Pak Global to ' + (partsOnly ? 'supply the parts as detailed in this quotation.' : 'proceed with the recommended work and parts as detailed in this report.') + '</p>');
+  if (!partsOnly) w.document.write('<p style="font-size:10.5pt;color:#444">If further faults are found after the agreed work has been completed, the parts already used in that work remain payable by the customer.</p>');
   if (fullCleanOptionTools.length) {
     w.document.write('<div style="border:1px solid #1e379940;border-radius:6px;padding:8px 12px;margin-top:12px;font-size:10.5pt"><strong style="color:#1e3799">Optional full clean, degrease &amp; relube</strong> - $' + FULL_CLEAN_FEE.toFixed(2) + ' ex GST per tool' +
       fullCleanOptionTools.map(function(t) { var mn = mLookup(t.machine_id); return '<div style="margin-top:6px">' + (fullCleanOptionTools.length > 1 || tools.length > 1 ? 'Tool ' + t.tool_number + (mn ? ' - ' + mn : '') + (t.serial_number ? ' (S/N ' + t.serial_number + ')' : '') + ': &nbsp;' : '') + '<span style="display:inline-block;width:12px;height:12px;border:1.5px solid #333;vertical-align:middle"></span> Yes, please &nbsp;&nbsp; <span style="display:inline-block;width:12px;height:12px;border:1.5px solid #333;vertical-align:middle"></span> No thanks</div>'; }).join('') + '</div>');
